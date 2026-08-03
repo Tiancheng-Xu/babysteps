@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { Address, Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -140,11 +140,13 @@ describe("BabySteps App", () => {
 				"成长星无价格，只用于 Sepolia 课程演示；可在测试钱包间赠送，不可兑换。",
 			),
 		).toBeTruthy();
-		expect(screen.getByText(/请只使用专用测试钱包/)).toBeTruthy();
+		expect(screen.getByText(/请只用专用测试钱包/)).toBeTruthy();
 		expect(screen.getByText(/成年照护者自报/)).toBeTruthy();
-		expect(screen.getByText(/请勿填写或上传儿童姓名/)).toBeTruthy();
-		expect(screen.getByText("累计养成值：18")).toBeTruthy();
-		expect(screen.getByText("可赠送成长星：7")).toBeTruthy();
+		expect(screen.getByText(/不要填写或上传儿童姓名/)).toBeTruthy();
+		expect(screen.getByText("累计养成值")).toBeTruthy();
+		expect(screen.getByText("18")).toBeTruthy();
+		expect(screen.getByText("可赠送成长星")).toBeTruthy();
+		expect(screen.getByText("7")).toBeTruthy();
 		expect(screen.getByText(/收到的成长星不会增加星宝阶段/)).toBeTruthy();
 		expect(screen.getByText("首轮养成已完成")).toBeTruthy();
 		expect(screen.queryByText("18 / 15")).toBeNull();
@@ -153,38 +155,80 @@ describe("BabySteps App", () => {
 		);
 	});
 
-	it("records only an available activity and labels today's completed card", () => {
+	it("keeps the single-page story flow and course proof area aligned with the PRD", () => {
+		const { container } = render(<App />);
+
+		expect(
+			screen.getByRole("heading", { name: "BabySteps · 成长星球" }),
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"记录一件小小的陪伴，让原创虚拟伙伴“星宝”在测试链上慢慢长大。",
+			),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "步骤 1 · 连接测试钱包" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "步骤 2 · 虚拟伙伴养成" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "步骤 3 · 测试钱包赠送" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "步骤 4 · 原始作业能力" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "这份作业展示了什么？" }),
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"React + wagmi 连接 MetaMask，并把合约作为数据后端。",
+			),
+		).toBeTruthy();
+		expect(
+			screen.getByText("交易哈希只代表广播；receipt 成功后才刷新链上状态。"),
+		).toBeTruthy();
+		expect(container.querySelector("nav")).toBeNull();
+		expect(screen.queryByText("数字传家宝")).toBeNull();
+		expect(screen.queryByText("永久儿童寄语")).toBeNull();
+		expect(screen.queryByText("孩子档案")).toBeNull();
+		expect(screen.queryByText("发现星球")).toBeNull();
+		expect(screen.queryByText("成长纪念")).toBeNull();
+	});
+
+	it("keeps unavailable activities button-free and still lets an available card submit", () => {
 		growthState.todayByActivity = { meal: true, walk: false, read: false };
 		render(<App />);
 
-		const mealButton = screen.getByRole("button", {
-			name: "一起用餐今天已记录",
-		}) as HTMLButtonElement;
-		expect(mealButton.disabled).toBe(true);
-
-		fireEvent.click(
-			screen.getByRole("button", {
-				name: "记录户外陪伴，获得 5 枚成长星",
+		expect(screen.getByText("星宝现在还不饿")).toBeTruthy();
+		expect(
+			screen.queryByRole("button", {
+				name: "记录喂养陪伴，获得 3 枚成长星",
 			}),
-		);
+		).toBeNull();
+
+		const walkCard = screen.getByRole("heading", { name: "户外陪伴" }).closest("article");
+		if (!walkCard) {
+			throw new Error("Expected to find the walk activity card");
+		}
+
+		fireEvent.click(within(walkCard).getByRole("button", { name: "记录这次陪伴" }));
 		expect(mocks.recordActivity).toHaveBeenCalledWith("walk");
 	});
 
-	it("keeps signature and confirmation visible and blocks every activity", () => {
+	it("keeps signature and confirmation feedback visible while a record is pending", () => {
 		growthState.phase = "awaiting-signature";
 		growthState.isPending = true;
 		growthState.message = "请在 MetaMask 中确认这次陪伴记录。";
 		const { rerender } = render(<App />);
 
 		expect(screen.getByText("请在 MetaMask 中确认这次陪伴记录。")).toBeTruthy();
-		for (const button of screen.getAllByRole("button", { name: /^记录/ })) {
-			expect((button as HTMLButtonElement).disabled).toBe(true);
-		}
 
 		growthState.phase = "confirming";
-		growthState.message = "交易已广播，正在等待测试链确认。";
+		growthState.message = "交易已提交，正在等待链上确认";
 		rerender(<App />);
-		expect(screen.getByText("交易已广播，正在等待测试链确认。")).toBeTruthy();
+		expect(screen.getByText("交易已提交，正在等待链上确认")).toBeTruthy();
 	});
 
 	it("links a confirmed growth transaction to Sepolia Etherscan", () => {

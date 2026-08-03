@@ -34,7 +34,7 @@ describe("growth model", () => {
 			percent: 100,
 			complete: true,
 		});
-		expect(growthStageLabel("star")).toBe("闪耀星宝");
+		expect(growthStageLabel("star")).toBe("闪耀星宝 Star");
 	});
 
 	it("rejects an unknown contract stage instead of showing an egg", () => {

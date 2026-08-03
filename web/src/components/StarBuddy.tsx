@@ -8,6 +8,7 @@ type StarBuddyProps = {
 };
 
 export function StarBuddy({ stage }: StarBuddyProps) {
+	const isEggLike = stage === "egg" || stage === "sprout";
 	const isAwake = stage !== "egg";
 	const isExplorer = stage === "explorer" || stage === "star";
 	const isStar = stage === "star";
@@ -19,69 +20,75 @@ export function StarBuddy({ stage }: StarBuddyProps) {
 			role="img"
 			aria-label={growthStageLabel(stage)}
 		>
-			<svg viewBox="0 0 260 240" aria-hidden="true" focusable="false">
+			<div className="star-buddy__halo" aria-hidden="true" />
+			<svg viewBox="0 0 280 260" aria-hidden="true" focusable="false">
 				<defs>
 					<linearGradient id="buddy-body" x1="0" y1="0" x2="1" y2="1">
-						<stop offset="0" stopColor="#fff3aa" />
-						<stop offset="1" stopColor="#f7b95f" />
+						<stop offset="0" stopColor="#FFF7D1" />
+						<stop offset="1" stopColor="#F3B769" />
 					</linearGradient>
-					<filter
-						id="buddy-shadow"
-						x="-30%"
-						y="-30%"
-						width="160%"
-						height="170%"
-					>
-						<feDropShadow dx="0" dy="8" stdDeviation="8" floodOpacity="0.18" />
+					<filter id="buddy-shadow" x="-35%" y="-35%" width="170%" height="180%">
+						<feDropShadow dx="0" dy="10" stdDeviation="10" floodOpacity="0.16" />
 					</filter>
 				</defs>
 
 				<ellipse
-					cx="130"
-					cy="216"
-					rx="78"
-					ry="14"
-					fill="#173b4d"
+					cx="140"
+					cy="236"
+					rx="84"
+					ry="16"
+					fill="#173B4D"
 					opacity="0.12"
 				/>
-				<path
-					d="M130 25l22 48 52 6-38 36 10 52-46-25-46 25 10-52-38-36 52-6z"
-					fill="url(#buddy-body)"
-					stroke="#ad6d2e"
-					strokeWidth="5"
-					strokeLinejoin="round"
-					filter="url(#buddy-shadow)"
-				/>
+
+				{isEggLike ? (
+					<path
+						d="M140 34c35 0 62 34 62 81 0 47-28 80-62 80s-62-33-62-80c0-47 27-81 62-81z"
+						fill="url(#buddy-body)"
+						filter="url(#buddy-shadow)"
+						stroke="#173B4D"
+						strokeWidth="4"
+					/>
+				) : (
+					<path
+						d="M140 27c12 25 24 33 52 37-19 16-26 33-20 58 2 9 8 22 14 36-23-7-38-3-46 12-8-15-23-19-46-12 6-14 12-27 14-36 6-25-1-42-20-58 28-4 40-12 52-37z"
+						fill="url(#buddy-body)"
+						filter="url(#buddy-shadow)"
+						stroke="#173B4D"
+						strokeLinejoin="round"
+						strokeWidth="4"
+					/>
+				)}
 
 				{isAwake ? (
 					<g className="star-buddy__face">
-						<circle cx="108" cy="105" r="6" fill="#173b4d" />
-						<circle cx="152" cy="105" r="6" fill="#173b4d" />
+						<circle cx="118" cy="112" r="6" fill="#173B4D" />
+						<circle cx="162" cy="112" r="6" fill="#173B4D" />
 						<path
-							d="M116 126q14 13 28 0"
+							d="M125 132q15 12 30 0"
 							fill="none"
-							stroke="#173b4d"
-							strokeWidth="5"
+							stroke="#173B4D"
 							strokeLinecap="round"
+							strokeWidth="5"
 						/>
-						<circle cx="91" cy="123" r="9" fill="#f38e79" opacity="0.55" />
-						<circle cx="169" cy="123" r="9" fill="#f38e79" opacity="0.55" />
+						<circle cx="99" cy="128" r="8" fill="#F38E79" opacity="0.4" />
+						<circle cx="181" cy="128" r="8" fill="#F38E79" opacity="0.4" />
 					</g>
 				) : (
-					<g className="star-buddy__shell">
+					<g className="star-buddy__face">
 						<path
-							d="M96 108q12-9 24 0M140 108q12-9 24 0"
+							d="M109 113q8-7 16 0M155 113q8-7 16 0"
 							fill="none"
-							stroke="#173b4d"
-							strokeWidth="5"
+							stroke="#173B4D"
 							strokeLinecap="round"
+							strokeWidth="5"
 						/>
 						<path
-							d="M102 158l18-13 18 13 20-13"
+							d="M118 146q22 10 44 0"
 							fill="none"
-							stroke="#fff7d5"
-							strokeWidth="7"
+							stroke="#FFF9E5"
 							strokeLinecap="round"
+							strokeWidth="7"
 						/>
 					</g>
 				)}
@@ -89,21 +96,22 @@ export function StarBuddy({ stage }: StarBuddyProps) {
 				{stage === "sprout" ? (
 					<g className="star-buddy__sprout">
 						<path
-							d="M130 54v-21"
-							stroke="#357a54"
-							strokeWidth="6"
+							d="M140 50V28"
+							fill="none"
+							stroke="#3F7659"
 							strokeLinecap="round"
+							strokeWidth="6"
 						/>
 						<path
-							d="M129 36q-27-4-28-23 25-2 29 17"
-							fill="#68ad70"
-							stroke="#357a54"
+							d="M139 40q-22-6-24-23 21 0 24 15"
+							fill="#8DC67A"
+							stroke="#3F7659"
 							strokeWidth="4"
 						/>
 						<path
-							d="M131 35q25-8 31 9-21 9-31-3"
-							fill="#8acb79"
-							stroke="#357a54"
+							d="M141 39q21-10 28 6-19 11-28 1"
+							fill="#A5D58C"
+							stroke="#3F7659"
 							strokeWidth="4"
 						/>
 					</g>
@@ -112,20 +120,27 @@ export function StarBuddy({ stage }: StarBuddyProps) {
 				{isExplorer ? (
 					<g className="star-buddy__satchel">
 						<path
-							d="M89 142q39 45 81 10"
+							d="M101 148q42 42 80 6"
 							fill="none"
-							stroke="#3c6d82"
-							strokeWidth="7"
+							stroke="#4F7895"
 							strokeLinecap="round"
+							strokeWidth="7"
 						/>
 						<rect
-							x="146"
-							y="153"
-							width="41"
+							x="155"
+							y="155"
+							width="40"
 							height="34"
-							rx="9"
-							fill="#6aa0ac"
-							stroke="#173b4d"
+							rx="10"
+							fill="#DDEAD8"
+							stroke="#173B4D"
+							strokeWidth="4"
+						/>
+						<path
+							d="M166 154q8-8 18 0"
+							fill="none"
+							stroke="#173B4D"
+							strokeLinecap="round"
 							strokeWidth="4"
 						/>
 					</g>
@@ -134,16 +149,16 @@ export function StarBuddy({ stage }: StarBuddyProps) {
 				{isStar ? (
 					<g className="star-buddy__story">
 						<path
-							d="M89 62q42-32 83 0l-10 25q-32-17-64 0z"
-							fill="#6f5ca8"
-							stroke="#173b4d"
+							d="M96 74q44-30 88 0l-10 22q-35-16-68 0z"
+							fill="#6F5CA8"
+							stroke="#173B4D"
 							strokeWidth="4"
 						/>
-						<circle cx="131" cy="57" r="8" fill="#fff3aa" />
+						<circle cx="141" cy="70" r="7" fill="#FFF3AA" />
 						<path
-							d="M81 190q25-12 49 4v31q-24-16-49-4zM179 190q-25-12-49 4v31q24-16 49-4z"
-							fill="#fffdf2"
-							stroke="#173b4d"
+							d="M95 194q25-12 46 4v28q-21-15-46-4zM185 194q-25-12-46 4v28q21-15 46-4z"
+							fill="#FFFDF7"
+							stroke="#173B4D"
 							strokeWidth="4"
 						/>
 					</g>

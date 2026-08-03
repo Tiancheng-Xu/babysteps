@@ -5,10 +5,10 @@ import { StarBuddy } from "./StarBuddy";
 
 describe("StarBuddy", () => {
 	it.each([
-		["egg", "星星蛋"],
-		["sprout", "冒芽星宝"],
-		["explorer", "探索星宝"],
-		["star", "闪耀星宝"],
+		["egg", "星蛋 Egg"],
+		["sprout", "星芽 Sprout"],
+		["explorer", "探索星宝 Explorer"],
+		["star", "闪耀星宝 Star"],
 	] as const)(
 		"renders the %s stage with an accessible name",
 		(stage, label) => {

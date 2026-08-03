@@ -48,7 +48,8 @@ describe("PointTransferPanel", () => {
 	it("shows the onchain balance and irreversible public-data warning", () => {
 		render(<PointTransferPanel />);
 
-		expect(screen.getByText("可赠送成长星：7")).toBeTruthy();
+		expect(screen.getByText("可赠送成长星")).toBeTruthy();
+		expect(screen.getByText("7")).toBeTruthy();
 		expect(
 			screen.getByText(
 				"接收地址、数量和交易会长期公开；测试链转账无法撤回，请逐字核对地址。",
