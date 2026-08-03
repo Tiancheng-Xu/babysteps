@@ -1,6 +1,9 @@
-import { growthStageLabel, type GrowthStageName } from "../features/growth/growthModel";
-import { StarBuddy } from "./StarBuddy";
+import {
+	type GrowthStageName,
+	growthStageLabel,
+} from "../features/growth/growthModel";
 import { BrandMark } from "./BrandMark";
+import { StarBuddy } from "./StarBuddy";
 
 const HERO_STAGES: GrowthStageName[] = ["egg", "sprout", "explorer", "star"];
 

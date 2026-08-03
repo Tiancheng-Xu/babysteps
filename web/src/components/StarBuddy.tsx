@@ -27,8 +27,19 @@ export function StarBuddy({ stage }: StarBuddyProps) {
 						<stop offset="0" stopColor="#FFF7D1" />
 						<stop offset="1" stopColor="#F3B769" />
 					</linearGradient>
-					<filter id="buddy-shadow" x="-35%" y="-35%" width="170%" height="180%">
-						<feDropShadow dx="0" dy="10" stdDeviation="10" floodOpacity="0.16" />
+					<filter
+						id="buddy-shadow"
+						x="-35%"
+						y="-35%"
+						width="170%"
+						height="180%"
+					>
+						<feDropShadow
+							dx="0"
+							dy="10"
+							stdDeviation="10"
+							floodOpacity="0.16"
+						/>
 					</filter>
 				</defs>
 

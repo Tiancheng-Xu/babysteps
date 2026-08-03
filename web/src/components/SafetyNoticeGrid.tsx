@@ -16,10 +16,14 @@ const SAFETY_NOTICES = [
 	},
 ] as const;
 
-function SafetyIcon({ kind }: { kind: (typeof SAFETY_NOTICES)[number]["icon"] }) {
+function SafetyIcon({
+	kind,
+}: {
+	kind: (typeof SAFETY_NOTICES)[number]["icon"];
+}) {
 	if (kind === "category") {
 		return (
-			<svg viewBox="0 0 32 32" focusable="false">
+			<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
 				<rect x="5" y="7" width="10" height="8" rx="2" />
 				<rect x="17" y="7" width="10" height="8" rx="2" />
 				<rect x="5" y="17" width="10" height="8" rx="2" />
@@ -29,14 +33,14 @@ function SafetyIcon({ kind }: { kind: (typeof SAFETY_NOTICES)[number]["icon"] })
 	}
 	if (kind === "shield") {
 		return (
-			<svg viewBox="0 0 32 32" focusable="false">
+			<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
 				<path d="M16 5l9 4v7c0 6-4 9-9 11-5-2-9-5-9-11V9z" />
 				<path d="M12 16l3 3 6-7" fill="none" strokeLinecap="round" />
 			</svg>
 		);
 	}
 	return (
-		<svg viewBox="0 0 32 32" focusable="false">
+		<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
 			<circle cx="16" cy="16" r="10" fill="none" />
 			<path d="M6 16h20M16 6a16 16 0 010 20M16 6a16 16 0 000 20" fill="none" />
 		</svg>

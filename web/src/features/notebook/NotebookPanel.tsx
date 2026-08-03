@@ -17,7 +17,10 @@ export function NotebookPanel() {
 		!notebook.canSave || byteLength > NOTE_BYTE_LIMIT || isPending;
 
 	return (
-		<section className="story-card notebook-panel" aria-labelledby="notebook-heading">
+		<section
+			className="story-card notebook-panel"
+			aria-labelledby="notebook-heading"
+		>
 			<div className="story-card__header">
 				<div>
 					<h2 id="notebook-heading">步骤 4 · 原始作业能力</h2>
@@ -88,7 +91,10 @@ export function NotebookPanel() {
 			</div>
 
 			{clearArmed ? (
-				<div className="transaction-panel transaction-panel--error" role="alert">
+				<div
+					className="transaction-panel transaction-panel--error"
+					role="alert"
+				>
 					<p>历史交易仍公开，确认只清空当前显示？</p>
 					<div className="button-row">
 						<button

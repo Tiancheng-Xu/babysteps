@@ -1,7 +1,7 @@
 export function BrandMark() {
 	return (
 		<div className="brand-mark" aria-hidden="true">
-			<svg viewBox="0 0 84 84" focusable="false">
+			<svg viewBox="0 0 84 84" aria-hidden="true" focusable="false">
 				<defs>
 					<filter id="brand-glow" x="-30%" y="-30%" width="160%" height="160%">
 						<feDropShadow dx="0" dy="10" stdDeviation="8" floodOpacity="0.16" />

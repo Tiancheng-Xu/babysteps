@@ -11,7 +11,10 @@ export function PointTransferPanel() {
 		Boolean(transfer.validationMessage);
 
 	return (
-		<section className="story-card transfer-panel" aria-labelledby="transfer-heading">
+		<section
+			className="story-card transfer-panel"
+			aria-labelledby="transfer-heading"
+		>
 			<div className="story-card__header">
 				<div>
 					<h2 id="transfer-heading">步骤 3 · 测试钱包赠送</h2>

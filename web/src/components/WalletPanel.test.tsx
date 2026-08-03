@@ -84,9 +84,7 @@ describe("WalletPanel", () => {
 		render(<WalletPanel />);
 
 		expect(screen.getByText("尚未连接测试钱包")).toBeTruthy();
-		expect(
-			screen.getByRole("button", { name: "连接 MetaMask" }),
-		).toBeTruthy();
+		expect(screen.getByRole("button", { name: "连接 MetaMask" })).toBeTruthy();
 	});
 
 	it("keeps the connect action visibly pending without allowing a duplicate click", () => {

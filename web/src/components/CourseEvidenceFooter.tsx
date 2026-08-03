@@ -17,7 +17,7 @@ export function CourseEvidenceFooter() {
 						))}
 					</ul>
 				</div>
-				<div className="course-evidence__card" aria-label="课程证据摘要">
+				<div className="course-evidence__card">
 					<p className="course-evidence__card-title">课程验收要点</p>
 					<p>
 						页面保留了公开链上便签、双账本成长、测试链赠送、钱包网络识别和

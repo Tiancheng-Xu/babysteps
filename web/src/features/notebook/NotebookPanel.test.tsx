@@ -61,7 +61,9 @@ describe("NotebookPanel", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "清空当前便签" }));
 		expect(mocks.clear).not.toHaveBeenCalled();
-		expect(screen.getByText("历史交易仍公开，确认只清空当前显示？")).toBeTruthy();
+		expect(
+			screen.getByText("历史交易仍公开，确认只清空当前显示？"),
+		).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("button", { name: "确认清空当前便签" }));
 		expect(mocks.clear).toHaveBeenCalledOnce();

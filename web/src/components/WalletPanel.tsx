@@ -27,7 +27,10 @@ export function WalletPanel() {
 
 	if (!hasMetaMaskProvider()) {
 		return (
-			<section className="story-card wallet-panel" aria-labelledby="wallet-heading">
+			<section
+				className="story-card wallet-panel"
+				aria-labelledby="wallet-heading"
+			>
 				<div className="story-card__header">
 					<div>
 						<h2 id="wallet-heading">步骤 1 · 连接测试钱包</h2>
@@ -38,14 +41,18 @@ export function WalletPanel() {
 				</div>
 				<div className="wallet-shell">
 					<div className="wallet-summary">
-						<span className="status-pill status-pill--warning">尚未安装 MetaMask</span>
+						<span className="status-pill status-pill--warning">
+							尚未安装 MetaMask
+						</span>
 						<p>
 							未检测到 MetaMask。请先安装，再使用只用于课程演示的测试账户连接。
 						</p>
 					</div>
 					<div className="wallet-support">
 						<p className="wallet-support__title">连接前提醒</p>
-						<p>页面只会读取公开地址，不会要求你提供助记词、私钥或真实身份资料。</p>
+						<p>
+							页面只会读取公开地址，不会要求你提供助记词、私钥或真实身份资料。
+						</p>
 					</div>
 				</div>
 				<a
@@ -62,7 +69,10 @@ export function WalletPanel() {
 
 	if (!isConnected || !address) {
 		return (
-			<section className="story-card wallet-panel" aria-labelledby="wallet-heading">
+			<section
+				className="story-card wallet-panel"
+				aria-labelledby="wallet-heading"
+			>
 				<div className="story-card__header">
 					<div>
 						<h2 id="wallet-heading">步骤 1 · 连接测试钱包</h2>
@@ -73,7 +83,9 @@ export function WalletPanel() {
 				</div>
 				<div className="wallet-shell">
 					<div className="wallet-summary">
-						<span className="status-pill status-pill--neutral">尚未连接测试钱包</span>
+						<span className="status-pill status-pill--neutral">
+							尚未连接测试钱包
+						</span>
 						<p>连接只会读取公开地址，不会要求你提供助记词或私钥。</p>
 					</div>
 					<div className="wallet-support">
@@ -101,12 +113,16 @@ export function WalletPanel() {
 
 	const wrongNetwork = chainId !== sepolia.id;
 	return (
-		<section className="story-card wallet-panel" aria-labelledby="wallet-heading">
+		<section
+			className="story-card wallet-panel"
+			aria-labelledby="wallet-heading"
+		>
 			<div className="story-card__header">
 				<div>
 					<h2 id="wallet-heading">步骤 1 · 连接测试钱包</h2>
 					<p className="story-card__lead">
-						让不熟悉 Web3 的照护者也能确认：当前连接的是哪个测试账户、在哪条测试链上。
+						让不熟悉 Web3
+						的照护者也能确认：当前连接的是哪个测试账户、在哪条测试链上。
 					</p>
 				</div>
 			</div>
