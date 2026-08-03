@@ -1,5 +1,6 @@
 type WalletError = {
 	code?: unknown;
+	errorName?: unknown;
 	shortMessage?: unknown;
 };
 
@@ -23,6 +24,9 @@ export function toWalletMessage(error: unknown) {
 	}
 	if (walletError?.code === -32603 || walletError?.code === -32000) {
 		return "网络请求失败，请检查网络后重试。";
+	}
+	if (walletError?.errorName === "ActivityAlreadyRecordedToday") {
+		return "今天已经记录这项陪伴，北京时间明天 00:00 后再来。";
 	}
 
 	const shortMessage = walletError?.shortMessage;

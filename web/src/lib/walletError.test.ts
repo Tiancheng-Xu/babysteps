@@ -36,6 +36,16 @@ describe("wallet error messages", () => {
 		).toBe("合约执行失败，请检查内容后重试。");
 	});
 
+	it("maps a repeated activity without exposing revert arguments", () => {
+		expect(
+			toWalletMessage({
+				errorName: "ActivityAlreadyRecordedToday",
+				shortMessage:
+					"ActivityAlreadyRecordedToday(0xprivate-provider-details, 0, 20668)",
+			}),
+		).toBe("今天已经记录这项陪伴，北京时间明天 00:00 后再来。");
+	});
+
 	it("hides unknown provider details", () => {
 		expect(
 			toWalletMessage({
