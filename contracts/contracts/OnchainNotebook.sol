@@ -20,6 +20,7 @@ contract OnchainNotebook {
 
     mapping(address author => string note) private notes;
     mapping(address account => uint256 points) private growthPoints;
+    mapping(address account => uint256 balance) private transferableBalances;
     mapping(address account => mapping(ActivityType activity => uint256 marker))
         private lastRecordedDayMarker;
 
@@ -28,6 +29,13 @@ contract OnchainNotebook {
         address account,
         ActivityType activity,
         uint256 utc8DayId
+    );
+    error InvalidTransferRecipient(address recipient);
+    error CannotTransferToSelf();
+    error InvalidTransferAmount();
+    error InsufficientTransferableBalance(
+        uint256 available,
+        uint256 requested
     );
 
     event NoteUpdated(address indexed author, string note);
@@ -39,6 +47,13 @@ contract OnchainNotebook {
         uint256 reward,
         uint256 totalPoints,
         GrowthStage stage
+    );
+    event GrowthPointsTransferred(
+        address indexed sender,
+        address indexed recipient,
+        uint256 amount,
+        uint256 senderBalance,
+        uint256 recipientBalance
     );
 
     function getNote(address author) external view returns (string memory) {
@@ -73,6 +88,7 @@ contract OnchainNotebook {
         // Store dayId + 1 so the mapping's zero value always means "never recorded".
         lastRecordedDayMarker[msg.sender][activity] = dayId + 1;
         growthPoints[msg.sender] = totalPoints;
+        transferableBalances[msg.sender] += reward;
 
         emit ActivityRecorded(
             msg.sender,
@@ -86,6 +102,38 @@ contract OnchainNotebook {
 
     function getGrowthPoints(address account) external view returns (uint256) {
         return growthPoints[account];
+    }
+
+    function getTransferableBalance(
+        address account
+    ) external view returns (uint256) {
+        return transferableBalances[account];
+    }
+
+    function transferGrowthPoints(address recipient, uint256 amount) external {
+        if (recipient == address(0)) {
+            revert InvalidTransferRecipient(recipient);
+        }
+        if (recipient == msg.sender) revert CannotTransferToSelf();
+        if (amount == 0) revert InvalidTransferAmount();
+
+        uint256 senderBalance = transferableBalances[msg.sender];
+        if (senderBalance < amount) {
+            revert InsufficientTransferableBalance(senderBalance, amount);
+        }
+
+        senderBalance -= amount;
+        uint256 recipientBalance = transferableBalances[recipient] + amount;
+        transferableBalances[msg.sender] = senderBalance;
+        transferableBalances[recipient] = recipientBalance;
+
+        emit GrowthPointsTransferred(
+            msg.sender,
+            recipient,
+            amount,
+            senderBalance,
+            recipientBalance
+        );
     }
 
     function hasRecordedToday(

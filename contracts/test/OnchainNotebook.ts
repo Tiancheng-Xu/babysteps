@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
+import { zeroAddress } from "viem";
 
 describe("OnchainNotebook", async () => {
 	const { viem, networkHelpers } = await network.create();
@@ -135,6 +136,131 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getGrowthStage([author.account.address]),
 			3,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			15n,
+		);
+	});
+
+	it("keeps lifetime growth unchanged when points are transferred", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([2], { account: author.account });
+		await notebook.write.transferGrowthPoints([reader.account.address, 5n], {
+			account: author.account,
+		});
+
+		assert.equal(
+			await notebook.read.getGrowthPoints([author.account.address]),
+			7n,
+		);
+		assert.equal(
+			await notebook.read.getGrowthStage([author.account.address]),
+			1,
+		);
+		assert.equal(
+			await notebook.read.getGrowthPoints([reader.account.address]),
+			0n,
+		);
+		assert.equal(
+			await notebook.read.getGrowthStage([reader.account.address]),
+			0,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			2n,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([reader.account.address]),
+			5n,
+		);
+	});
+
+	it("emits a point transfer with both final balances", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([0], { account: author.account });
+
+		await viem.assertions.emitWithArgs(
+			notebook.write.transferGrowthPoints([reader.account.address, 2n], {
+				account: author.account,
+			}),
+			notebook,
+			"GrowthPointsTransferred",
+			[author.account.address, reader.account.address, 2n, 1n, 2n],
+		);
+	});
+
+	it("allows a recipient to gift received points again", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([0], { account: author.account });
+		await notebook.write.transferGrowthPoints([reader.account.address, 2n], {
+			account: author.account,
+		});
+		await notebook.write.transferGrowthPoints([author.account.address, 1n], {
+			account: reader.account,
+		});
+
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			2n,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([reader.account.address]),
+			1n,
+		);
+	});
+
+	it("rejects invalid recipients without changing the balance", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([0], { account: author.account });
+
+		await viem.assertions.revertWithCustomErrorWithArgs(
+			notebook.write.transferGrowthPoints([zeroAddress, 1n], {
+				account: author.account,
+			}),
+			notebook,
+			"InvalidTransferRecipient",
+			[zeroAddress],
+		);
+		await viem.assertions.revertWithCustomError(
+			notebook.write.transferGrowthPoints([author.account.address, 1n], {
+				account: author.account,
+			}),
+			notebook,
+			"CannotTransferToSelf",
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			3n,
+		);
+	});
+
+	it("rejects invalid or unavailable amounts without changing balances", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([0], { account: author.account });
+
+		await viem.assertions.revertWithCustomError(
+			notebook.write.transferGrowthPoints([reader.account.address, 0n], {
+				account: author.account,
+			}),
+			notebook,
+			"InvalidTransferAmount",
+		);
+		await viem.assertions.revertWithCustomErrorWithArgs(
+			notebook.write.transferGrowthPoints([reader.account.address, 4n], {
+				account: author.account,
+			}),
+			notebook,
+			"InsufficientTransferableBalance",
+			[3n, 4n],
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			3n,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([reader.account.address]),
+			0n,
 		);
 	});
 
