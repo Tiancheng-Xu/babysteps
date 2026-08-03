@@ -18,14 +18,22 @@ contract OnchainNotebook {
         Star
     }
 
+    struct ActivityProgress {
+        uint64 nextClaimAt;
+        uint64 totalClaims;
+        uint32 utc8DayMarker;
+        uint16 claimsToday;
+    }
+
     mapping(address author => string note) private notes;
     mapping(address account => uint256 points) private growthPoints;
     mapping(address account => uint256 balance) private transferableBalances;
-    mapping(address account => mapping(ActivityType activity => uint256 marker))
-        private lastRecordedDayMarker;
+    mapping(address account => mapping(ActivityType activity => ActivityProgress progress))
+        private activityProgress;
 
     error NoteTooLong(uint256 actualLength, uint256 maximumLength);
-    error ActivityAlreadyRecordedToday(
+    error ActivityCoolingDown(address account, ActivityType activity);
+    error DailyActivityLimitReached(
         address account,
         ActivityType activity,
         uint256 utc8DayId
@@ -77,16 +85,27 @@ contract OnchainNotebook {
     }
 
     function recordActivity(ActivityType activity) external {
+        ActivityProgress storage progress = activityProgress[msg.sender][
+            activity
+        ];
         uint256 dayId = currentUtc8DayId();
-        if (lastRecordedDayMarker[msg.sender][activity] == dayId + 1) {
-            revert ActivityAlreadyRecordedToday(msg.sender, activity, dayId);
+        uint16 currentClaimsToday = claimsTodayFor(progress, dayId);
+        if (currentClaimsToday >= dailyLimitFor(activity)) {
+            revert DailyActivityLimitReached(msg.sender, activity, dayId);
+        }
+        if (block.timestamp < progress.nextClaimAt) {
+            revert ActivityCoolingDown(msg.sender, activity);
         }
 
         uint256 reward = rewardFor(activity);
         uint256 totalPoints = growthPoints[msg.sender] + reward;
+        uint64 claimNumber = progress.totalClaims + 1;
+        uint256 cooldown = cooldownFor(activity, claimNumber);
 
-        // Store dayId + 1 so the mapping's zero value always means "never recorded".
-        lastRecordedDayMarker[msg.sender][activity] = dayId + 1;
+        progress.nextClaimAt = uint64(block.timestamp + cooldown);
+        progress.totalClaims = claimNumber;
+        progress.utc8DayMarker = uint32(dayId + 1);
+        progress.claimsToday = currentClaimsToday + 1;
         growthPoints[msg.sender] = totalPoints;
         transferableBalances[msg.sender] += reward;
 
@@ -136,13 +155,22 @@ contract OnchainNotebook {
         );
     }
 
-    function hasRecordedToday(
+    function getActivityAvailability(
         address account,
         ActivityType activity
-    ) external view returns (bool) {
-        return
-            lastRecordedDayMarker[account][activity] ==
-            currentUtc8DayId() + 1;
+    ) external view returns (bool available, bool dailyLimitReached) {
+        ActivityProgress storage progress = activityProgress[account][activity];
+        uint16 currentClaimsToday = claimsTodayFor(
+            progress,
+            currentUtc8DayId()
+        );
+        if (currentClaimsToday >= dailyLimitFor(activity)) {
+            return (false, true);
+        }
+        return (
+            block.timestamp >= progress.nextClaimAt,
+            false
+        );
     }
 
     function getGrowthStage(
@@ -161,6 +189,49 @@ contract OnchainNotebook {
         if (activity == ActivityType.Meal) return 3;
         if (activity == ActivityType.Walk) return 5;
         return 7;
+    }
+
+    function cooldownFor(
+        ActivityType activity,
+        uint256 claimNumber
+    ) private view returns (uint256) {
+        (uint256 minimum, uint256 span) = cooldownRange(activity);
+        uint256 entropy = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.prevrandao,
+                    block.timestamp,
+                    msg.sender,
+                    activity,
+                    claimNumber
+                )
+            )
+        );
+        return minimum + (entropy % (span + 1));
+    }
+
+    function cooldownRange(
+        ActivityType activity
+    ) private pure returns (uint256 minimum, uint256 span) {
+        if (activity == ActivityType.Meal) return (3 hours, 1 hours);
+        if (activity == ActivityType.Walk) return (8 hours, 4 hours);
+        return (4 hours, 2 hours);
+    }
+
+    function dailyLimitFor(
+        ActivityType activity
+    ) private pure returns (uint16) {
+        if (activity == ActivityType.Meal) return 6;
+        if (activity == ActivityType.Walk) return 2;
+        return 3;
+    }
+
+    function claimsTodayFor(
+        ActivityProgress storage progress,
+        uint256 dayId
+    ) private view returns (uint16) {
+        if (progress.utc8DayMarker != dayId + 1) return 0;
+        return progress.claimsToday;
     }
 
     function growthStageFor(

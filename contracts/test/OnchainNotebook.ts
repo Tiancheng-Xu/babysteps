@@ -105,6 +105,50 @@ describe("OnchainNotebook", async () => {
 		);
 	});
 
+	it("keeps every activity unavailable through its minimum cooldown and ready by its maximum", async () => {
+		const cooldowns = [
+			{ activity: 0, minimum: 3 * 60 * 60, maximum: 4 * 60 * 60 },
+			{ activity: 1, minimum: 8 * 60 * 60, maximum: 12 * 60 * 60 },
+			{ activity: 2, minimum: 4 * 60 * 60, maximum: 6 * 60 * 60 },
+		] as const;
+
+		for (const { activity, minimum, maximum } of cooldowns) {
+			const notebook = await viem.deployContract("OnchainNotebook");
+			assert.deepEqual(
+				await notebook.read.getActivityAvailability([
+					author.account.address,
+					activity,
+				]),
+				[true, false],
+			);
+
+			await notebook.write.recordActivity([activity], {
+				account: author.account,
+			});
+			const recordedAt = Number(await networkHelpers.time.latest());
+
+			await networkHelpers.time.setNextBlockTimestamp(recordedAt + minimum - 1);
+			await networkHelpers.mine();
+			assert.deepEqual(
+				await notebook.read.getActivityAvailability([
+					author.account.address,
+					activity,
+				]),
+				[false, false],
+			);
+
+			await networkHelpers.time.setNextBlockTimestamp(recordedAt + maximum);
+			await networkHelpers.mine();
+			assert.deepEqual(
+				await notebook.read.getActivityAvailability([
+					author.account.address,
+					activity,
+				]),
+				[true, false],
+			);
+		}
+	});
+
 	it("awards Meal, Walk, and Read as 3, 5, and 7 points", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 
@@ -290,16 +334,15 @@ describe("OnchainNotebook", async () => {
 		);
 	});
 
-	it("rejects a repeated activity without changing points or today's marker", async () => {
+	it("rejects a repeated activity during cooldown without changing balances", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 		await notebook.write.recordActivity([0], { account: author.account });
-		const dayId = await notebook.read.currentUtc8DayId();
 
 		await viem.assertions.revertWithCustomErrorWithArgs(
 			notebook.write.recordActivity([0], { account: author.account }),
 			notebook,
-			"ActivityAlreadyRecordedToday",
-			[author.account.address, 0, dayId],
+			"ActivityCoolingDown",
+			[author.account.address, 0],
 		);
 
 		assert.equal(
@@ -307,18 +350,18 @@ describe("OnchainNotebook", async () => {
 			3n,
 		);
 		assert.equal(
-			await notebook.read.hasRecordedToday([author.account.address, 0]),
-			true,
+			await notebook.read.getTransferableBalance([author.account.address]),
+			3n,
 		);
 	});
 
-	it("isolates daily activity state and points by wallet", async () => {
+	it("isolates activity availability and points by wallet", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 		await notebook.write.recordActivity([0], { account: author.account });
 
-		assert.equal(
-			await notebook.read.hasRecordedToday([reader.account.address, 0]),
-			false,
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([reader.account.address, 0]),
+			[true, false],
 		);
 
 		await notebook.write.recordActivity([0], { account: reader.account });
@@ -330,6 +373,14 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getGrowthPoints([reader.account.address]),
 			3n,
+		);
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[false, false],
+		);
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([reader.account.address, 0]),
+			[false, false],
 		);
 	});
 
@@ -345,45 +396,110 @@ describe("OnchainNotebook", async () => {
 		);
 	});
 
-	it("resets a daily activity exactly at Beijing midnight", async () => {
+	it("enforces each UTC+8 daily cap before checking cooldown", async () => {
+		const capCases = [
+			{ activity: 0, cap: 6, maximumCooldown: 4 * 60 * 60, reward: 3 },
+			{ activity: 1, cap: 2, maximumCooldown: 12 * 60 * 60, reward: 5 },
+			{ activity: 2, cap: 3, maximumCooldown: 6 * 60 * 60, reward: 7 },
+		] as const;
+		const day = 24 * 60 * 60;
+		const offset = 8 * 60 * 60;
+
+		for (const { activity, cap, maximumCooldown, reward } of capCases) {
+			const notebook = await viem.deployContract("OnchainNotebook");
+			const latest = Number(await networkHelpers.time.latest());
+			const nextBeijingMidnight =
+				(Math.floor((latest + offset) / day) + 1) * day - offset;
+
+			for (let claim = 0; claim < cap; claim += 1) {
+				await networkHelpers.time.setNextBlockTimestamp(
+					nextBeijingMidnight + claim * maximumCooldown,
+				);
+				await notebook.write.recordActivity([activity], {
+					account: author.account,
+				});
+			}
+
+			assert.deepEqual(
+				await notebook.read.getActivityAvailability([
+					author.account.address,
+					activity,
+				]),
+				[false, true],
+			);
+			const dayId = await notebook.read.currentUtc8DayId();
+			await viem.assertions.revertWithCustomErrorWithArgs(
+				notebook.write.recordActivity([activity], {
+					account: author.account,
+				}),
+				notebook,
+				"DailyActivityLimitReached",
+				[author.account.address, activity, dayId],
+			);
+			assert.equal(
+				await notebook.read.getGrowthPoints([author.account.address]),
+				BigInt(cap * reward),
+			);
+			assert.equal(
+				await notebook.read.getTransferableBalance([author.account.address]),
+				BigInt(cap * reward),
+			);
+		}
+	});
+
+	it("resets the daily cap at Beijing midnight without bypassing cooldown", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 		const day = 24 * 60 * 60;
 		const offset = 8 * 60 * 60;
 		const latest = Number(await networkHelpers.time.latest());
-		const atBeijingMidnight =
-			(Math.floor((latest + offset) / day) + 1) * day - offset;
-
-		await networkHelpers.time.setNextBlockTimestamp(atBeijingMidnight - 1);
-		await notebook.write.recordActivity([0], { account: author.account });
-		assert.equal(
-			await notebook.read.hasRecordedToday([author.account.address, 0]),
-			true,
+		const midnight = (Math.floor((latest + offset) / day) + 1) * day - offset;
+		const claimOffsets = [0, 4, 8, 12, 16, 23.5].map(
+			(hours) => hours * 60 * 60,
 		);
 
-		await networkHelpers.time.setNextBlockTimestamp(atBeijingMidnight);
-		await notebook.write.recordActivity([0], { account: author.account });
-		assert.equal(
-			await notebook.read.getGrowthPoints([author.account.address]),
-			6n,
+		for (const claimOffset of claimOffsets) {
+			await networkHelpers.time.setNextBlockTimestamp(midnight + claimOffset);
+			await notebook.write.recordActivity([0], { account: author.account });
+		}
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[false, true],
+		);
+
+		await networkHelpers.time.setNextBlockTimestamp(midnight + day);
+		await networkHelpers.mine();
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[false, false],
+		);
+
+		await networkHelpers.time.setNextBlockTimestamp(
+			midnight + day + 3.5 * 60 * 60,
+		);
+		await networkHelpers.mine();
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[true, false],
 		);
 	});
 
-	it("does not reset at UTC midnight when Beijing stays on the same day", async () => {
+	it("does not reset the UTC+8 count when UTC midnight passes", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 		const day = 24 * 60 * 60;
 		const latest = Number(await networkHelpers.time.latest());
-		const atUtcMidnight = (Math.floor(latest / day) + 1) * day;
+		const futureUtcMidnight = (Math.floor(latest / day) + 2) * day;
+		const beijingDayStart = futureUtcMidnight - 8 * 60 * 60;
 
-		await networkHelpers.time.setNextBlockTimestamp(atUtcMidnight - 1);
-		await notebook.write.recordActivity([0], { account: author.account });
-		await networkHelpers.time.setNextBlockTimestamp(atUtcMidnight);
+		for (let claim = 0; claim < 6; claim += 1) {
+			await networkHelpers.time.setNextBlockTimestamp(
+				beijingDayStart + claim * 4 * 60 * 60,
+			);
+			await notebook.write.recordActivity([0], { account: author.account });
+		}
 
-		const dayId = await notebook.read.currentUtc8DayId();
-		await viem.assertions.revertWithCustomErrorWithArgs(
-			notebook.write.recordActivity([0], { account: author.account }),
-			notebook,
-			"ActivityAlreadyRecordedToday",
-			[author.account.address, 0, dayId],
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[false, true],
 		);
 	});
 
@@ -391,12 +507,8 @@ describe("OnchainNotebook", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
 		await notebook.write.recordActivity([2], { account: author.account });
 
-		const day = 24 * 60 * 60;
-		const offset = 8 * 60 * 60;
 		const latest = Number(await networkHelpers.time.latest());
-		const nextBeijingDay =
-			(Math.floor((latest + offset) / day) + 1) * day - offset;
-		await networkHelpers.time.setNextBlockTimestamp(nextBeijingDay);
+		await networkHelpers.time.setNextBlockTimestamp(latest + 6 * 60 * 60);
 		await notebook.write.recordActivity([2], { account: author.account });
 
 		assert.equal(
@@ -406,6 +518,10 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getGrowthStage([author.account.address]),
 			2,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			14n,
 		);
 
 		await notebook.write.recordActivity([0], { account: author.account });
@@ -445,9 +561,9 @@ describe("OnchainNotebook", async () => {
 			await notebook.read.getGrowthPoints([author.account.address]),
 			3n,
 		);
-		assert.equal(
-			await notebook.read.hasRecordedToday([author.account.address, 0]),
-			true,
+		assert.deepEqual(
+			await notebook.read.getActivityAvailability([author.account.address, 0]),
+			[false, false],
 		);
 		assert.equal(
 			await notebook.read.getTransferableBalance([author.account.address]),
