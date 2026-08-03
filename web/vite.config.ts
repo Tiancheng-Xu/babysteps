@@ -18,13 +18,20 @@ function assertProductionNotebookAddress(address: string | undefined) {
 }
 
 export default defineConfig(({ command, mode }) => {
+	const loadedEnv = loadEnv(mode, process.cwd(), "");
+	const notebookAddress =
+		process.env.VITE_ONCHAIN_NOTEBOOK_ADDRESS ??
+		loadedEnv.VITE_ONCHAIN_NOTEBOOK_ADDRESS;
+	const base = process.env.VITE_BASE_PATH ?? loadedEnv.VITE_BASE_PATH ?? "/";
+
 	if (command === "build") {
-		assertProductionNotebookAddress(
-			loadEnv(mode, process.cwd(), "").VITE_ONCHAIN_NOTEBOOK_ADDRESS,
-		);
+		assertProductionNotebookAddress(notebookAddress);
 	}
 
 	return {
+		// GitHub Pages hosts this repository at /course-homework/. Local and
+		// other deployments keep Vite's root default unless explicitly set.
+		base,
 		plugins: [react()],
 		test: {
 			environment: "jsdom",
