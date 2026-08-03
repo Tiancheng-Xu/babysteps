@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	invalidateQueries: vi.fn(),
 	readRefetch: vi.fn(),
+	readContractQueryKey: vi.fn(),
 	simulateContract: vi.fn(),
 	switchChainAsync: vi.fn(),
 	useAccount: vi.fn(),
@@ -39,6 +40,10 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 	};
 });
 
+vi.mock("wagmi/query", () => ({
+	readContractQueryKey: mocks.readContractQueryKey,
+}));
+
 import { wagmiConfig } from "../../config/wagmi";
 import { usePointTransfer } from "./usePointTransfer";
 
@@ -51,6 +56,7 @@ const transferRequest = {
 };
 
 type ReceiptState = {
+	data?: { status: "success" | "reverted" };
 	error: unknown;
 	isError: boolean;
 	isPending: boolean;
@@ -109,12 +115,17 @@ describe("usePointTransfer", () => {
 			switchChainAsync: mocks.switchChainAsync,
 		});
 		receiptState = {
+			data: undefined,
 			error: null,
 			isError: false,
 			isPending: false,
 			isSuccess: false,
 		};
 		mocks.useWaitForTransactionReceipt.mockImplementation(() => receiptState);
+		mocks.readContractQueryKey.mockImplementation((input) => [
+			"readContract",
+			input,
+		]);
 		mocks.simulateContract.mockResolvedValue({ request: transferRequest });
 		mocks.invalidateQueries.mockResolvedValue(undefined);
 		mocks.readRefetch.mockResolvedValue(undefined);
@@ -215,6 +226,7 @@ describe("usePointTransfer", () => {
 		await act(async () => result.current.transfer());
 
 		receiptState = {
+			data: { status: "success" },
 			error: null,
 			isError: false,
 			isPending: false,
@@ -236,6 +248,37 @@ describe("usePointTransfer", () => {
 		expect(result.current.amount).toBe("");
 	});
 
+	it("refreshes the submitting sender after an account switch", async () => {
+		mocks.writeContractAsync.mockResolvedValue(transactionHash);
+		const { result, rerender } = renderHook(() => usePointTransfer());
+		fillValidTransfer(result);
+		await act(async () => result.current.transfer());
+
+		mocks.useAccount.mockReturnValue({
+			address: recipient,
+			chainId: 11155111,
+			isConnected: true,
+		});
+		receiptState = {
+			data: { status: "success" },
+			error: null,
+			isError: false,
+			isPending: false,
+			isSuccess: true,
+		};
+		rerender();
+
+		await waitFor(() =>
+			expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2),
+		);
+		expect(mocks.readContractQueryKey).toHaveBeenCalledWith(
+			expect.objectContaining({ args: [account] }),
+		);
+		expect(mocks.readContractQueryKey).toHaveBeenCalledWith(
+			expect.objectContaining({ args: [recipient] }),
+		);
+	});
+
 	it("maps wallet cancellation without changing the displayed balance", async () => {
 		mocks.writeContractAsync.mockRejectedValue({ code: 4001 });
 		const { result } = renderHook(() => usePointTransfer());
@@ -248,21 +291,26 @@ describe("usePointTransfer", () => {
 		expect(result.current.balance).toBe(7n);
 	});
 
-	it("keeps the chain balance when the submitted transaction reverts", async () => {
+	it("does not report a mined reverted receipt as success", async () => {
 		mocks.writeContractAsync.mockResolvedValue(transactionHash);
 		const { result, rerender } = renderHook(() => usePointTransfer());
 		fillValidTransfer(result);
 		await act(async () => result.current.transfer());
 
 		receiptState = {
-			error: new Error("private receipt details"),
-			isError: true,
+			data: { status: "reverted" },
+			error: null,
+			isError: false,
 			isPending: false,
-			isSuccess: false,
+			isSuccess: true,
 		};
 		rerender();
 
 		await waitFor(() => expect(result.current.phase).toBe("write-error"));
+		expect(result.current.message).toBe(
+			"交易已上链但执行失败，成长星没有转移。",
+		);
+		expect(mocks.invalidateQueries).not.toHaveBeenCalled();
 		expect(result.current.balance).toBe(7n);
 	});
 });

@@ -60,6 +60,18 @@ describe("wallet error messages", () => {
 		).toBe(message);
 	});
 
+	it("maps a viem custom error nested under cause.data", () => {
+		expect(
+			toWalletMessage({
+				shortMessage: "outer provider wrapper",
+				cause: {
+					shortMessage: "contract reverted with private details",
+					data: { errorName: "InsufficientTransferableBalance" },
+				},
+			}),
+		).toBe("可赠送成长星不足。");
+	});
+
 	it("hides unknown provider details", () => {
 		expect(
 			toWalletMessage({

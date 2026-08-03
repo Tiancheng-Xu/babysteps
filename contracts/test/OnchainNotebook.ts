@@ -117,6 +117,10 @@ describe("OnchainNotebook", async () => {
 			await notebook.read.getGrowthStage([author.account.address]),
 			1,
 		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			3n,
+		);
 
 		await notebook.write.recordActivity([1], { account: author.account });
 		assert.equal(
@@ -126,6 +130,10 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getGrowthStage([author.account.address]),
 			2,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			8n,
 		);
 
 		await notebook.write.recordActivity([2], { account: author.account });
@@ -140,6 +148,24 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getTransferableBalance([author.account.address]),
 			15n,
+		);
+	});
+
+	it("allows transferring the exact full available balance", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([0], { account: author.account });
+
+		await viem.assertions.emitWithArgs(
+			notebook.write.transferGrowthPoints([reader.account.address, 3n], {
+				account: author.account,
+			}),
+			notebook,
+			"GrowthPointsTransferred",
+			[author.account.address, reader.account.address, 3n, 0n, 3n],
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			0n,
 		);
 	});
 
@@ -399,6 +425,9 @@ describe("OnchainNotebook", async () => {
 			account: author.account,
 		});
 		await notebook.write.recordActivity([0], { account: author.account });
+		await notebook.write.transferGrowthPoints([reader.account.address, 2n], {
+			account: author.account,
+		});
 
 		assert.equal(
 			await notebook.read.getNote([author.account.address]),
@@ -419,6 +448,14 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.hasRecordedToday([author.account.address, 0]),
 			true,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			1n,
+		);
+		assert.equal(
+			await notebook.read.getTransferableBalance([reader.account.address]),
+			2n,
 		);
 	});
 });

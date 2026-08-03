@@ -5,6 +5,7 @@ import { validatePointTransfer } from "./pointTransferModel";
 
 const sender = "0x1111111111111111111111111111111111111111" as Address;
 const recipient = "0x2222222222222222222222222222222222222222";
+const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 describe("point transfer validation", () => {
 	it("normalizes a valid recipient and parses an integer amount", () => {
@@ -41,6 +42,20 @@ describe("point transfer validation", () => {
 		).toEqual({
 			ok: false,
 			message: "不能把成长星赠送给当前钱包。",
+		});
+	});
+
+	it("rejects the zero address before contract simulation", () => {
+		expect(
+			validatePointTransfer({
+				sender,
+				balance: 7n,
+				recipient: zeroAddress,
+				amount: "1",
+			}),
+		).toEqual({
+			ok: false,
+			message: "请输入有效的 Sepolia 收款钱包地址。",
 		});
 	});
 

@@ -1,4 +1,4 @@
-import { type Address, getAddress, isAddress } from "viem";
+import { type Address, getAddress, isAddress, zeroAddress } from "viem";
 
 export type PointTransferValidation =
 	| { ok: true; recipient: Address; amount: bigint }
@@ -17,7 +17,7 @@ export function validatePointTransfer({
 	recipient,
 	amount,
 }: PointTransferInput): PointTransferValidation {
-	if (!isAddress(recipient)) {
+	if (!isAddress(recipient) || recipient.toLowerCase() === zeroAddress) {
 		return {
 			ok: false,
 			message: "请输入有效的 Sepolia 收款钱包地址。",

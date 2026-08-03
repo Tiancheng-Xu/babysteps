@@ -1,5 +1,7 @@
 type WalletError = {
+	cause?: unknown;
 	code?: unknown;
+	data?: unknown;
 	errorName?: unknown;
 	shortMessage?: unknown;
 };
@@ -10,12 +12,32 @@ function getWalletError(error: unknown): WalletError | undefined {
 		: undefined;
 }
 
+function getNestedErrorName(error: unknown) {
+	const seen = new Set<object>();
+	let current = error;
+	for (let depth = 0; depth < 8; depth += 1) {
+		const walletError = getWalletError(current);
+		if (!walletError || seen.has(walletError)) return undefined;
+		seen.add(walletError);
+		if (typeof walletError.errorName === "string") {
+			return walletError.errorName;
+		}
+		const data = getWalletError(walletError.data);
+		if (typeof data?.errorName === "string") {
+			return data.errorName;
+		}
+		current = walletError.cause;
+	}
+	return undefined;
+}
+
 export function toWalletMessage(error: unknown) {
 	if (error === undefined) {
 		return "未检测到钱包，请安装或解锁 MetaMask 后重试。";
 	}
 
 	const walletError = getWalletError(error);
+	const errorName = getNestedErrorName(error);
 	if (walletError?.code === 4001) {
 		return "你取消了钱包操作，草稿仍然保留。";
 	}
@@ -25,19 +47,19 @@ export function toWalletMessage(error: unknown) {
 	if (walletError?.code === -32603 || walletError?.code === -32000) {
 		return "网络请求失败，请检查网络后重试。";
 	}
-	if (walletError?.errorName === "ActivityAlreadyRecordedToday") {
+	if (errorName === "ActivityAlreadyRecordedToday") {
 		return "今天已经记录这项陪伴，北京时间明天 00:00 后再来。";
 	}
-	if (walletError?.errorName === "InvalidTransferRecipient") {
+	if (errorName === "InvalidTransferRecipient") {
 		return "请输入有效的 Sepolia 收款钱包地址。";
 	}
-	if (walletError?.errorName === "CannotTransferToSelf") {
+	if (errorName === "CannotTransferToSelf") {
 		return "不能把成长星赠送给当前钱包。";
 	}
-	if (walletError?.errorName === "InvalidTransferAmount") {
+	if (errorName === "InvalidTransferAmount") {
 		return "赠送数量必须是大于 0 的整数。";
 	}
-	if (walletError?.errorName === "InsufficientTransferableBalance") {
+	if (errorName === "InsufficientTransferableBalance") {
 		return "可赠送成长星不足。";
 	}
 

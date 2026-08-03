@@ -36,6 +36,7 @@ type TransactionPhase = Exclude<
 >;
 
 type SubmittedTransfer = {
+	sender: Address;
 	recipient: Address;
 	amount: bigint;
 };
@@ -107,11 +108,25 @@ export function usePointTransfer() {
 	}, [receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
+		if (
+			!receipt.isSuccess ||
+			receipt.data?.status !== "reverted" ||
+			!transactionHash
+		) {
+			return;
+		}
+		confirmedHashRef.current = transactionHash;
+		pendingRef.current = false;
+		setTransactionPhase("write-error");
+		setTransactionMessage("交易已上链但执行失败，成长星没有转移。");
+	}, [receipt.data?.status, receipt.isSuccess, transactionHash]);
+
+	useEffect(() => {
 		const submitted = submittedRef.current;
 		if (
 			!receipt.isSuccess ||
+			receipt.data?.status !== "success" ||
 			!transactionHash ||
-			!address ||
 			!submitted ||
 			confirmedHashRef.current === transactionHash
 		) {
@@ -119,7 +134,7 @@ export function usePointTransfer() {
 		}
 
 		confirmedHashRef.current = transactionHash;
-		const queryKeys = [address, submitted.recipient].map((account) =>
+		const queryKeys = [submitted.sender, submitted.recipient].map((account) =>
 			readContractQueryKey({
 				address: notebookAddress,
 				functionName: "getTransferableBalance",
@@ -143,7 +158,7 @@ export function usePointTransfer() {
 				setTransactionPhase("write-error");
 				setTransactionMessage("交易已确认，但刷新可赠送余额失败，请重试读取。");
 			});
-	}, [address, queryClient, receipt.isSuccess, transactionHash]);
+	}, [queryClient, receipt.data?.status, receipt.isSuccess, transactionHash]);
 
 	const transfer = useCallback(async () => {
 		if (pendingRef.current || walletState !== "ready" || !address) return;
@@ -156,6 +171,7 @@ export function usePointTransfer() {
 		pendingRef.current = true;
 		confirmedHashRef.current = undefined;
 		submittedRef.current = {
+			sender: address,
 			recipient: validation.recipient,
 			amount: validation.amount,
 		};
