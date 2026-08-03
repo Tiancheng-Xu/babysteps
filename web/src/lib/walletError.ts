@@ -28,6 +28,18 @@ export function toWalletMessage(error: unknown) {
 	if (walletError?.errorName === "ActivityAlreadyRecordedToday") {
 		return "今天已经记录这项陪伴，北京时间明天 00:00 后再来。";
 	}
+	if (walletError?.errorName === "InvalidTransferRecipient") {
+		return "请输入有效的 Sepolia 收款钱包地址。";
+	}
+	if (walletError?.errorName === "CannotTransferToSelf") {
+		return "不能把成长星赠送给当前钱包。";
+	}
+	if (walletError?.errorName === "InvalidTransferAmount") {
+		return "赠送数量必须是大于 0 的整数。";
+	}
+	if (walletError?.errorName === "InsufficientTransferableBalance") {
+		return "可赠送成长星不足。";
+	}
 
 	const shortMessage = walletError?.shortMessage;
 	if (

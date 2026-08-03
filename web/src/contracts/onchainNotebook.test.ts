@@ -33,4 +33,56 @@ describe("OnchainNotebook frontend ABI", () => {
 			],
 		});
 	});
+
+	it("encodes a transfer with only a recipient and integer amount", () => {
+		const recipient = "0x2222222222222222222222222222222222222222";
+		const data = encodeFunctionData({
+			abi: onchainNotebookAbi,
+			functionName: "transferGrowthPoints",
+			args: [recipient, 2n],
+		});
+
+		expect(decodeFunctionData({ abi: onchainNotebookAbi, data })).toEqual({
+			functionName: "transferGrowthPoints",
+			args: [recipient, 2n],
+		});
+	});
+
+	it("exposes the balance getter, transfer event, and exact custom errors", () => {
+		expect(
+			onchainNotebookAbi.find(
+				(item) =>
+					item.type === "function" && item.name === "getTransferableBalance",
+			),
+		).toMatchObject({
+			inputs: [{ type: "address" }],
+			outputs: [{ type: "uint256" }],
+		});
+		expect(
+			onchainNotebookAbi.find(
+				(item) =>
+					item.type === "event" && item.name === "GrowthPointsTransferred",
+			),
+		).toMatchObject({
+			inputs: [
+				{ type: "address" },
+				{ type: "address" },
+				{ type: "uint256" },
+				{ type: "uint256" },
+				{ type: "uint256" },
+			],
+		});
+
+		const errorNames = onchainNotebookAbi
+			.filter((item) => item.type === "error")
+			.map((item) => item.name);
+		expect(errorNames).toEqual(
+			expect.arrayContaining([
+				"InvalidTransferRecipient",
+				"CannotTransferToSelf",
+				"InvalidTransferAmount",
+				"InsufficientTransferableBalance",
+			]),
+		);
+	});
 });

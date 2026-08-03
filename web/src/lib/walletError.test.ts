@@ -46,6 +46,20 @@ describe("wallet error messages", () => {
 		).toBe("今天已经记录这项陪伴，北京时间明天 00:00 后再来。");
 	});
 
+	it.each([
+		["InvalidTransferRecipient", "请输入有效的 Sepolia 收款钱包地址。"],
+		["CannotTransferToSelf", "不能把成长星赠送给当前钱包。"],
+		["InvalidTransferAmount", "赠送数量必须是大于 0 的整数。"],
+		["InsufficientTransferableBalance", "可赠送成长星不足。"],
+	])("maps %s without exposing transfer arguments", (errorName, message) => {
+		expect(
+			toWalletMessage({
+				errorName,
+				shortMessage: `${errorName}(private provider details)`,
+			}),
+		).toBe(message);
+	});
+
 	it("hides unknown provider details", () => {
 		expect(
 			toWalletMessage({
