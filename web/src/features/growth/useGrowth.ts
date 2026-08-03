@@ -147,6 +147,12 @@ export function useGrowth() {
 				args: [address],
 				chainId: sepolia.id,
 			}),
+			readContractQueryKey({
+				address: notebookAddress,
+				functionName: "getTransferableBalance",
+				args: [address],
+				chainId: sepolia.id,
+			}),
 			...GROWTH_ACTIVITIES.map((activity) =>
 				readContractQueryKey({
 					address: notebookAddress,
@@ -175,7 +181,7 @@ export function useGrowth() {
 		if (
 			!receipt.isSuccess ||
 			!transactionHash ||
-			readQueryKeys.length !== 5 ||
+			readQueryKeys.length !== 6 ||
 			confirmedHashRef.current === transactionHash
 		) {
 			return;

@@ -237,7 +237,7 @@ describe("useGrowth", () => {
 		rerender();
 
 		await waitFor(() =>
-			expect(mocks.invalidateQueries).toHaveBeenCalledTimes(5),
+			expect(mocks.invalidateQueries).toHaveBeenCalledTimes(6),
 		);
 		expect(result.current.phase).toBe("confirming");
 
