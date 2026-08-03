@@ -29,7 +29,7 @@ export default defineConfig(({ command, mode }) => {
 	}
 
 	return {
-		// GitHub Pages hosts this repository at /course-homework/. Local and
+		// GitHub Pages hosts this repository at /fullstack-showcase/. Local and
 		// other deployments keep Vite's root default unless explicitly set.
 		base,
 		plugins: [react()],
