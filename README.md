@@ -65,9 +65,9 @@ RPC URL、部署钱包私钥和 Etherscan API Key 只通过 Hardhat 的交互式
 提示输入。不要写进命令行参数、`.env`、聊天、截图、日志或 Git：
 
 ```sh
-pnpm --filter @course-homework/web3-contracts exec hardhat keystore set SEPOLIA_RPC_URL
-pnpm --filter @course-homework/web3-contracts exec hardhat keystore set SEPOLIA_PRIVATE_KEY
-pnpm --filter @course-homework/web3-contracts exec hardhat keystore set ETHERSCAN_API_KEY
+pnpm --filter @course-homework/web3-contracts exec hardhat keystore set SEPOLIARPCURL
+pnpm --filter @course-homework/web3-contracts exec hardhat keystore set SEPOLIAPRIVATEKEY
+pnpm --filter @course-homework/web3-contracts exec hardhat keystore set ETHERSCANAPIKEY
 ```
 
 只使用专用测试钱包，不使用持有真实资产的钱包。
@@ -83,6 +83,16 @@ pnpm --filter @course-homework/web3-contracts deploy:verify:sepolia
 
 第二条命令会通过 Etherscan V2 API 请求源码验证。部署、验证和钱包签名都属于外部
 链上操作，必须在执行前确认账户、网络、合约候选提交和公开信息范围。
+
+## 已部署的 Sepolia 实例
+
+- 合约地址：[`0xeb7216D50a2708a59fef5322e452e34382aFCDaD`](https://sepolia.etherscan.io/address/0xeb7216D50a2708a59fef5322e452e34382aFCDaD#code)
+- 部署交易：[`0x2128ff…f674a`](https://sepolia.etherscan.io/tx/0x2128ff833511d6f6c03d9c60ab6f161f62909e6f00fedd80710a8826495f674a)
+- 部署区块：`11411013`（`2026-08-03T14:42:48.000Z`）
+- 源码验证：Etherscan `Source Code Verified · Exact Match`
+- Sourcify：[`chainId 11155111` 完整匹配源码](https://sourcify.dev/server/repo-ui/11155111/0xeb7216D50a2708a59fef5322e452e34382aFCDaD)
+
+以上地址和交易均为公开测试链证据，不包含任何钱包私钥或本地凭据。
 
 ## 验收证据
 

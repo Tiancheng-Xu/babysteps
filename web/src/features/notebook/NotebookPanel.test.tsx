@@ -71,6 +71,19 @@ describe("NotebookPanel", () => {
 		expect(mocks.clear).toHaveBeenCalledOnce();
 	});
 
+	it("disables clearing when the current onchain note is already empty", () => {
+		notebookState.chainNote = "";
+		render(<NotebookPanel />);
+
+		expect(
+			(
+				screen.getByRole("button", {
+					name: "清空当前便签",
+				}) as HTMLButtonElement
+			).disabled,
+		).toBe(true);
+	});
+
 	it("disables duplicate note writes during confirmation and keeps the receipt link visible", () => {
 		notebookState.phase = "confirming";
 		notebookState.message = "交易已广播，正在等待链上确认。";

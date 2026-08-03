@@ -16,11 +16,11 @@ export default defineConfig({
 		sepolia: {
 			type: "http",
 			chainType: "l1",
-			url: configVariable("SEPOLIA_RPC_URL"),
-			accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+			url: configVariable("SEPOLIARPCURL"),
+			accounts: [configVariable("SEPOLIAPRIVATEKEY")],
 		},
 	},
 	verify: {
-		etherscan: { apiKey: configVariable("ETHERSCAN_API_KEY") },
+		etherscan: { apiKey: configVariable("ETHERSCANAPIKEY") },
 	},
 });

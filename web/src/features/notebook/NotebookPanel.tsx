@@ -81,7 +81,7 @@ export function NotebookPanel() {
 						<button
 							type="button"
 							className="button button--danger"
-							disabled={!notebook.canClear || isPending}
+							disabled={!notebook.canClear || !notebook.chainNote || isPending}
 							onClick={() => setClearArmed(true)}
 						>
 							清空当前便签

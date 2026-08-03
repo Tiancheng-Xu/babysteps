@@ -22,9 +22,9 @@ describe("OnchainNotebook Ignition module", () => {
 		);
 
 		for (const variable of [
-			"SEPOLIA_RPC_URL",
-			"SEPOLIA_PRIVATE_KEY",
-			"ETHERSCAN_API_KEY",
+			"SEPOLIARPCURL",
+			"SEPOLIAPRIVATEKEY",
+			"ETHERSCANAPIKEY",
 		]) {
 			assert.match(readme, new RegExp(variable));
 		}
@@ -37,9 +37,13 @@ describe("OnchainNotebook Ignition module", () => {
 			readme,
 			/pnpm --filter @course-homework\/web3-contracts deploy:verify:sepolia/,
 		);
-		assert.doesNotMatch(readme, /https?:\/\//i);
+		const credentialsSection = readme.match(
+			/## Sepolia 凭据[\s\S]*?(?=\n## )/,
+		)?.[0];
+		assert.ok(credentialsSection);
+		assert.doesNotMatch(credentialsSection, /https?:\/\//i);
 		assert.doesNotMatch(
-			readme,
+			credentialsSection,
 			/(?:private.?key|api.?key|rpc.?url)\s*=\s*.{12,}/i,
 		);
 	});

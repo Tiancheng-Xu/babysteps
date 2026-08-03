@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check": "biome check hardhat.config.ts ignition test",
+		"check": "biome check hardhat.config.ts ignition/modules test",
 		"compile": "hardhat compile",
 		"test": "hardhat test",
 		"typecheck": "tsc --noEmit",
