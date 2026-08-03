@@ -56,7 +56,11 @@ type ReceiptState = {
 let receiptState: ReceiptState;
 let points = 0n;
 let stageCode = 0;
-let completed = [false, false, false];
+let availability: Array<readonly [boolean, boolean]> = [
+	[true, false],
+	[true, false],
+	[true, false],
+];
 
 function installMetaMask() {
 	Object.defineProperty(window, "ethereum", {
@@ -66,10 +70,10 @@ function installMetaMask() {
 }
 
 function successfulRead(functionName: string, args?: readonly unknown[]) {
-	let data: bigint | number | boolean;
+	let data: bigint | number | readonly [boolean, boolean];
 	if (functionName === "getGrowthPoints") data = points;
 	else if (functionName === "getGrowthStage") data = stageCode;
-	else data = completed[Number(args?.[1] ?? 0)] ?? false;
+	else data = availability[Number(args?.[1] ?? 0)] ?? [false, false];
 
 	return {
 		data,
@@ -97,7 +101,11 @@ describe("useGrowth", () => {
 		installMetaMask();
 		points = 0n;
 		stageCode = 0;
-		completed = [false, false, false];
+		availability = [
+			[true, false],
+			[true, false],
+			[true, false],
+		];
 		mocks.useAccount.mockReturnValue({
 			address: account,
 			chainId: 11155111,
@@ -138,7 +146,11 @@ describe("useGrowth", () => {
 		expect(result.current.points).toBeUndefined();
 		expect(mocks.useReadContract).toHaveBeenCalledTimes(5);
 		for (const [options] of mocks.useReadContract.mock.calls) {
-			expect(options.query).toEqual({ enabled: false });
+			expect(options.query).toEqual(
+				options.functionName === "getActivityAvailability"
+					? { enabled: false, refetchInterval: 60_000 }
+					: { enabled: false },
+			);
 		}
 	});
 
@@ -166,21 +178,53 @@ describe("useGrowth", () => {
 		expect(mocks.readRefetch).toHaveBeenCalledTimes(5);
 	});
 
-	it("maps successful reads to points, stage, and exact daily flags", () => {
+	it("polls and maps exact activity availability without exposing times", () => {
 		points = 15n;
 		stageCode = 3;
-		completed = [true, false, true];
+		availability = [
+			[false, false],
+			[true, false],
+			[false, true],
+		];
 
 		const { result } = renderHook(() => useGrowth());
 
 		expect(result.current.points).toBe(15n);
 		expect(result.current.stage).toBe("star");
-		expect(result.current.todayByActivity).toEqual({
-			meal: true,
-			walk: false,
-			read: true,
+		expect(result.current.availabilityByActivity).toEqual({
+			meal: { available: false, dailyLimitReached: false },
+			walk: { available: true, dailyLimitReached: false },
+			read: { available: false, dailyLimitReached: true },
 		});
+		const activityReads = mocks.useReadContract.mock.calls.filter(
+			([options]) => options.functionName === "getActivityAvailability",
+		);
+		expect(activityReads).toHaveLength(3);
+		for (const [options] of activityReads) {
+			expect(options.query).toEqual({
+				enabled: true,
+				refetchInterval: 60_000,
+			});
+		}
 	});
+
+	it.each([
+		[[false, false], "星宝的这个活动还没有准备好。"],
+		[[false, true], "星宝今天已经很充实了。"],
+	] as const)(
+		"does not simulate an unavailable activity with state %j",
+		async (mealAvailability, message) => {
+			availability[0] = mealAvailability;
+			const { result } = renderHook(() => useGrowth());
+
+			await act(async () => result.current.recordActivity("meal"));
+
+			expect(mocks.simulateContract).not.toHaveBeenCalled();
+			expect(mocks.writeContractAsync).not.toHaveBeenCalled();
+			expect(result.current.phase).toBe("write-error");
+			expect(result.current.message).toBe(message);
+		},
+	);
 
 	it("simulates the selected activity before asking the wallet to write", async () => {
 		mocks.writeContractAsync.mockResolvedValue(transactionHash);
@@ -278,15 +322,18 @@ describe("useGrowth", () => {
 
 		await act(async () => result.current.recordActivity("read"));
 
-		expect(result.current.phase).toBe("write-error");
+		expect(result.current.phase).toBe("rejected");
 		expect(result.current.message).toBe("已取消，本次没有写入测试链。");
 		expect(result.current.points).toBe(8n);
 		expect(result.current.stage).toBe("explorer");
 	});
 
-	it("maps a duplicate activity simulation to the Beijing reset message", async () => {
+	it.each([
+		["ActivityCoolingDown", "星宝的这个活动还没有准备好。"],
+		["DailyActivityLimitReached", "星宝今天已经很充实了。"],
+	])("maps a nested %s simulation safely", async (errorName, message) => {
 		mocks.simulateContract.mockRejectedValue({
-			errorName: "ActivityAlreadyRecordedToday",
+			cause: { data: { errorName } },
 		});
 		const { result } = renderHook(() => useGrowth());
 
@@ -294,9 +341,7 @@ describe("useGrowth", () => {
 
 		expect(mocks.writeContractAsync).not.toHaveBeenCalled();
 		expect(result.current.phase).toBe("write-error");
-		expect(result.current.message).toBe(
-			"今天已经记录这项陪伴，北京时间明天 00:00 后再来。",
-		);
+		expect(result.current.message).toBe(message);
 	});
 
 	it("keeps points unchanged when the submitted transaction reverts", async () => {

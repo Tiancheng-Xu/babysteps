@@ -47,8 +47,11 @@ export function toWalletMessage(error: unknown) {
 	if (walletError?.code === -32603 || walletError?.code === -32000) {
 		return "网络请求失败，请检查网络后重试。";
 	}
-	if (errorName === "ActivityAlreadyRecordedToday") {
-		return "今天已经记录这项陪伴，北京时间明天 00:00 后再来。";
+	if (errorName === "ActivityCoolingDown") {
+		return "星宝的这个活动还没有准备好。";
+	}
+	if (errorName === "DailyActivityLimitReached") {
+		return "星宝今天已经很充实了。";
 	}
 	if (errorName === "InvalidTransferRecipient") {
 		return "请输入有效的 Sepolia 收款钱包地址。";

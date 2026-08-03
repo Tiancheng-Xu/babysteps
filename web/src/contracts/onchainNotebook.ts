@@ -13,7 +13,8 @@ export const notebookAddress: Address = configuredNotebookAddress;
 
 export const onchainNotebookAbi = parseAbi([
 	"error NoteTooLong(uint256 actualLength, uint256 maximumLength)",
-	"error ActivityAlreadyRecordedToday(address account, uint8 activity, uint256 utc8DayId)",
+	"error ActivityCoolingDown(address account, uint8 activity)",
+	"error DailyActivityLimitReached(address account, uint8 activity, uint256 utc8DayId)",
 	"error InvalidTransferRecipient(address recipient)",
 	"error CannotTransferToSelf()",
 	"error InvalidTransferAmount()",
@@ -29,7 +30,7 @@ export const onchainNotebookAbi = parseAbi([
 	"function getGrowthPoints(address account) view returns (uint256)",
 	"function getTransferableBalance(address account) view returns (uint256)",
 	"function transferGrowthPoints(address recipient, uint256 amount)",
-	"function hasRecordedToday(address account, uint8 activity) view returns (bool)",
+	"function getActivityAvailability(address account, uint8 activity) view returns (bool available, bool dailyLimitReached)",
 	"function getGrowthStage(address account) view returns (uint8)",
 	"function currentUtc8DayId() view returns (uint256)",
 ]);

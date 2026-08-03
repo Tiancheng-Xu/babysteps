@@ -36,15 +36,24 @@ describe("wallet error messages", () => {
 		).toBe("合约执行失败，请检查内容后重试。");
 	});
 
-	it("maps a repeated activity without exposing revert arguments", () => {
-		expect(
-			toWalletMessage({
-				errorName: "ActivityAlreadyRecordedToday",
-				shortMessage:
-					"ActivityAlreadyRecordedToday(0xprivate-provider-details, 0, 20668)",
-			}),
-		).toBe("今天已经记录这项陪伴，北京时间明天 00:00 后再来。");
-	});
+	it.each([
+		["ActivityCoolingDown", "星宝的这个活动还没有准备好。"],
+		["DailyActivityLimitReached", "星宝今天已经很充实了。"],
+	])(
+		"maps nested %s without exposing timing arguments",
+		(errorName, message) => {
+			const rendered = toWalletMessage({
+				shortMessage: "outer provider wrapper",
+				cause: {
+					shortMessage: `${errorName}(0xprivate-provider-details, 0, 20668)`,
+					data: { errorName },
+				},
+			});
+
+			expect(rendered).toBe(message);
+			expect(rendered).not.toMatch(/00:00|小时|分钟|倒计时|下次/);
+		},
+	);
 
 	it.each([
 		["InvalidTransferRecipient", "请输入有效的 Sepolia 收款钱包地址。"],

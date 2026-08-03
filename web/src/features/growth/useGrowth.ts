@@ -33,11 +33,17 @@ export type GrowthPhase =
 	| "awaiting-signature"
 	| "confirming"
 	| "success"
+	| "rejected"
 	| "write-error";
 
 type TransactionPhase = Exclude<GrowthPhase, "idle" | "reading" | "read-error">;
 
-type TodayByActivity = Record<GrowthActivityId, boolean>;
+export type ActivityAvailability = {
+	available: boolean;
+	dailyLimitReached: boolean;
+};
+
+type AvailabilityByActivity = Record<GrowthActivityId, ActivityAvailability>;
 
 function isUserRejected(error: unknown) {
 	return (
@@ -89,26 +95,26 @@ export function useGrowth() {
 	const mealRead = useReadContract({
 		address: notebookAddress,
 		abi: onchainNotebookAbi,
-		functionName: "hasRecordedToday",
+		functionName: "getActivityAvailability",
 		args: address ? [address, 0] : undefined,
 		chainId: sepolia.id,
-		query: { enabled: readEnabled },
+		query: { enabled: readEnabled, refetchInterval: 60_000 },
 	});
 	const walkRead = useReadContract({
 		address: notebookAddress,
 		abi: onchainNotebookAbi,
-		functionName: "hasRecordedToday",
+		functionName: "getActivityAvailability",
 		args: address ? [address, 1] : undefined,
 		chainId: sepolia.id,
-		query: { enabled: readEnabled },
+		query: { enabled: readEnabled, refetchInterval: 60_000 },
 	});
 	const readActivityRead = useReadContract({
 		address: notebookAddress,
 		abi: onchainNotebookAbi,
-		functionName: "hasRecordedToday",
+		functionName: "getActivityAvailability",
 		args: address ? [address, 2] : undefined,
 		chainId: sepolia.id,
-		query: { enabled: readEnabled },
+		query: { enabled: readEnabled, refetchInterval: 60_000 },
 	});
 
 	const reads = [pointsRead, stageRead, mealRead, walkRead, readActivityRead];
@@ -124,13 +130,26 @@ export function useGrowth() {
 	if (readsSucceeded && typeof stageRead.data === "number") {
 		stage = growthStageFromCode(stageRead.data);
 	}
-	const todayByActivity: TodayByActivity | undefined = readsSucceeded
-		? {
-				meal: mealRead.data === true,
-				walk: walkRead.data === true,
-				read: readActivityRead.data === true,
-			}
-		: undefined;
+	const availabilityByActivity: AvailabilityByActivity | undefined =
+		readsSucceeded &&
+		mealRead.data !== undefined &&
+		walkRead.data !== undefined &&
+		readActivityRead.data !== undefined
+			? {
+					meal: {
+						available: mealRead.data[0],
+						dailyLimitReached: mealRead.data[1],
+					},
+					walk: {
+						available: walkRead.data[0],
+						dailyLimitReached: walkRead.data[1],
+					},
+					read: {
+						available: readActivityRead.data[0],
+						dailyLimitReached: readActivityRead.data[1],
+					},
+				}
+			: undefined;
 
 	const readQueryKeys = useMemo(() => {
 		if (!address) return [];
@@ -156,7 +175,7 @@ export function useGrowth() {
 			...GROWTH_ACTIVITIES.map((activity) =>
 				readContractQueryKey({
 					address: notebookAddress,
-					functionName: "hasRecordedToday",
+					functionName: "getActivityAvailability",
 					args: [address, activity.contractValue],
 					chainId: sepolia.id,
 				}),
@@ -212,10 +231,13 @@ export function useGrowth() {
 			if (pendingRef.current || walletState !== "ready" || !address) return;
 			const activity = GROWTH_ACTIVITIES.find(({ id }) => id === activityId);
 			if (!activity) return;
-			if (todayByActivity?.[activityId]) {
+			const availability = availabilityByActivity?.[activityId];
+			if (!availability?.available) {
 				setTransactionPhase("write-error");
 				setTransactionMessage(
-					"今天已经记录这项陪伴，北京时间明天 00:00 后再来。",
+					availability?.dailyLimitReached
+						? "星宝今天已经很充实了。"
+						: "星宝的这个活动还没有准备好。",
 				);
 				return;
 			}
@@ -242,7 +264,7 @@ export function useGrowth() {
 				setTransactionMessage("交易已广播，正在等待测试链确认。");
 			} catch (error) {
 				pendingRef.current = false;
-				setTransactionPhase("write-error");
+				setTransactionPhase(isUserRejected(error) ? "rejected" : "write-error");
 				setTransactionMessage(
 					isUserRejected(error)
 						? "已取消，本次没有写入测试链。"
@@ -250,7 +272,7 @@ export function useGrowth() {
 				);
 			}
 		},
-		[address, todayByActivity, walletState, writeContractAsync],
+		[address, availabilityByActivity, walletState, writeContractAsync],
 	);
 
 	const retryRead = useCallback(
@@ -303,7 +325,7 @@ export function useGrowth() {
 		walletState,
 		points,
 		stage,
-		todayByActivity,
+		availabilityByActivity,
 		phase,
 		message,
 		transactionHash,

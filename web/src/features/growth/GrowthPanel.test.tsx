@@ -1,4 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import type { Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,7 +33,11 @@ describe("GrowthPanel", () => {
 			walletState: "ready",
 			points: 8n,
 			stage: "explorer",
-			todayByActivity: { meal: false, walk: false, read: false },
+			availabilityByActivity: {
+				meal: { available: true, dailyLimitReached: false },
+				walk: { available: true, dailyLimitReached: false },
+				read: { available: true, dailyLimitReached: false },
+			},
 			phase: "idle",
 			message: undefined,
 			transactionHash: undefined,
@@ -69,16 +79,56 @@ describe("GrowthPanel", () => {
 		expect(screen.queryByRole("button", { name: "记录这次陪伴" })).toBeNull();
 	});
 
-	it("turns already-recorded activities into story-state messages without leaking a timer", () => {
-		growthState.todayByActivity = { meal: true, walk: false, read: true };
+	it("renders every cooldown story without buttons or timing text", () => {
+		growthState.availabilityByActivity = {
+			meal: { available: false, dailyLimitReached: false },
+			walk: { available: false, dailyLimitReached: false },
+			read: { available: false, dailyLimitReached: false },
+		};
 		render(<GrowthPanel />);
 
 		expect(screen.getByText("星宝现在还不饿")).toBeTruthy();
+		expect(screen.getByText("星宝正在休息")).toBeTruthy();
 		expect(screen.getByText("星宝还在回味故事")).toBeTruthy();
 		expect(screen.queryByText(/小时|分钟|倒计时|下次/)).toBeNull();
-		expect(screen.getAllByRole("button", { name: "记录这次陪伴" })).toHaveLength(
-			1,
+		expect(screen.queryByRole("button", { name: "记录这次陪伴" })).toBeNull();
+	});
+
+	it("gives the daily limit priority and keeps the card button-free", () => {
+		growthState.availabilityByActivity = {
+			meal: { available: false, dailyLimitReached: true },
+			walk: { available: true, dailyLimitReached: false },
+			read: { available: true, dailyLimitReached: false },
+		};
+		render(<GrowthPanel />);
+
+		expect(screen.getByText("星宝今天已经很充实了")).toBeTruthy();
+		expect(
+			screen.getAllByRole("button", { name: "记录这次陪伴" }),
+		).toHaveLength(2);
+	});
+
+	it.each([
+		["rejected", "已取消，本次没有写入测试链。"],
+		["write-error", "本次记录失败，积分没有变化。"],
+	] as const)("restores the active button after %s", (phase, message) => {
+		const { rerender } = render(<GrowthPanel />);
+		const mealCard = screen
+			.getByRole("heading", { name: "喂养陪伴" })
+			.closest("article");
+		if (!mealCard) throw new Error("Expected the meal activity card");
+		fireEvent.click(
+			within(mealCard).getByRole("button", { name: "记录这次陪伴" }),
 		);
+
+		growthState.phase = phase;
+		growthState.message = message;
+		rerender(<GrowthPanel />);
+
+		expect(within(mealCard).getByText(message)).toBeTruthy();
+		expect(
+			within(mealCard).getByRole("button", { name: "记录这次陪伴" }),
+		).toBeTruthy();
 	});
 
 	it("keeps pending and confirmed transaction feedback visible with a Sepolia receipt link", () => {

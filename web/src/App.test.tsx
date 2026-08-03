@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import type { Address, Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,7 +89,11 @@ describe("BabySteps App", () => {
 			walletState: "ready",
 			points: 0n,
 			stage: "egg",
-			todayByActivity: { meal: false, walk: false, read: false },
+			availabilityByActivity: {
+				meal: { available: true, dailyLimitReached: false },
+				walk: { available: true, dailyLimitReached: false },
+				read: { available: true, dailyLimitReached: false },
+			},
 			phase: "idle",
 			message: undefined,
 			transactionHash: undefined,
@@ -182,9 +192,7 @@ describe("BabySteps App", () => {
 			screen.getByRole("heading", { name: "这份作业展示了什么？" }),
 		).toBeTruthy();
 		expect(
-			screen.getByText(
-				"React + wagmi 连接 MetaMask，并把合约作为数据后端。",
-			),
+			screen.getByText("React + wagmi 连接 MetaMask，并把合约作为数据后端。"),
 		).toBeTruthy();
 		expect(
 			screen.getByText("交易哈希只代表广播；receipt 成功后才刷新链上状态。"),
@@ -198,22 +206,31 @@ describe("BabySteps App", () => {
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {
-		growthState.todayByActivity = { meal: true, walk: false, read: false };
+		growthState.availabilityByActivity = {
+			meal: { available: false, dailyLimitReached: false },
+			walk: { available: true, dailyLimitReached: false },
+			read: { available: false, dailyLimitReached: true },
+		};
 		render(<App />);
 
 		expect(screen.getByText("星宝现在还不饿")).toBeTruthy();
+		expect(screen.getByText("星宝今天已经很充实了")).toBeTruthy();
 		expect(
 			screen.queryByRole("button", {
 				name: "记录喂养陪伴，获得 3 枚成长星",
 			}),
 		).toBeNull();
 
-		const walkCard = screen.getByRole("heading", { name: "户外陪伴" }).closest("article");
+		const walkCard = screen
+			.getByRole("heading", { name: "户外陪伴" })
+			.closest("article");
 		if (!walkCard) {
 			throw new Error("Expected to find the walk activity card");
 		}
 
-		fireEvent.click(within(walkCard).getByRole("button", { name: "记录这次陪伴" }));
+		fireEvent.click(
+			within(walkCard).getByRole("button", { name: "记录这次陪伴" }),
+		);
 		expect(mocks.recordActivity).toHaveBeenCalledWith("walk");
 	});
 
