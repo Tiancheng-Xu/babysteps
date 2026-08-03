@@ -1,0 +1,6 @@
+import { vi } from "vitest";
+
+vi.stubEnv(
+	"VITE_ONCHAIN_NOTEBOOK_ADDRESS",
+	"0x0000000000000000000000000000000000000001",
+);
