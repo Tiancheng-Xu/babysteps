@@ -86,6 +86,8 @@ pnpm --filter @course-homework/web3-contracts deploy:verify:sepolia
 
 ## 已部署的 Sepolia 实例
 
+- 公网产品页：[BabySteps · 成长星球](https://tiancheng-xu.github.io/fullstack-showcase/)
+- 公开源码仓库：[Tiancheng-Xu/fullstack-showcase](https://github.com/Tiancheng-Xu/fullstack-showcase)
 - 合约地址：[`0xeb7216D50a2708a59fef5322e452e34382aFCDaD`](https://sepolia.etherscan.io/address/0xeb7216D50a2708a59fef5322e452e34382aFCDaD#code)
 - 部署交易：[`0x2128ff…f674a`](https://sepolia.etherscan.io/tx/0x2128ff833511d6f6c03d9c60ab6f161f62909e6f00fedd80710a8826495f674a)
 - 部署区块：`11411013`（`2026-08-03T14:42:48.000Z`）
