@@ -23,8 +23,8 @@ export function NotebookPanel() {
 		>
 			<div className="story-card__header">
 				<div>
-					<h2 id="notebook-heading">步骤 4 · 原始作业能力</h2>
-					<h3 className="story-card__title">公开链上便签（课程实验）</h3>
+					<h2 id="notebook-heading">步骤 4 · 链上家庭便签</h2>
+					<h3 className="story-card__title">公开链上便签</h3>
 				</div>
 				<span className="status-pill status-pill--warning">公开内容</span>
 			</div>

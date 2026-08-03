@@ -144,10 +144,10 @@ describe("BabySteps App", () => {
 		growthState.stage = "star";
 		render(<App />);
 
-		expect(screen.getByText("课程概念验证 · Sepolia 测试网")).toBeTruthy();
+		expect(screen.getByText("Sepolia 产品原型 · 测试网")).toBeTruthy();
 		expect(
 			screen.getByText(
-				"成长星无价格，只用于 Sepolia 课程演示；可在测试钱包间赠送，不可兑换。",
+				"成长星无价格，只用于 Sepolia 测试网体验；可在测试钱包间赠送，不可兑换。",
 			),
 		).toBeTruthy();
 		expect(screen.getByText(/请只用专用测试钱包/)).toBeTruthy();
@@ -186,11 +186,10 @@ describe("BabySteps App", () => {
 			screen.getByRole("heading", { name: "步骤 3 · 测试钱包赠送" }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: "步骤 4 · 原始作业能力" }),
+			screen.getByRole("heading", { name: "步骤 4 · 链上家庭便签" }),
 		).toBeTruthy();
-		expect(
-			screen.getByRole("heading", { name: "这份作业展示了什么？" }),
-		).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "核心技术能力" })).toBeTruthy();
+		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
 		expect(
 			screen.getByText("React + wagmi 连接 MetaMask，并把合约作为数据后端。"),
 		).toBeTruthy();
@@ -301,9 +300,7 @@ describe("BabySteps App", () => {
 	it("keeps the notebook visibly separate and warns against child data", () => {
 		render(<App />);
 
-		expect(
-			screen.getByRole("heading", { name: "公开链上便签（课程实验）" }),
-		).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "公开链上便签" })).toBeTruthy();
 		expect(screen.getByText(/历史交易仍然公开/)).toBeTruthy();
 		expect(
 			screen.getByPlaceholderText("今天完成了一次 Sepolia 测试"),

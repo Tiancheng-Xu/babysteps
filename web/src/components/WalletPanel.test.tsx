@@ -72,6 +72,7 @@ describe("WalletPanel", () => {
 		expect(
 			screen.getByRole("link", { name: "安装 MetaMask" }).getAttribute("href"),
 		).toBe("https://metamask.io/download/");
+		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
 	});
 
 	it("shows the disconnected state in plain language for non-technical users", () => {
@@ -85,6 +86,7 @@ describe("WalletPanel", () => {
 
 		expect(screen.getByText("尚未连接测试钱包")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "连接 MetaMask" })).toBeTruthy();
+		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
 	});
 
 	it("keeps the connect action visibly pending without allowing a duplicate click", () => {
@@ -124,6 +126,7 @@ describe("WalletPanel", () => {
 		expect(screen.getByText("以太坊主网")).toBeTruthy();
 		expect(screen.getByText("目标网络")).toBeTruthy();
 		expect(screen.getByText("Sepolia 测试网")).toBeTruthy();
+		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
 
 		fireEvent.click(screen.getByRole("button", { name: "切换到 Sepolia" }));
 		expect(mocks.switchChainAsync).toHaveBeenCalledWith({ chainId: 11155111 });

@@ -45,7 +45,8 @@ export function WalletPanel() {
 							尚未安装 MetaMask
 						</span>
 						<p>
-							未检测到 MetaMask。请先安装，再使用只用于课程演示的测试账户连接。
+							未检测到
+							MetaMask。请先安装，再使用只用于测试网体验的专用账户连接。
 						</p>
 					</div>
 					<div className="wallet-support">
@@ -77,7 +78,7 @@ export function WalletPanel() {
 					<div>
 						<h2 id="wallet-heading">步骤 1 · 连接测试钱包</h2>
 						<p className="story-card__lead">
-							连接后会读取钱包地址、Sepolia 网络和课程所需的公开链上状态。
+							连接后会读取钱包地址、Sepolia 网络和本产品所需的公开链上状态。
 						</p>
 					</div>
 				</div>
@@ -142,7 +143,7 @@ export function WalletPanel() {
 					</p>
 					<p>
 						{wrongNetwork
-							? "当前钱包已连接，但还没有切换到课程要求的 Sepolia 测试网。"
+							? "当前钱包已连接，但还没有切换到本产品使用的 Sepolia 测试网。"
 							: "当前测试账户已经准备好，可以继续记录陪伴、赠送成长星和保存公开便签。"}
 					</p>
 				</div>

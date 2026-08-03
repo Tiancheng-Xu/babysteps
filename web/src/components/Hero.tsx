@@ -14,7 +14,7 @@ export function Hero() {
 				<div className="brand-lockup">
 					<BrandMark />
 					<div>
-						<p className="hero-panel__eyebrow">课程概念验证 · Sepolia 测试网</p>
+						<p className="hero-panel__eyebrow">Sepolia 产品原型 · 测试网</p>
 						<h1 id="hero-heading">BabySteps · 成长星球</h1>
 					</div>
 				</div>
@@ -22,9 +22,10 @@ export function Hero() {
 					记录一件小小的陪伴，让原创虚拟伙伴“星宝”在测试链上慢慢长大。
 				</p>
 				<p className="hero-panel__value">
-					成长星无价格，只用于 Sepolia 课程演示；可在测试钱包间赠送，不可兑换。
+					成长星无价格，只用于 Sepolia
+					测试网体验；可在测试钱包间赠送，不可兑换。
 				</p>
-				<ul className="hero-panel__chips" aria-label="课程演示边界">
+				<ul className="hero-panel__chips" aria-label="测试网体验边界">
 					<li>公开链上便签</li>
 					<li>双账本成长星</li>
 					<li>测试钱包间赠送</li>

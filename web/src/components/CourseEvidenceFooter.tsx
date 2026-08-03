@@ -10,7 +10,7 @@ export function CourseEvidenceFooter() {
 		<footer className="course-evidence">
 			<div className="story-card course-evidence__shell">
 				<div className="course-evidence__copy">
-					<h2>这份作业展示了什么？</h2>
+					<h2>核心技术能力</h2>
 					<ul className="course-evidence__list">
 						{EVIDENCE_POINTS.map((item) => (
 							<li key={item}>{item}</li>
@@ -18,10 +18,10 @@ export function CourseEvidenceFooter() {
 					</ul>
 				</div>
 				<div className="course-evidence__card">
-					<p className="course-evidence__card-title">课程验收要点</p>
+					<p className="course-evidence__card-title">链上交互说明</p>
 					<p>
-						页面保留了公开链上便签、双账本成长、测试链赠送、钱包网络识别和
-						transaction receipt 成功后再刷新的课程关键证据。
+						页面覆盖公开链上便签、双账本成长、测试链赠送、钱包网络识别和
+						transaction receipt 成功后再刷新的完整链上交互闭环。
 					</p>
 				</div>
 			</div>

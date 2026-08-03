@@ -47,8 +47,10 @@ describe("NotebookPanel", () => {
 		render(<NotebookPanel />);
 
 		expect(
-			screen.getByRole("heading", { name: "步骤 4 · 原始作业能力" }),
+			screen.getByRole("heading", { name: "步骤 4 · 链上家庭便签" }),
 		).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "公开链上便签" })).toBeTruthy();
+		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
 		expect(screen.getByText("公开内容")).toBeTruthy();
 		expect(screen.getByText(/链上内容公开/)).toBeTruthy();
 		expect(screen.getByText("当前链上便签")).toBeTruthy();
