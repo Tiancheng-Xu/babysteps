@@ -1,5 +1,6 @@
 import { WalletPanel } from "./components/WalletPanel";
 import { GrowthPanel } from "./features/growth/GrowthPanel";
+import { PointTransferPanel } from "./features/growth/PointTransferPanel";
 import { NotebookPanel } from "./features/notebook/NotebookPanel";
 
 export default function App() {
@@ -12,7 +13,10 @@ export default function App() {
 					<p className="hero__lead">
 						记录一件小小的陪伴，让原创虚拟伙伴“星宝”在测试链上慢慢长大。
 					</p>
-					<p className="value-warning">成长星无价格，不可转让或兑换。</p>
+					<p className="value-warning">
+						成长星无价格，只用于 Sepolia
+						课程演示；可在测试钱包间赠送，不可兑换。
+					</p>
 				</div>
 				<div className="hero__orbit" aria-hidden="true">
 					<span>3</span>
@@ -42,6 +46,7 @@ export default function App() {
 
 			<WalletPanel />
 			<GrowthPanel />
+			<PointTransferPanel />
 			<NotebookPanel />
 
 			<footer className="course-notes">
@@ -50,7 +55,7 @@ export default function App() {
 					<li>React + wagmi 连接 MetaMask，并把合约作为数据后端。</li>
 					<li>Hardhat 开发、测试和部署同一份 Solidity 0.8.28 合约。</li>
 					<li>交易哈希只代表广播；receipt 成功后才刷新链上状态。</li>
-					<li>成长星和星宝都只用于 Sepolia 课程演示，不是 Token 或 NFT。</li>
+					<li>双账本把累计养成值与可赠送余额分开；成长星不是 Token 或 NFT。</li>
 				</ul>
 			</footer>
 		</main>

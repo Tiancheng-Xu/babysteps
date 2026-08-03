@@ -32,8 +32,8 @@ export function GrowthPanel() {
 				<div className="growth-meter">
 					<p className="points-total">
 						{hasChainState
-							? `累计 ${growth.points?.toString()} 枚成长星`
-							: "连接后读取链上成长星"}
+							? `累计养成值：${growth.points?.toString()}`
+							: "连接后读取累计养成值"}
 					</p>
 					<p className="progress-copy">
 						{progress.complete
@@ -51,7 +51,7 @@ export function GrowthPanel() {
 						<span style={{ width: `${progress.percent}%` }} />
 					</div>
 					<p className="helper-copy">
-						成长阶段来自链上积分，不代表孩子的发育或表现等级。
+						累计养成值只来自当前钱包记录的活动，不因赠送而减少，也不代表孩子的发育或表现等级。
 					</p>
 				</div>
 			</div>

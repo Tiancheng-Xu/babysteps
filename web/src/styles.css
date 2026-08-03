@@ -41,6 +41,7 @@ body {
 }
 
 button,
+input,
 textarea {
 	font: inherit;
 }
@@ -52,6 +53,7 @@ a {
 
 button:focus-visible,
 a:focus-visible,
+input:focus-visible,
 textarea:focus-visible {
 	outline: 4px solid rgba(111, 92, 168, 0.35);
 	outline-offset: 3px;
@@ -440,6 +442,65 @@ textarea:focus-visible {
 	margin: 0 0 10px;
 }
 
+.transfer-panel {
+	border-top: 8px solid var(--green);
+}
+
+.transfer-balance {
+	margin: 24px 0 0;
+	padding: 20px;
+	border-radius: 18px;
+	background: var(--green-soft);
+}
+
+.transfer-balance strong {
+	font-family: Georgia, "Noto Serif SC", serif;
+	font-size: clamp(1.55rem, 3vw, 2.2rem);
+}
+
+.transfer-balance p {
+	margin: 8px 0 0;
+	font-size: 1rem;
+	line-height: 1.6;
+}
+
+.transfer-form {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(150px, 0.7fr) auto;
+	gap: 14px;
+	align-items: end;
+	margin-top: 22px;
+}
+
+.field-group {
+	min-width: 0;
+}
+
+input {
+	width: 100%;
+	min-height: 50px;
+	padding: 11px 14px;
+	border: 2px solid var(--line);
+	border-radius: 14px;
+	background: #fffefa;
+	color: var(--ink);
+}
+
+.transfer-form__address input {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
 .explorer-link {
 	display: inline-flex;
 	margin-top: 18px;
@@ -537,7 +598,8 @@ textarea {
 
 	.safety-grid,
 	.activity-grid,
-	.growth-summary {
+	.growth-summary,
+	.transfer-form {
 		grid-template-columns: 1fr;
 	}
 

@@ -7,10 +7,13 @@ const mocks = vi.hoisted(() => ({
 	connect: vi.fn(),
 	disconnect: vi.fn(),
 	recordActivity: vi.fn(),
+	retryTransferRead: vi.fn(),
 	retryGrowthRead: vi.fn(),
 	retryNotebookRead: vi.fn(),
 	save: vi.fn(),
 	setDraft: vi.fn(),
+	setTransferAmount: vi.fn(),
+	setTransferRecipient: vi.fn(),
 	switchGrowthToSepolia: vi.fn(),
 	switchNotebookToSepolia: vi.fn(),
 	switchWalletToSepolia: vi.fn(),
@@ -19,7 +22,9 @@ const mocks = vi.hoisted(() => ({
 	useDisconnect: vi.fn(),
 	useGrowth: vi.fn(),
 	useNotebook: vi.fn(),
+	usePointTransfer: vi.fn(),
 	useSwitchChain: vi.fn(),
+	transfer: vi.fn(),
 }));
 
 vi.mock("./features/growth/useGrowth", () => ({
@@ -28,6 +33,10 @@ vi.mock("./features/growth/useGrowth", () => ({
 
 vi.mock("./features/notebook/useNotebook", () => ({
 	useNotebook: mocks.useNotebook,
+}));
+
+vi.mock("./features/growth/usePointTransfer", () => ({
+	usePointTransfer: mocks.usePointTransfer,
 }));
 
 vi.mock("wagmi", async (importOriginal) => {
@@ -48,6 +57,7 @@ const transactionHash = `0x${"c".repeat(64)}` as Hash;
 
 let growthState: Record<string, unknown>;
 let notebookState: Record<string, unknown>;
+let transferState: Record<string, unknown>;
 
 describe("BabySteps App", () => {
 	afterEach(cleanup);
@@ -97,8 +107,26 @@ describe("BabySteps App", () => {
 			canSave: true,
 			canClear: true,
 		};
+		transferState = {
+			walletState: "ready",
+			balance: 7n,
+			recipient: "",
+			setRecipient: mocks.setTransferRecipient,
+			amount: "",
+			setAmount: mocks.setTransferAmount,
+			validationMessage: undefined,
+			canTransfer: false,
+			phase: "idle",
+			message: undefined,
+			transactionHash: undefined,
+			transfer: mocks.transfer,
+			retryRead: mocks.retryTransferRead,
+			switchToSepolia: mocks.switchGrowthToSepolia,
+			isPending: false,
+		};
 		mocks.useGrowth.mockImplementation(() => growthState);
 		mocks.useNotebook.mockImplementation(() => notebookState);
+		mocks.usePointTransfer.mockImplementation(() => transferState);
 	});
 
 	it("shows safety boundaries and caps a completed first journey", () => {
@@ -107,11 +135,17 @@ describe("BabySteps App", () => {
 		render(<App />);
 
 		expect(screen.getByText("课程概念验证 · Sepolia 测试网")).toBeTruthy();
-		expect(screen.getByText("成长星无价格，不可转让或兑换。")).toBeTruthy();
+		expect(
+			screen.getByText(
+				"成长星无价格，只用于 Sepolia 课程演示；可在测试钱包间赠送，不可兑换。",
+			),
+		).toBeTruthy();
 		expect(screen.getByText(/请只使用专用测试钱包/)).toBeTruthy();
 		expect(screen.getByText(/成年照护者自报/)).toBeTruthy();
 		expect(screen.getByText(/请勿填写或上传儿童姓名/)).toBeTruthy();
-		expect(screen.getByText("累计 18 枚成长星")).toBeTruthy();
+		expect(screen.getByText("累计养成值：18")).toBeTruthy();
+		expect(screen.getByText("可赠送成长星：7")).toBeTruthy();
+		expect(screen.getByText(/收到的成长星不会增加星宝阶段/)).toBeTruthy();
 		expect(screen.getByText("首轮养成已完成")).toBeTruthy();
 		expect(screen.queryByText("18 / 15")).toBeNull();
 		expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(

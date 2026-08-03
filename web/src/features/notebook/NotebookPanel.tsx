@@ -20,7 +20,7 @@ export function NotebookPanel() {
 		<section className="card notebook-panel" aria-labelledby="notebook-heading">
 			<div className="section-heading">
 				<div>
-					<p className="eyebrow">步骤 3 · 原始作业能力</p>
+					<p className="eyebrow">步骤 4 · 原始作业能力</p>
 					<h2 id="notebook-heading">公开链上便签（课程实验）</h2>
 				</div>
 				<span className="public-pill">公开内容</span>
