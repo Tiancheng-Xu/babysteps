@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
 
-const artifactRoot = "web/dist";
+const artifactRoot = process.argv[2] ?? "web/dist";
 const readableExtensions = new Set([".html", ".js", ".css", ".json", ".svg"]);
 const knownPublicTransaction =
 	"0x2128ff833511d6f6c03d9c60ab6f161f62909e6f00fedd80710a8826495f674a";
