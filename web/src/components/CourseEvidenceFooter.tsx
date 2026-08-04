@@ -18,11 +18,21 @@ export function CourseEvidenceFooter() {
 					</ul>
 				</div>
 				<div className="course-evidence__card">
-					<p className="course-evidence__card-title">链上交互说明</p>
-					<p>
-						页面覆盖公开链上便签、双账本成长、测试链赠送、钱包网络识别和
-						transaction receipt 成功后再刷新的完整链上交互闭环。
-					</p>
+				<p className="course-evidence__card-title">链上交互说明</p>
+				<p>
+					页面覆盖公开链上便签、双账本成长、测试链赠送、钱包网络识别和
+					transaction receipt 成功后再刷新的完整链上交互闭环。
+				</p>
+				<p>
+					<a
+						href="https://sepolia.etherscan.io/address/0xeb7216D50a2708a59fef5322e452e34382aFCDaD#code"
+						target="_blank"
+						rel="noreferrer"
+						className="explorer-link"
+					>
+						Sepolia 源码验证地址
+					</a>
+				</p>
 				</div>
 			</div>
 		</footer>
