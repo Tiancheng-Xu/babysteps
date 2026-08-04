@@ -25,8 +25,19 @@ React UI ──wagmi/viem──> MetaMask ──签名交易──> Sepolia
 可信来源；前端只把链上状态转成易理解的按钮状态。按钮禁用只是体验层提示，无法
 替代合约校验。
 
+每日上限使用北京时间边界：`dayId = (block.timestamp + 8 hours) / 1 day`。合约在
+mapping 中保存 `dayId + 1`，让真实第一天不会和 Solidity 的默认零值混淆；跨过
+UTC 午夜不会提前重置，北京时间午夜也不会绕过尚未结束的随机冷却。
+
+## 交易确认与刷新
+
+写操作遵循“模拟 → 钱包签名 → 广播 → 等待 receipt → 重新查询”的顺序。交易哈希
+出现时只能进入确认中；只有 receipt 状态成功才显示成功。拒签或链上回滚不会在本地
+增加积分。成功后按提交交易时的钱包地址失效相关查询缓存，再从合约恢复真实状态。
+
 ## 发布模型
 
 GitHub Actions 在每次 `main` 更新后运行静态检查、测试、类型检查和生产构建，再将
-`web/dist` 发布到 GitHub Pages。Vite 使用相对资源路径，因此默认 Pages 地址和
+`web/dist` 发布到 GitHub Pages。公开合约地址只由 `web/.env.production` 提供，避免
+工作流与本地命令各自维护不同值。Vite 使用相对资源路径，因此默认 Pages 地址和
 `babysteps.baby2b.online` 都能加载同一份构建产物。

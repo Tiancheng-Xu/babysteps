@@ -39,8 +39,13 @@ for (const file of await listReadableFiles(artifactRoot)) {
 	);
 	assert.doesNotMatch(
 		contents,
-		/(?:github_pat_|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN (?:[A-Z ]+ )?PRIVATE KEY|\b(?:mnemonic|private.?key)\s*[:=]\s*["'][^"']{12,})/i,
+		/(?:github_pat_|gh[pousr]_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{20,}|(?:AKIA|ASIA)[0-9A-Z]{16}|BEGIN (?:[A-Z ]+ )?PRIVATE KEY|\b(?:mnemonic|private.?key)\s*[:=]\s*["'][^"']{12,})/i,
 		`${label} contains a credential-like value.`,
+	);
+	assert.doesNotMatch(
+		contents,
+		/(?:VITE_[A-Z0-9_]*(?:KEY|SECRET|TOKEN|MNEMONIC|PASSWORD|CREDENTIAL)[A-Z0-9_]*|private.?key|mnemonic|seed.?phrase|wallet.?secret|api.?token|access.?token)\s*[:=]\s*["'`]?(?:0x)?[0-9a-fA-F]{64}\b/i,
+		`${label} contains a 32-byte value assigned to a secret-like variable.`,
 	);
 
 	for (const candidate of contents.match(/0x[0-9a-fA-F]{64}/g) ?? []) {
