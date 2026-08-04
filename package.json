@@ -5,11 +5,12 @@
 	"type": "module",
 	"packageManager": "pnpm@11.17.0",
 	"scripts": {
-		"check": "pnpm --filter @babysteps/contracts check && pnpm --filter @babysteps/web check && pnpm validate:standalone",
+		"check": "pnpm --filter @babysteps/contracts check && pnpm --filter @babysteps/web check && pnpm validate:standalone && pnpm validate:public-copy",
 		"test": "pnpm --filter @babysteps/contracts test && pnpm --filter @babysteps/web test",
 		"typecheck": "pnpm --filter @babysteps/contracts typecheck && pnpm --filter @babysteps/web typecheck",
 		"build": "pnpm --filter @babysteps/contracts build && VITE_ONCHAIN_NOTEBOOK_ADDRESS=0xeb7216D50a2708a59fef5322e452e34382aFCDaD pnpm --filter @babysteps/web build",
-		"validate:standalone": "node scripts/validate-standalone.mjs"
+		"validate:standalone": "node scripts/validate-standalone.mjs",
+		"validate:public-copy": "node scripts/validate-public-copy.mjs"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6"

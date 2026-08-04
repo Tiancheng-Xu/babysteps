@@ -29,13 +29,10 @@ describe("OnchainNotebook Ignition module", () => {
 			assert.match(readme, new RegExp(variable));
 		}
 
+		assert.match(readme, /pnpm --filter @babysteps\/contracts deploy:sepolia/);
 		assert.match(
 			readme,
-			/pnpm --filter @course-homework\/web3-contracts deploy:sepolia/,
-		);
-		assert.match(
-			readme,
-			/pnpm --filter @course-homework\/web3-contracts deploy:verify:sepolia/,
+			/pnpm --filter @babysteps\/contracts deploy:verify:sepolia/,
 		);
 		const credentialsSection = readme.match(
 			/## Sepolia 凭据[\s\S]*?(?=\n## )/,
