@@ -1,0 +1,8 @@
+{
+	"sourceRepository": "git@github.com:Tiancheng-Xu/fullstack-showcase.git",
+	"sourcePath": "homeworks/06-web3-dapp",
+	"sourceCommit": "ed1af6c1c0b8dea52bbf75690c59e7da17f5d11c",
+	"subtreeCommit": "453ddd75be0968d6dc135bd1ad4ff7b6df32d071",
+	"extractionMethod": "git subtree split",
+	"extractionBranch": "codex/babysteps-history"
+}
