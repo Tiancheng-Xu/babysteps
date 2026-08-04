@@ -10,6 +10,7 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+.worktrees/
 contracts/.hardhat-keystore.json
 contracts/cache/
 contracts/artifacts/
