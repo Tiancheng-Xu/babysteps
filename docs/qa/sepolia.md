@@ -11,6 +11,21 @@
 - Etherscan：`Source Code Verified · Exact Match`。
 - Sourcify：chain ID `11155111` 完整匹配。
 
+## 公网发布
+
+- 主站：[`babysteps-83x.pages.dev`](https://babysteps-83x.pages.dev/)。
+- 托管：Cloudflare Pages，连接 `Tiancheng-Xu/babysteps` 的 `main` 分支。
+- 构建命令：`pnpm build`；发布目录：`web/dist`。
+- 首次发布：`2026-08-04`，Cloudflare 日志确认识别 pnpm `11.17.0`、Node.js
+  `22.16.0`，成功上传 8 个静态文件并部署到全球网络。
+- Chrome 可视检查：标题和一级标题均为 `BabySteps · 成长星球`；1920 px 视口下
+  页面宽度等于视口宽度，无横向溢出；未发现作业、课程、homework 或 assignment
+  等对外表述；页面自身无控制台错误。
+- 备用镜像：[`tiancheng-xu.github.io/babysteps`](https://tiancheng-xu.github.io/babysteps/)。
+- 品牌域名 `babysteps.baby2b.online` 暂未绑定。GoDaddy 收据显示已购买一年
+  `.ONLINE` 域名注册，但域名尚未出现在产品列表和注册局中；待注册商完成开通后，
+  再将权威 DNS 委派给 Cloudflare。
+
 ## 便签流程
 
 | 场景 | 交易 | 区块/结果 |

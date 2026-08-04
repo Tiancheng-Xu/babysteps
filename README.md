@@ -4,7 +4,11 @@ BabySteps 是一个运行在 Sepolia 测试链上的亲子成长 DApp 概念验�
 钱包记录喂养、散步和共读等日常活动，获得可赠送的成长星，并共同培育一个随累计
 成长值变化的星宝形象。
 
-> 产品域名：<https://babysteps.baby2b.online/>（域名接入中）
+> 在线体验：<https://babysteps-83x.pages.dev/>
+>
+> 备用镜像：<https://tiancheng-xu.github.io/babysteps/>
+>
+> 品牌域名：<https://babysteps.baby2b.online/>（等待注册商完成域名开通后绑定）
 
 ## 产品体验
 
@@ -158,7 +162,7 @@ BabySteps 不是儿童档案、健康服务、育儿建议、投资产品或 NFT
 - 钱包扩展之外的页面操作支持键盘，交互具有清晰 `focus-visible`。
 - 动态状态提供可读文字和 `aria-live`，进度条提供名称、范围与当前值。
 - 支持 `prefers-reduced-motion`，关闭漂浮、呼吸和庆祝动画。
-- 静态资源可在 GitHub Pages 默认路径和自定义子域名下正确加载。
+- 静态资源可在 Cloudflare Pages、GitHub Pages 默认路径和自定义子域名下正确加载。
 - 仓库与发布产物不得包含私钥、助记词、RPC 密钥或源码验证密钥。
 
 ### 数据与隐私边界
@@ -198,7 +202,7 @@ Solidity 合约是公开运行的后端，React 前端通过 wagmi 和 ABI 与�
 - 合约：Solidity、Hardhat
 - 网络：Ethereum Sepolia（chain ID `11155111`）
 - 质量保障：Vitest、Hardhat Test、Biome、TypeScript
-- 发布：GitHub Actions、GitHub Pages、自定义子域名
+- 发布：Cloudflare Pages 主站、GitHub Actions/Pages 备用镜像、自定义子域名
 
 ## 本地运行
 
