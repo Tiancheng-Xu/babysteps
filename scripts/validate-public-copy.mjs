@@ -10,7 +10,20 @@ const [readme, html, app, footer] = await Promise.all([
 
 assert.match(readme, /^# BabySteps · 成长星球/m);
 assert.match(readme, /https:\/\/babysteps\.baby2b\.online\//);
-assert.doesNotMatch(readme, /周日.*作业|课程只计划|课程实验/);
+for (const heading of [
+	"## 产品需求文档（PRD）",
+	"### 目标用户",
+	"### 产品目标",
+	"### 非目标",
+	"### 核心用户旅程",
+	"### 功能需求",
+	"### 状态与反馈",
+	"### 非功能需求",
+	"### 产品完成标准",
+]) {
+	assert.ok(readme.includes(heading), `README is missing PRD section: ${heading}`);
+}
+assert.doesNotMatch(readme, /作业|课程|老师|验收|\b(?:homework|assignment)\b/i);
 assert.doesNotMatch(
 	`${html}\n${app}\n${footer}`,
 	/作业|课程|老师|验收|homework|assignment/i,
