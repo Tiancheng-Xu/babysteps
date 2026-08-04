@@ -1,5 +1,5 @@
 {
-	"name": "@course-homework/web3-contracts",
+	"name": "@babysteps/contracts",
 	"private": true,
 	"type": "module",
 	"scripts": {

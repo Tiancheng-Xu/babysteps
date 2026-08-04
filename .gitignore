@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.log
+.DS_Store
+.idea/
+.vscode/
+contracts/.hardhat-keystore.json
+contracts/cache/
+contracts/artifacts/
+contracts/ignition/deployments/
+web/.env.local

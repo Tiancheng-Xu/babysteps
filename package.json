@@ -1,5 +1,17 @@
 {
-	"name": "@course-homework/web3-dapp",
+	"name": "babysteps",
+	"version": "1.0.0",
 	"private": true,
-	"type": "module"
+	"type": "module",
+	"packageManager": "pnpm@11.17.0",
+	"scripts": {
+		"check": "pnpm --filter @babysteps/contracts check && pnpm --filter @babysteps/web check && pnpm validate:standalone",
+		"test": "pnpm --filter @babysteps/contracts test && pnpm --filter @babysteps/web test",
+		"typecheck": "pnpm --filter @babysteps/contracts typecheck && pnpm --filter @babysteps/web typecheck",
+		"build": "pnpm --filter @babysteps/contracts build && VITE_ONCHAIN_NOTEBOOK_ADDRESS=0xeb7216D50a2708a59fef5322e452e34382aFCDaD pnpm --filter @babysteps/web build",
+		"validate:standalone": "node scripts/validate-standalone.mjs"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.6"
+	}
 }
