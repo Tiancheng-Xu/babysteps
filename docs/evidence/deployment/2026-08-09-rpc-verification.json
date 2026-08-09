@@ -1,0 +1,38 @@
+{
+  "verifiedAt": "2026-08-09",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": 11155111,
+  "contractsHaveRuntimeCode": {
+    "BabyCoin": true,
+    "GrowthActivities": true,
+    "GrowthCertificate": true,
+    "TaskMarketplace": true
+  },
+  "roles": {
+    "rewardRole": true,
+    "minterRole": true,
+    "providerRole": true,
+    "oracleRole": true
+  },
+  "vrfSubscription": {
+    "id": "71373032545190242781617190213327705196443132403442427466313474597415853818930",
+    "owner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "nativeBalanceWei": "30000000000000000",
+    "requestCount": "0",
+    "consumers": [
+      "0x2D1107610eBaBbFa7CD9569eb42eF315eb6F25BE"
+    ]
+  },
+  "finalizationTransactions": {
+    "0xa64d357b7dbc2cba07c4285d0fffd7e82eae88f45351a63fd3d2dee7fd9fbda8": {
+      "action": "grant PROVIDER_ROLE to demo operator",
+      "status": "success",
+      "blockNumber": 11453356
+    },
+    "0x5741e113ee023a7f8fb2079e01a68e49c334bd3510451bff3d033bd9157faf7b": {
+      "action": "add TaskMarketplace as VRF consumer",
+      "status": "success",
+      "blockNumber": 11453357
+    }
+  }
+}

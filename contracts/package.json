@@ -3,11 +3,20 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check": "biome check hardhat.config.ts ignition/modules test",
+		"check": "biome check hardhat.config.ts ignition/modules test scripts",
 		"compile": "hardhat compile",
 		"test": "hardhat test",
 		"typecheck": "tsc --noEmit",
 		"build": "hardhat compile",
+		"deploy:web3:local": "hardhat ignition deploy ignition/modules/BabyStepsWeb3Local.ts",
+		"deploy:web3:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3.ts --network sepolia --parameters ignition/parameters/babysteps-web3.sepolia.json",
+		"deploy:web3:verify:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3.ts --network sepolia --parameters ignition/parameters/babysteps-web3.sepolia.json --verify",
+		"inspect:sepolia": "hardhat run scripts/inspectSepolia.ts --network sepolia",
+		"prepare:vrf:sepolia": "hardhat run scripts/prepareSepoliaVrf.ts --network sepoliaPublic",
+		"configure:vrf:sepolia": "hardhat run scripts/addSepoliaVrfConsumer.ts --network sepolia",
+		"deploy:web3:closed-loop:sepolia": "bash scripts/deploySepoliaClosedLoop.sh",
+		"finalize:web3:sepolia": "bash scripts/finalizeSepoliaSetup.sh",
+		"business:closed-loop:sepolia": "hardhat run scripts/runSepoliaBusinessClosedLoop.ts --network sepoliaPublic",
 		"deploy:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia",
 		"deploy:verify:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia --verify"
 	},
@@ -19,5 +28,8 @@
 		"hardhat": "3.12.0",
 		"typescript": "catalog:",
 		"viem": "2.55.10"
+	},
+	"dependencies": {
+		"@openzeppelin/contracts": "5.6.1"
 	}
 }

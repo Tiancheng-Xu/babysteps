@@ -19,6 +19,12 @@ export default defineConfig({
 			url: configVariable("SEPOLIARPCURL"),
 			accounts: [configVariable("SEPOLIAPRIVATEKEY")],
 		},
+		sepoliaPublic: {
+			type: "http",
+			chainType: "l1",
+			url: "https://ethereum-sepolia-rpc.publicnode.com",
+			accounts: [configVariable("SEPOLIAPRIVATEKEY")],
+		},
 	},
 	verify: {
 		etherscan: { apiKey: configVariable("ETHERSCANAPIKEY") },

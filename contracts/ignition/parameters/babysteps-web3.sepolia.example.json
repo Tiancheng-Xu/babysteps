@@ -1,0 +1,9 @@
+{
+	"BabyStepsWeb3Module": {
+		"vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
+		"vrfSubscriptionId": "0",
+		"vrfKeyHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+		"vrfRequestConfirmations": 3,
+		"vrfCallbackGasLimit": 500000
+	}
+}
