@@ -38,17 +38,33 @@ assert.match(deployJob, /permissions:\n      pages: write\n      id-token: write
 assert.match(deployJob, /needs: build/);
 assert.doesNotMatch(
 	workflow,
-	/(?:SEPOLIAPRIVATEKEY|ETHERSCANAPIKEY|SEPOLIARPCURL|VITE_ONCHAIN_NOTEBOOK_ADDRESS)/,
+	/(?:SEPOLIAPRIVATEKEY|ETHERSCANAPIKEY|SEPOLIARPCURL|VITE_(?:ONCHAIN_NOTEBOOK|BABY_COIN|GROWTH_ACTIVITIES|GROWTH_CERTIFICATE|TASK_MARKETPLACE)_ADDRESS)/,
 	"The Pages build must not receive contract-deployment credentials.",
 );
 assert.doesNotMatch(
 	rootPackage,
-	/VITE_ONCHAIN_NOTEBOOK_ADDRESS=/,
+	/VITE_(?:ONCHAIN_NOTEBOOK|BABY_COIN|GROWTH_ACTIVITIES|GROWTH_CERTIFICATE|TASK_MARKETPLACE)_ADDRESS=/,
 	"The build command must not override the committed production address.",
 );
-assert.match(
-	productionEnv,
-	/^VITE_ONCHAIN_NOTEBOOK_ADDRESS=0x[0-9a-fA-F]{40}\n?$/,
+
+const productionAddresses = Object.fromEntries(
+	productionEnv
+		.trim()
+		.split("\n")
+		.map((line) => line.split("=", 2)),
 );
+for (const variable of [
+	"VITE_ONCHAIN_NOTEBOOK_ADDRESS",
+	"VITE_BABY_COIN_ADDRESS",
+	"VITE_GROWTH_ACTIVITIES_ADDRESS",
+	"VITE_GROWTH_CERTIFICATE_ADDRESS",
+	"VITE_TASK_MARKETPLACE_ADDRESS",
+]) {
+	assert.match(
+		productionAddresses[variable] ?? "",
+		/^0x[0-9a-fA-F]{40}$/,
+		`${variable} must contain one deployed contract address.`,
+	);
+}
 
 console.log("GitHub Pages workflow validation passed.");

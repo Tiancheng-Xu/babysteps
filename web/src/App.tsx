@@ -1,14 +1,24 @@
+import { useState } from "react";
+
 import { CourseEvidenceFooter } from "./components/CourseEvidenceFooter";
 import { Hero } from "./components/Hero";
+import {
+	ProductNavigation,
+	type ProductView,
+} from "./components/ProductNavigation";
 import { SafetyNoticeGrid } from "./components/SafetyNoticeGrid";
 import { WalletPanel } from "./components/WalletPanel";
 import { GrowthPanel } from "./features/growth/GrowthPanel";
 import { PointTransferPanel } from "./features/growth/PointTransferPanel";
 import { NotebookPanel } from "./features/notebook/NotebookPanel";
+import { EvidencePage } from "./pages/EvidencePage";
+import { GrowthMarketplacePage } from "./pages/GrowthMarketplacePage";
+import { ParentDashboardPage } from "./pages/ParentDashboardPage";
+import { ProviderConsolePage } from "./pages/ProviderConsolePage";
 
-export default function App() {
+function HomeView() {
 	return (
-		<main className="page-shell">
+		<>
 			<Hero />
 			<SafetyNoticeGrid />
 			<WalletPanel />
@@ -16,6 +26,24 @@ export default function App() {
 			<PointTransferPanel />
 			<NotebookPanel />
 			<CourseEvidenceFooter />
+		</>
+	);
+}
+
+export default function App() {
+	const [currentView, setCurrentView] = useState<ProductView>("home");
+
+	return (
+		<main className="page-shell">
+			<ProductNavigation
+				currentView={currentView}
+				onViewChange={setCurrentView}
+			/>
+			{currentView === "home" ? <HomeView /> : null}
+			{currentView === "marketplace" ? <GrowthMarketplacePage /> : null}
+			{currentView === "parent" ? <ParentDashboardPage /> : null}
+			{currentView === "provider" ? <ProviderConsolePage /> : null}
+			{currentView === "evidence" ? <EvidencePage /> : null}
 		</main>
 	);
 }

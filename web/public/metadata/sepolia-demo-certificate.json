@@ -1,0 +1,19 @@
+{
+  "name": "StarBuddy 亲子共读成长证书",
+  "description": "完成 BabySteps 亲子共读星光任务后铸造的 Sepolia ERC-721 成长证书。",
+  "attributes": [
+    {
+      "trait_type": "Activity",
+      "value": "Read"
+    },
+    {
+      "trait_type": "Companion",
+      "value": "StarBuddy"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Ethereum Sepolia"
+    }
+  ],
+  "external_url": "https://babysteps.baby2b.online/evidence"
+}

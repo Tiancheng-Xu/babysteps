@@ -1,0 +1,51 @@
+{
+  "status": "complete",
+  "updatedAt": "2026-08-09T17:15:46.749Z",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "operator": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+  "demoRoleBoundary": "Minimal homework demo: one operator wallet acts as Provider, parent buyer, and Oracle; payout uses a deterministic test-only address.",
+  "addresses": {
+    "babyCoin": "0x108a55217011983b93C3A95aD8D3B3343Bd5471b",
+    "growthActivities": "0x69935c3683eBbf34c898B8DC7404E546a7E1939a",
+    "growthCertificate": "0x4d594aeeAAfb4280D95CD60940AeBd3d11DBAFa3",
+    "taskMarketplace": "0x2D1107610eBaBbFa7CD9569eb42eF315eb6F25BE",
+    "demoPayee": "0x955e48183a3e698D0d1230FF4D2837d6F053aFba"
+  },
+  "metadata": {
+    "task": "https://babysteps.baby2b.online/metadata/sepolia-demo-task.json",
+    "certificate": "https://babysteps.baby2b.online/metadata/sepolia-demo-certificate.json"
+  },
+  "transactions": {
+    "createTask": "0xfb82fab7f35213fffcd521bd835a53439684f2947d192448d3ccd07b850f7b97",
+    "recordActivity": "0x82af37819714d0d5f5d852de9bc4f56e2e5126f22823fb95f1982819850be138",
+    "approve": "0x120bfb565182d62999c7454e6759512789425c122c0cc43f3f961a0498d83a31",
+    "buy": "0xba0d13402507da21b4c680dbe1dd3413c7fd0eb2c97b93a30c8f86a0f0622cfd",
+    "confirmCompletion": "0x90936e9cf8f7039b02b4aa4bbd7ec01e2665709ba19a854f5d0fb068f3eb9051"
+  },
+  "taskId": "1",
+  "requestId": "67603022906193918301226269282578359406419277827040881628768248191905840000890",
+  "providerBalanceBeforePurchase": "0",
+  "purchaseId": "1",
+  "certificateTokenId": "1",
+  "verification": {
+    "taskActive": true,
+    "taskPaused": false,
+    "activityType": 2,
+    "priceWei": "4000000000000000000",
+    "priceBABY": "4",
+    "opensAt": "1786295292",
+    "closesAt": "1786309692",
+    "durationSeconds": "14400",
+    "purchaseCompleted": true,
+    "buyer": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "providerPayee": "0x955e48183a3e698D0d1230FF4D2837d6F053aFba",
+    "providerPayoutWei": "4000000000000000000",
+    "buyerBalanceBABY": "3",
+    "lifetimeEarnedBABY": "7",
+    "growthStage": 1,
+    "remainingAllowanceWei": "0",
+    "certificateOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "certificateTokenUri": "https://babysteps.baby2b.online/metadata/sepolia-demo-certificate.json"
+  }
+}

@@ -15,4 +15,5 @@ contracts/.hardhat-keystore.json
 contracts/cache/
 contracts/artifacts/
 contracts/ignition/deployments/
+contracts/ignition/parameters/babysteps-web3.sepolia.json
 web/.env.local

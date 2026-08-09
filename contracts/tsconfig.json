@@ -8,5 +8,10 @@
 		"skipLibCheck": true,
 		"noEmit": true
 	},
-	"include": ["hardhat.config.ts", "ignition/**/*.ts", "test/**/*.ts"]
+	"include": [
+		"hardhat.config.ts",
+		"ignition/**/*.ts",
+		"scripts/**/*.ts",
+		"test/**/*.ts"
+	]
 }

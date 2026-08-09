@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 	disconnect: vi.fn(),
 	recordActivity: vi.fn(),
 	retryTransferRead: vi.fn(),
+	retryBabyCoinRead: vi.fn(),
 	retryGrowthRead: vi.fn(),
 	retryNotebookRead: vi.fn(),
 	save: vi.fn(),
@@ -27,8 +28,11 @@ const mocks = vi.hoisted(() => ({
 	useConnect: vi.fn(),
 	useDisconnect: vi.fn(),
 	useGrowth: vi.fn(),
+	useBabyCoinGrowth: vi.fn(),
+	useMarketplace: vi.fn(),
 	useNotebook: vi.fn(),
 	usePointTransfer: vi.fn(),
+	useProviderTaskCreation: vi.fn(),
 	useSwitchChain: vi.fn(),
 	transfer: vi.fn(),
 }));
@@ -37,8 +41,20 @@ vi.mock("./features/growth/useGrowth", () => ({
 	useGrowth: mocks.useGrowth,
 }));
 
+vi.mock("./features/babycoin/useBabyCoinGrowth", () => ({
+	useBabyCoinGrowth: mocks.useBabyCoinGrowth,
+}));
+
 vi.mock("./features/notebook/useNotebook", () => ({
 	useNotebook: mocks.useNotebook,
+}));
+
+vi.mock("./features/marketplace/useMarketplace", () => ({
+	useMarketplace: mocks.useMarketplace,
+}));
+
+vi.mock("./features/provider/useProviderTaskCreation", () => ({
+	useProviderTaskCreation: mocks.useProviderTaskCreation,
 }));
 
 vi.mock("./features/growth/usePointTransfer", () => ({
@@ -62,6 +78,7 @@ const account = "0x1111111111111111111111111111111111111111" as Address;
 const transactionHash = `0x${"c".repeat(64)}` as Hash;
 
 let growthState: Record<string, unknown>;
+let babyCoinGrowthState: Record<string, unknown>;
 let notebookState: Record<string, unknown>;
 let transferState: Record<string, unknown>;
 
@@ -102,6 +119,25 @@ describe("BabySteps App", () => {
 			switchToSepolia: mocks.switchGrowthToSepolia,
 			isPending: false,
 		};
+		babyCoinGrowthState = {
+			isConfigured: true,
+			walletState: "ready",
+			balance: 9n * 10n ** 18n,
+			lifetimeEarned: 15n * 10n ** 18n,
+			stage: "star",
+			availabilityByActivity: {
+				meal: { available: true, dailyLimitReached: false },
+				walk: { available: false, dailyLimitReached: false },
+				read: { available: false, dailyLimitReached: true },
+			},
+			phase: "ready",
+			message: undefined,
+			transactionHash: undefined,
+			isPending: false,
+			recordActivity: mocks.recordActivity,
+			retryRead: mocks.retryBabyCoinRead,
+			switchToSepolia: mocks.switchGrowthToSepolia,
+		};
 		notebookState = {
 			walletState: "ready",
 			chainNote: "公开测试内容",
@@ -135,6 +171,31 @@ describe("BabySteps App", () => {
 			isPending: false,
 		};
 		mocks.useGrowth.mockImplementation(() => growthState);
+		mocks.useBabyCoinGrowth.mockImplementation(() => babyCoinGrowthState);
+		mocks.useMarketplace.mockReturnValue({
+			isConfigured: false,
+			tasks: [],
+			phase: "unconfigured",
+			message: undefined,
+			isPending: false,
+			retryRead: vi.fn(),
+		});
+		mocks.useProviderTaskCreation.mockReturnValue({
+			isConfigured: false,
+			walletState: "ready",
+			activity: "walk",
+			setActivity: vi.fn(),
+			metadataUri: "",
+			setMetadataUri: vi.fn(),
+			hasProviderRole: false,
+			phase: "unavailable",
+			message: undefined,
+			canSubmit: false,
+			isPending: false,
+			transactionHash: undefined,
+			createTask: vi.fn(),
+			switchToSepolia: vi.fn(),
+		});
 		mocks.useNotebook.mockImplementation(() => notebookState);
 		mocks.usePointTransfer.mockImplementation(() => transferState);
 	});
@@ -196,12 +257,59 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByText("交易哈希只代表广播；receipt 成功后才刷新链上状态。"),
 		).toBeTruthy();
-		expect(container.querySelector("nav")).toBeNull();
+		expect(container.querySelector("nav")).toBeTruthy();
+		expect(
+			screen.getByRole("navigation", { name: "BabySteps 产品导航" }),
+		).toBeTruthy();
 		expect(screen.queryByText("数字传家宝")).toBeNull();
 		expect(screen.queryByText("永久儿童寄语")).toBeNull();
 		expect(screen.queryByText("孩子档案")).toBeNull();
 		expect(screen.queryByText("发现星球")).toBeNull();
 		expect(screen.queryByText("成长纪念")).toBeNull();
+	});
+
+	it("navigates the canonical Chinese Stitch product views", () => {
+		render(<App />);
+
+		const navigation = screen.getByRole("navigation", {
+			name: "BabySteps 产品导航",
+		});
+		expect(
+			within(navigation)
+				.getByRole("button", { name: "首页" })
+				.getAttribute("aria-current"),
+		).toBe("page");
+
+		fireEvent.click(
+			within(navigation).getByRole("button", { name: "成长任务" }),
+		);
+		expect(screen.getByRole("heading", { name: "成长任务市集" })).toBeTruthy();
+		expect(screen.getByText("暂无已激活的成长任务")).toBeTruthy();
+
+		fireEvent.click(
+			within(navigation).getByRole("button", { name: "家长中心" }),
+		);
+		expect(screen.getByRole("heading", { name: "家长成长中心" })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "链上成长与可用余额" }),
+		).toBeTruthy();
+		expect(screen.getByText("9 BABY")).toBeTruthy();
+		expect(screen.getByText("15 BABY")).toBeTruthy();
+
+		fireEvent.click(
+			within(navigation).getByRole("button", { name: "Provider 控制台" }),
+		);
+		expect(
+			screen.getByRole("heading", { name: "机构与育婴师控制台" }),
+		).toBeTruthy();
+
+		fireEvent.click(
+			within(navigation).getByRole("button", { name: "工作证据" }),
+		);
+		expect(screen.getByRole("heading", { name: "链上工作证据" })).toBeTruthy();
+		expect(
+			screen.getByRole("img", { name: "StarBuddy Web3 架构图" }),
+		).toBeTruthy();
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {

@@ -193,8 +193,9 @@ Solidity 合约是公开运行的后端，React 前端通过 wagmi 和 ABI 与�
 - 写入需要钱包签名，并使用少量 Sepolia 测试 ETH 支付 gas；
 - transaction hash 只说明交易已广播，成功 receipt 才代表链上确认。
 
-成长星不是 ERC-20：它没有价格、交易市场、提现能力、`approve` 或 `allowance`，
-仅用于演示可转让的产品积分。当前版本只支持 Sepolia，不面向主网或真实资产。
+已部署的旧版成长星不是 ERC-20，继续作为只读学习证据保留。正在开发的 Web3
+成长任务市场把新成长奖励改为标准 ERC-20 BabyCoin，并使用标准 ERC-721 成长证书；
+两者只用于 Sepolia 测试网功能演示，没有真实价值，不提供提现或收益承诺。
 
 ## 技术栈
 
@@ -235,13 +236,50 @@ pnpm --filter @babysteps/contracts exec hardhat keystore set SEPOLIAPRIVATEKEY
 pnpm --filter @babysteps/contracts exec hardhat keystore set ETHERSCANAPIKEY
 ```
 
-只使用不持有真实资产的专用测试钱包。合约没有构造参数；确认网络、账户余额和准备
-公开的源码后，可以部署并请求 Etherscan 验证：
+只使用不持有真实资产的专用测试钱包。旧版 Notebook 合约没有构造参数；确认网络、
+账户余额和准备公开的源码后，可以部署并请求 Etherscan 验证：
 
 ```sh
 pnpm --filter @babysteps/contracts deploy:sepolia
 pnpm --filter @babysteps/contracts deploy:verify:sepolia
 ```
+
+## Web3 成长任务市场
+
+新架构由四个生产合约组成：
+
+- `BabyCoin`：可花费的 ERC-20 测试币；只有活动奖励增加 `lifetimeEarned`。
+- `GrowthActivities`：Meal、Walk、Read 的奖励、冷却和 UTC+8 每日上限。
+- `TaskMarketplace`：Provider 上架、Chainlink VRF v2.5 锁定 2–4 BABY 价格与开放时长、
+  `approve → buy → transferFrom` 购买，以及 Oracle 完成确认。
+- `GrowthCertificate`：每笔已完成购买最多一张标准 ERC-721 证书。
+
+本地模块会部署 Mock VRF Coordinator，因此无需测试网凭据即可验证完整部署图：
+
+```sh
+pnpm --filter @babysteps/contracts deploy:web3:local
+```
+
+Sepolia 部署参数均为公开链上配置，不包含私钥。部署脚本使用 Chainlink VRF v2.5
+官方 Sepolia Coordinator 与 gas lane，以原生测试 ETH 创建并注资 subscription，
+随后把部署出的 TaskMarketplace 加为 consumer：
+
+```sh
+pnpm --filter @babysteps/contracts deploy:web3:closed-loop:sepolia
+```
+
+这个单一命令会在终端静默读取一次 keystore 密码，依次完成部署前核对、VRF
+subscription 创建与注资、四合约部署、consumer 授权；若 keystore 已有
+`ETHERSCANAPIKEY`，还会继续执行源码验证。命令可在 RPC 中断后安全续跑，会复用已经
+生成的 subscription 与 Ignition 部署状态；密码不会写入命令历史、日志或文件。
+
+`prepare:vrf:sepolia` 默认把 subscription 的原生测试 ETH 余额补足到 `0.03 ETH`，
+并生成被 Git 忽略的参数文件。若已有同一部署钱包持有的 subscription，可仅在当前
+命令环境设置公开的 `VRF_SUBSCRIPTION_ID` 后复用，脚本会先核对 owner。
+
+前端部署完成后，在本地 `web/.env.local` 填写四个公开合约地址；变量名见
+`web/.env.example`。Sepolia 演示模块会把 Provider 与 Oracle 角色授予部署测试钱包，
+便于完成演示闭环；正式多用户环境必须改为单独审核与授权。
 
 ## 已部署的 Sepolia 合约
 

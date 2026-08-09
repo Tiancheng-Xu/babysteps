@@ -1,0 +1,39 @@
+{
+  "verifiedAt": "2026-08-09T17:24:27.418Z",
+  "verificationBlock": "11453663",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "transactions": {
+    "fundVrf": { "hash": "0x075cc6d1fc3b0f02d7ebc7675bb7bd041e1fe19404d7e210f565577eadb69ef1", "status": "success", "blockNumber": "11453585", "gasUsed": "38965" },
+    "createTask": { "hash": "0xfb82fab7f35213fffcd521bd835a53439684f2947d192448d3ccd07b850f7b97", "status": "success", "blockNumber": "11453520", "gasUsed": "238711" },
+    "vrfFulfillment": { "hash": "0xb340fd680760d923d8faa760b7da08ba9d321b50c389c5f7fd8ed863b88d48a8", "status": "success", "blockNumber": "11453586" },
+    "recordActivity": { "hash": "0x82af37819714d0d5f5d852de9bc4f56e2e5126f22823fb95f1982819850be138", "status": "success", "blockNumber": "11453617", "gasUsed": "124815" },
+    "approve": { "hash": "0x120bfb565182d62999c7454e6759512789425c122c0cc43f3f961a0498d83a31", "status": "success", "blockNumber": "11453618", "gasUsed": "46396" },
+    "buy": { "hash": "0xba0d13402507da21b4c680dbe1dd3413c7fd0eb2c97b93a30c8f86a0f0622cfd", "status": "success", "blockNumber": "11453620", "gasUsed": "188031" },
+    "confirmCompletion": { "hash": "0x90936e9cf8f7039b02b4aa4bbd7ec01e2665709ba19a854f5d0fb068f3eb9051", "status": "success", "blockNumber": "11453621", "gasUsed": "234871" }
+  },
+  "vrf": {
+    "subscriptionId": "71373032545190242781617190213327705196443132403442427466313474597415853818930",
+    "nativeBalanceWei": "499780314850163094",
+    "nativeBalanceETH": "0.499780314850163094",
+    "requestCount": "1",
+    "consumerConfigured": true,
+    "taskId": "1",
+    "requestId": "67603022906193918301226269282578359406419277827040881628768248191905840000890",
+    "randomPriceBABY": "4",
+    "randomDurationSeconds": "14400"
+  },
+  "businessState": {
+    "taskActive": true,
+    "taskPaused": false,
+    "purchaseCompleted": true,
+    "buyerBalanceBABY": "3",
+    "providerPayeeBalanceBABY": "4",
+    "remainingAllowanceWei": "0",
+    "lifetimeEarnedBABY": "7",
+    "certificateOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "certificateTokenId": "1",
+    "certificateTokenUri": "https://babysteps.baby2b.online/metadata/sepolia-demo-certificate.json"
+  },
+  "method": "Independent read-only verification via ethereum-sepolia-rpc.publicnode.com; no local transaction output was trusted as final state."
+}

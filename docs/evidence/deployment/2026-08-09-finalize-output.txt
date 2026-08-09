@@ -1,0 +1,12 @@
+Network: Ethereum Sepolia (chain ID 11155111)
+Deployer: 0x4d9df519abcbe51c0098649bcd0e17ac1548fa88
+VRF subscription: 71373032545190242781617190213327705196443132403442427466313474597415853818930
+TaskMarketplace: 0x2D1107610eBaBbFa7CD9569eb42eF315eb6F25BE
+
+Completed transactions:
+- grant PROVIDER_ROLE to demo operator
+  0xa64d357b7dbc2cba07c4285d0fffd7e82eae88f45351a63fd3d2dee7fd9fbda8
+- add TaskMarketplace as VRF consumer
+  0x5741e113ee023a7f8fb2079e01a68e49c334bd3510451bff3d033bd9157faf7b
+
+This evidence intentionally excludes passwords, private keys, API keys, and protected RPC credentials.

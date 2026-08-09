@@ -1,0 +1,7 @@
+{
+  "name": "亲子共读星光任务",
+  "description": "BabySteps Sepolia 演示任务：家长与宝宝完成一次亲子共读，由 Chainlink VRF 随机确定 BabyCoin 价格和开放时长。",
+  "activityType": "Read",
+  "network": "Ethereum Sepolia",
+  "external_url": "https://babysteps.baby2b.online/marketplace"
+}
