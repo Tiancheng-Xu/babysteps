@@ -1,4 +1,4 @@
-import architectureImage from "../../../docs/architecture/starbuddy-web3-architecture.png";
+import architectureImage from "../../../docs/architecture/starbuddy-web3-architecture-v2.png";
 
 const CONTRACTS = [
 	["BabyCoin", "ERC-20 奖励与 lifetimeEarned 双账本"],

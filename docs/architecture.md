@@ -1,6 +1,6 @@
 # BabySteps / StarBuddy 架构
 
-完整、可执行的架构真相源见 [`docs/architecture/starbuddy-web3-architecture.mmd`](architecture/starbuddy-web3-architecture.mmd)。StarBuddy 主题业务图见 [`docs/architecture/starbuddy-web3-architecture.png`](architecture/starbuddy-web3-architecture.png)。
+完整、可执行的架构真相源见 [`docs/architecture/starbuddy-web3-architecture.mmd`](architecture/starbuddy-web3-architecture.mmd)。当前 StarBuddy 主题业务图见 [`docs/architecture/starbuddy-web3-architecture-v2.png`](architecture/starbuddy-web3-architecture-v2.png)；上一版 PNG 保留为历史证据。
 
 ## 当前边界
 
