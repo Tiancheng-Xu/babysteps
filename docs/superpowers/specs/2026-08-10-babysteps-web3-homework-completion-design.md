@@ -60,31 +60,107 @@ V2 优先复用已部署的 `BabyCoin` 与 `GrowthActivities`。部署脚本在�
 
 ## 目标架构
 
-目标架构把可信状态放到 Sepolia，把富内容和隐私较高的数据放到 D1，把签名密钥限制在 AWS KMS。
+目标架构把可信状态放到 Sepolia，把富内容和隐私较高的数据放到 D1，把签名密钥限制在 AWS KMS。图中“现有”表示已有代码或部署，“计划”表示本设计尚待实施，“待验证”表示依赖真实外部环境验收。
 
 ```mermaid
 flowchart LR
-    parent["家长<br/>Privy 邮箱或外部钱包"] --> web["React + TypeScript<br/>BabySteps 前端"]
+    parent["家长"] --> web["现有并扩展<br/>React + TypeScript 前端"]
     provider["机构或育婴师"] --> web
     owner["Owner"] --> web
 
-    web --> worker["Cloudflare Worker API"]
-    worker --> d1["Cloudflare D1<br/>任务资料、视频、评论、用户名、nonce、审计"]
+    web --> privy["计划<br/>Privy 邮箱或外部钱包"]
+    web --> worker["计划<br/>Cloudflare Worker API"]
+    worker --> d1["计划<br/>Cloudflare D1<br/>任务资料、视频、评论、用户名、nonce、审计"]
 
-    web --> router["Uniswap v3 官方 Router<br/>USDC 或 ETH 换 BABY"]
-    web --> market["TaskMarketplaceV2<br/>Sepolia"]
-    market --> coin["BabyCoin ERC-20"]
-    market --> vrf["Chainlink VRF"]
-    market --> sbt["GrowthCertificateSBT<br/>ERC-5192"]
-    sbt --> ipfs["IPFS metadata"]
+    web --> router["计划并待验证<br/>Uniswap v3 官方 Router<br/>USDC 或 ETH 换 BABY"]
+    web --> market["计划<br/>TaskMarketplaceV2<br/>Sepolia"]
+    market --> coin["已部署<br/>BabyCoin ERC-20"]
+    market --> vrf["现有闭环已验证<br/>Chainlink VRF"]
+    market --> sbt["计划<br/>GrowthCertificateSBT<br/>ERC-5192"]
+    sbt --> ipfs["计划并待验证<br/>IPFS metadata"]
 
-    worker --> lambda["AWS Lambda Relayer"]
-    lambda --> kms["AWS KMS 非导出签名密钥"]
+    worker --> lambda["计划<br/>AWS Lambda Relayer"]
+    lambda --> kms["计划并待验证<br/>AWS KMS 非导出签名密钥"]
     kms --> market
 
-    market --> graph["The Graph Subgraph"]
-    market --> rpc["公共 RPC、Infura、Alchemy<br/>ethers.js 对照读取"]
+    market --> graph["计划并待验证<br/>The Graph Subgraph"]
+    market --> rpc["计划<br/>公共 RPC、Infura、Alchemy<br/>ethers.js 对照读取"]
 ```
+
+## 部署与 CI/CD 架构
+
+部署链路必须先证明代码、构建产物和目标部署一致，再允许人工批准生产变更。
+
+```mermaid
+flowchart LR
+    branch["Feature branch"] --> checks["本地与 CI 门禁<br/>测试、类型、构建、链接、敏感信息"]
+    checks --> preview["开发环境<br/>D1 preview、Worker preview、Sepolia"]
+    preview --> evidence["Evidence gate<br/>地址、交易、日志、截图、实现映射"]
+    evidence --> review["人工审查与授权"]
+    review --> main["合并 main"]
+    main --> pages["Git 集成 Cloudflare Pages"]
+    main --> workerDeploy["Worker 与 D1 production migration"]
+    main --> awsDeploy["AWS Lambda 与 KMS 配置"]
+    pages --> httpGate["HTTP、TLS、深链与非空产物验收"]
+    workerDeploy --> apiGate["API、migration 与权限验收"]
+    awsDeploy --> relayerGate["IAM、KMS 与幂等验收"]
+```
+
+当前仓库已具备 Git 集成 Pages 的历史部署链路。V2 合约、D1、Worker、AWS、The Graph 和新 Evidence 尚未完成，不能把图中的目标节点写成已上线。
+
+## 权限与安全时序
+
+关键业务时序把内容审核权、支付权和完成签名权分开。任何单一 Provider 或 Relayer 都不能授予角色或修改系统配置。
+
+```mermaid
+sequenceDiagram
+    participant P as Provider
+    participant W as Worker/D1
+    participant O as Owner
+    participant M as MarketplaceV2
+    participant V as Chainlink VRF
+    participant U as Uniswap Router
+    participant B as Parent wallet
+    participant L as Lambda/KMS Relayer
+    participant S as ERC-5192 SBT
+
+    P->>W: 保存 metadata 草稿
+    P->>M: requestTask(metadataHash)
+    O->>M: approveTask(taskId)
+    M->>V: 请求随机价格与时长
+    V-->>M: fulfillRandomWords
+    B->>U: 可选 Swap USDC/ETH 为 BABY
+    B->>M: 精确 approve 后 buy(taskId)
+    P->>W: 提交签名完成证据
+    W->>L: 幂等完成请求
+    L->>M: KMS 签名 confirmCompletion
+    M->>S: mintForPurchase
+    S-->>B: 锁定证书
+```
+
+该时序是目标行为。已有 Sepolia 闭环只验证了 VRF、Approve、Buy、完成调用和可转让 ERC-721 发证；Provider 审核、Worker/D1、KMS 和 ERC-5192 仍待实现。
+
+## 关键节点交付协议
+
+每个实施节点在开始前必须报告以下内容：
+
+- 操作目的
+- 采用该设计的原因
+- 将修改的代码、调用的服务或创建的资源
+- 预期结果
+- 主要风险与停止条件
+
+每个节点完成后必须报告以下真实证据：
+
+- 修改后的文件与行号
+- 实际执行的测试、类型检查和构建结果
+- Git 提交哈希
+- 已发生部署的地址、云资源标识、链上合约地址和交易哈希
+- 可公开且已脱敏的截图或日志
+
+没有发生的部署、交易或截图不得填写占位值。无法验证的内容标为 `pending`，测试失败的内容标为 `blocked`，只有代码、测试和外部证据同时满足验收线时才标为 `complete`。
+
+`docs/homework/web3-homework-implementation-map.md` 持续维护“作业要求 → 实现功能 → 代码位置 → 验证证据 → 当前状态”。每个关键节点结束时同步更新该映射和架构图，不能等到最后补写。
 
 ## 链上与链下 ID 绑定
 
@@ -296,6 +372,16 @@ Evidence 必须保存以下真实结果：
 - 关键页面截图、StarBuddy 主题架构图和故障复盘
 
 Evidence 不复制源码，不包含密钥，不伪造缺失记录。未完成的外部验证必须标为 pending。
+
+最终交付前执行一次证据完整性审计：
+
+1. 逐行核对实现映射，确认每项要求都有代码位置、测试和状态
+2. 对照真实代码更新运行时、部署和权限架构图
+3. 重新执行完整测试、生产构建、链接检查和公开内容扫描
+4. 重新读取合约、交易、RPC、Subgraph、Pages、Worker 与 AWS 状态
+5. 汇总已完成、未完成、已知限制、外部依赖和从零复现步骤
+
+审计报告必须区分本地通过、测试网通过、云端通过和生产通过。一个环境的成功不能代替其他环境的证据。
 
 ## 作业验收矩阵
 
