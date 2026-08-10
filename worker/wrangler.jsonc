@@ -8,6 +8,12 @@
 		"enabled": true,
 		"head_sampling_rate": 1
 	},
+	"vars": {
+		"APP_DOMAIN": "babysteps.baby2b.online",
+		"APP_URI": "https://babysteps.baby2b.online",
+		"CHAIN_ID": "11155111",
+		"OWNER_WALLET": "0x0000000000000000000000000000000000000000"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
