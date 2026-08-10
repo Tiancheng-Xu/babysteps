@@ -1,4 +1,6 @@
-CREATE TABLE IF NOT EXISTS completion_jobs (
+import type { SqlQueryable } from "./postgresCompletionJobs.js";
+
+export const COMPLETION_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS completion_jobs (
   idempotency_key text PRIMARY KEY,
   purchase_id numeric(78, 0) NOT NULL UNIQUE,
   evidence_hash char(66) NOT NULL,
@@ -16,3 +18,8 @@ CREATE TABLE IF NOT EXISTS webhook_nonces (
 );
 
 CREATE INDEX IF NOT EXISTS webhook_nonces_expires_at_idx ON webhook_nonces (expires_at);
+`;
+
+export async function initializeCompletionSchema(database: SqlQueryable) {
+	await database.query(COMPLETION_SCHEMA_SQL);
+}

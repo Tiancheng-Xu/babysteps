@@ -33,6 +33,7 @@ import {
 	PostgresNonceStore,
 	type SqlPool,
 } from "./repositories/postgresCompletionJobs.js";
+import { initializeCompletionSchema } from "./repositories/schema.js";
 import {
 	KmsEthereumSigner,
 	type KmsLike,
@@ -144,6 +145,7 @@ async function createProductionHandler() {
 		ssl: { rejectUnauthorized: true },
 	});
 	const sqlPool = adaptPool(pool);
+	await initializeCompletionSchema(sqlPool);
 	const repository = new PostgresCompletionJobs(sqlPool);
 	const nonceStore = new PostgresNonceStore(sqlPool);
 	const kmsClient = new KMSClient({});
