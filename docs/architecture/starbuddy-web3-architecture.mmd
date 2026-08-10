@@ -19,7 +19,7 @@ flowchart LR
     marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
     marketV2 --> coin
     marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
-    marketV2 --> sbt["ERC-5192 SBT<br/>计划"]
+    marketV2 --> sbt["ERC-5192 SBT<br/>现有代码，待验证部署"]
     sbt --> ipfs[("IPFS metadata<br/>计划，待验证")]
     worker --> lambda["Lambda Relayer<br/>计划"]
     lambda --> kms["AWS KMS<br/>计划，待验证"]
@@ -45,7 +45,7 @@ flowchart TB
         baby["BabyCoin<br/>现有：0x108a…5471b"]
         oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
         newMarket["Marketplace V2<br/>计划"]
-        cert["ERC-5192<br/>计划"]
+        cert["ERC-5192<br/>现有代码，待验证部署"]
         uni["Uniswap v3<br/>待验证"]
         chainlink["Chainlink VRF<br/>现有闭环证据"]
     end
