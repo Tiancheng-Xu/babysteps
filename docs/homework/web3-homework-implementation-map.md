@@ -5,7 +5,7 @@
 | 作业要求 | 实现功能 | 代码位置 | 验证证据 | 当前状态 |
 | --- | --- | --- | --- | --- |
 | 链上任务列表与链下视频、评论稳定绑定 | V1 已有链上任务 ID 和 metadata URI；D1 稳定复合键、视频和评论尚未实现 | `contracts/contracts/TaskMarketplace.sol:30`<br>`web/src/features/marketplace/useMarketplace.ts:1` | `contracts/test/TaskMarketplace.ts` 现有链上任务测试；D1 证据缺失 | `partial` |
-| Owner 管理机构和育婴师，Provider 提交并审核上架 | V2 已在本地实现 `PendingReview → PendingRandomness → Active`、Owner 拒绝和暂停；尚未部署 | `contracts/contracts/TaskMarketplaceV2.sol:16`<br>`web/src/pages/ProviderConsolePage.tsx:1` | `contracts/test/TaskMarketplaceV2.ts` 7 个审核与 VRF 测试通过；Sepolia Owner 审核交易缺失 | `partial` |
+| Owner 管理机构和育婴师，Provider 提交并审核上架 | V2 已在本地实现 `PendingReview → PendingRandomness → Active`、Owner 拒绝和暂停；生产图复用既有 BabyCoin，本地图使用 Mock VRF；尚未部署 Sepolia | `contracts/contracts/TaskMarketplaceV2.sol:20`<br>`contracts/ignition/modules/BabyStepsWeb3V2.ts:1`<br>`contracts/ignition/modules/BabyStepsWeb3V2Local.ts:1`<br>`web/src/pages/ProviderConsolePage.tsx:1` | `contracts/test/TaskMarketplaceV2.ts` 12 个审核、VRF、购买和完成测试；`contracts/test/babysteps-web3-v2-module.test.ts` 4 个部署契约测试；本地 Ignition 部署成功；Sepolia Owner 审核交易缺失 | `partial` |
 | 发行 ERC-20 平台币 | 使用 BabyCoin 替代 YD，奖励与 `lifetimeEarned` 分离 | `contracts/contracts/BabyCoin.sol:1`<br>`contracts/contracts/GrowthActivities.sol:1` | Sepolia `0x108a55217011983b93C3A95aD8D3B3343Bd5471b`；`contracts/test/BabyCoin.ts`；`docs/evidence/deployment/2026-08-09-sepolia.md` | `complete` |
 | 建立 BABY/USDC 与 BABY/WETH Uniswap v3 池 | 计划使用 Circle Sepolia USDC、官方 WETH9、0.3% fee tier | 尚无实现文件 | 池地址、流动性交易与 Swap 回执缺失 | `pending` |
 | 余额不足时使用 USDC 或 ETH 自动兑换 BABY | 计划使用官方 Router 与 Quoter 执行 exact-output 短缺额兑换 | 尚无实现文件 | Router 单元测试和 Sepolia Swap 回执缺失 | `pending` |

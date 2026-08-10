@@ -446,11 +446,11 @@ Add package scripts with the V2 module and parameter path. The example parameter
 Run:
 
 ```bash
-pnpm --filter @babysteps/contracts exec hardhat ignition deploy ignition/modules/BabyStepsWeb3V2Local.ts --reset
+pnpm --filter @babysteps/contracts exec hardhat ignition deploy ignition/modules/BabyStepsWeb3V2Local.ts
 pnpm --filter @babysteps/contracts exec hardhat test test/babysteps-web3-v2-module.test.ts
 ```
 
-Expected: local deployment succeeds and the module test passes. Record local addresses only in test output, not public deployment evidence.
+Expected: in-memory local deployment succeeds and the module test passes. Do not pass `--reset`: Hardhat 3 rejects reset on an ephemeral network because it has no persistent deployment state. Record local addresses only in test output, not public deployment evidence.
 
 - [ ] **Step 6: Commit deployment support**
 
