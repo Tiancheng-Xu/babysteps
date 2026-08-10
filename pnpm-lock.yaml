@@ -33,6 +33,24 @@ importers:
         specifier: ^2.5.6
         version: 2.5.6
 
+  aws:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.6
+        version: 2.5.6
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.1
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
+      yaml:
+        specifier: 2.8.1
+        version: 2.8.1
+
   contracts:
     dependencies:
       '@openzeppelin/contracts':
@@ -99,7 +117,7 @@ importers:
         version: 19.2.4(@types/react@19.2.18)
       '@vitejs/plugin-react':
         specifier: ^6.0.4
-        version: 6.0.5(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))
+        version: 6.0.5(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
       jsdom:
         specifier: 30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
@@ -108,10 +126,10 @@ importers:
         version: 6.0.3
       vite:
         specifier: 8.2.0
-        version: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)
+        version: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)
       vitest:
         specifier: 4.1.10
-        version: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))
+        version: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
 
   worker:
     dependencies:
@@ -130,7 +148,7 @@ importers:
         version: 2.5.6
       '@cloudflare/vitest-pool-workers':
         specifier: 0.20.3
-        version: 0.20.3(@cloudflare/workers-types@5.20260810.1)(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)))
+        version: 0.20.3(@cloudflare/workers-types@5.20260810.1)(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)))
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.1
@@ -139,7 +157,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 4.1.10
-        version: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))
+        version: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
       wrangler:
         specifier: 4.120.0
         version: 4.120.0(@cloudflare/workers-types@5.20260810.1)
@@ -2050,6 +2068,11 @@ packages:
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
+  yaml@2.8.1:
+    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   youch-core@0.3.3:
     resolution: {integrity: sha512-ho7XuGjLaJ2hWHoK8yFnsUGy2Y5uDpqSTq1FkHLK4/oqKtyUU1AFbOOxY4IpC9f0fTLjwYbslUz0Po5BpD1wrA==}
 
@@ -2172,14 +2195,14 @@ snapshots:
     optionalDependencies:
       workerd: 1.20260801.1
 
-  '@cloudflare/vitest-pool-workers@0.20.3(@cloudflare/workers-types@5.20260810.1)(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)))':
+  '@cloudflare/vitest-pool-workers@0.20.3(@cloudflare/workers-types@5.20260810.1)(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)))':
     dependencies:
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.1
       miniflare: 5.20260801.1-alpha
-      vitest: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))
+      vitest: 4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
       wrangler: 4.120.0(@cloudflare/workers-types@5.20260810.1)
       zod: 4.4.3
     transitivePeerDependencies:
@@ -2978,10 +3001,10 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
-  '@vitejs/plugin-react@6.0.5(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))':
+  '@vitejs/plugin-react@6.0.5(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)
+      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -2992,13 +3015,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@4.1.10(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))':
+  '@vitest/mocker@4.1.10(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)
+      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -3742,7 +3765,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5):
+  vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
@@ -3754,11 +3777,12 @@ snapshots:
       esbuild: 0.28.1
       fsevents: 2.3.3
       tsx: 4.23.5
+      yaml: 2.8.1
 
-  vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)):
+  vitest@4.1.10(@types/node@22.20.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5))
+      '@vitest/mocker': 4.1.10(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -3775,7 +3799,7 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)
+      vite: 8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(tsx@4.23.5)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.20.1
@@ -3867,6 +3891,8 @@ snapshots:
   xml-name-validator@5.0.0: {}
 
   xmlchars@2.2.0: {}
+
+  yaml@2.8.1: {}
 
   youch-core@0.3.3:
     dependencies:

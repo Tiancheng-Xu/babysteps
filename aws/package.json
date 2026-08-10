@@ -1,0 +1,19 @@
+{
+	"name": "@babysteps/aws",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "biome check src test vitest.config.ts",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit",
+		"build": "sam build --template-file template.yaml --build-dir dist",
+		"validate": "sam validate --template-file template.yaml"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.6",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "4.1.10",
+		"yaml": "2.8.1"
+	}
+}

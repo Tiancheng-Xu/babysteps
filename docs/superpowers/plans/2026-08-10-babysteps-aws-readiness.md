@@ -49,7 +49,7 @@
 
 - [ ] **Step 3: Implement the minimum SAM template**
 
-  Add parameters `EnvironmentName`, `ExpiresAt`, `DatabaseName`, `SepoliaRpcUrl`, `MarketplaceAddress`, and `RelayerRoleArn`. Define two public and two private subnets across two AZs, one NAT/EIP, private route tables, Lambda/RDS security groups, a generated RDS Secret, private PostgreSQL, asymmetric KMS key, HTTP API, Lambda, and explicit 7-day log group. Export only non-secret identifiers.
+  Add parameters `EnvironmentName`, `ExpiresAt`, `DatabaseName`, `SepoliaRpcUrl`, and `MarketplaceAddress`. The on-chain `COMPLETION_RELAYER_ROLE` is granted to the address derived from KMS and is not an AWS ARN or CloudFormation parameter. Define two public and two private subnets across two AZs, one NAT/EIP, private route tables, Lambda/RDS security groups, a generated RDS Secret, private PostgreSQL, asymmetric KMS key, HTTP API, Lambda, and explicit 7-day log group. Export only non-secret identifiers.
 
 - [ ] **Step 4: Verify GREEN and validate syntax**
 
