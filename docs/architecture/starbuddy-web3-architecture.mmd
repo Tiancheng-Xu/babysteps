@@ -1,0 +1,106 @@
+# StarBuddy BabySteps Web3 architecture
+
+架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。状态含义：`现有` 表示已有代码或真实部署，`计划` 表示尚待实现，`待验证` 表示已有设计但缺少外部环境证据。
+
+## 运行时请求与数据流
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
+flowchart LR
+    parent["家长<br/>现有：外部钱包<br/>计划：Privy 邮箱"] --> web["BabySteps React<br/>现有并扩展"]
+    provider["机构或育婴师<br/>现有角色，计划审核流"] --> web
+    owner["Owner<br/>现有管理员"] --> web
+
+    web --> worker["Worker API<br/>计划"]
+    worker --> d1[("D1<br/>metadata、视频、评论、nonce<br/>计划")]
+    web --> router["Uniswap v3 Router<br/>计划，待验证"]
+    web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
+    web --> marketV2["Marketplace V2<br/>计划"]
+    marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
+    marketV2 --> coin
+    marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
+    marketV2 --> sbt["ERC-5192 SBT<br/>计划"]
+    sbt --> ipfs[("IPFS metadata<br/>计划，待验证")]
+    worker --> lambda["Lambda Relayer<br/>计划"]
+    lambda --> kms["AWS KMS<br/>计划，待验证"]
+    kms --> marketV2
+    marketV2 --> graph["The Graph<br/>计划，待验证"]
+    marketV2 --> rpc["公共 RPC、Infura、Alchemy<br/>计划三源对照"]
+```
+
+## 组件、职责、存储与外部服务
+
+```mermaid
+flowchart TB
+    subgraph browser["浏览器信任边界"]
+        ui["React UI<br/>交易状态与只读展示"]
+        wallet["Privy 或外部钱包<br/>计划"]
+    end
+    subgraph cloudflare["Cloudflare 边界"]
+        pages["Pages<br/>现有 Git 集成"]
+        worker2["Worker<br/>计划鉴权与 API"]
+        d12[("D1<br/>计划链下内容")]
+    end
+    subgraph ethereum["Ethereum Sepolia 边界"]
+        baby["BabyCoin<br/>现有：0x108a…5471b"]
+        oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
+        newMarket["Marketplace V2<br/>计划"]
+        cert["ERC-5192<br/>计划"]
+        uni["Uniswap v3<br/>待验证"]
+        chainlink["Chainlink VRF<br/>现有闭环证据"]
+    end
+    subgraph aws["AWS 签名边界"]
+        relayer["Lambda<br/>计划最小权限"]
+        key["KMS secp256k1<br/>计划不可导出"]
+    end
+
+    pages --> ui
+    wallet --> ui
+    ui --> worker2 --> d12
+    ui --> oldMarket
+    ui --> newMarket
+    ui --> uni
+    newMarket --> baby
+    newMarket --> cert
+    newMarket --> chainlink
+    worker2 --> relayer --> key --> newMarket
+```
+
+## 部署与 CI/CD
+
+```mermaid
+flowchart LR
+    feature["Feature branch<br/>现有"] --> local["本地门禁<br/>测试、类型、构建、公开扫描<br/>现有并扩展"]
+    local --> preview["Preview 环境<br/>计划"]
+    preview --> evidence["Evidence gate<br/>现有规则，持续更新"]
+    evidence --> approval["人工授权<br/>生产与付费资源"]
+    approval --> main["main"]
+    main --> pagesDeploy["Cloudflare Pages Git 部署<br/>现有"]
+    main --> workerDeploy["Worker/D1 migration<br/>计划"]
+    main --> awsDeploy["Lambda/KMS IaC<br/>计划"]
+    main --> graphDeploy["Subgraph Studio<br/>计划，待验证"]
+    pagesDeploy --> httpCheck["HTTP、TLS、深链、非空产物<br/>现有门禁"]
+    workerDeploy --> apiCheck["API 与 migration 验收<br/>计划"]
+    awsDeploy --> kmsCheck["IAM、KMS、幂等验收<br/>计划"]
+```
+
+## 权限与安全边界
+
+```mermaid
+flowchart LR
+    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>计划"]
+    provider2["Provider<br/>提交任务与完成证据"] --> market
+    provider2 --> api["Worker API<br/>计划签名验证"]
+    parent2["Parent<br/>Swap、Approve、Buy"] --> market
+    relayer2["KMS Relayer<br/>仅 COMPLETION_RELAYER_ROLE"] --> market
+    coordinator["VRF Coordinator<br/>仅随机回调"] --> market
+    market --> sbt2["SBT<br/>Marketplace 持 MINTER_ROLE"]
+
+    owner2 -. "不能代替家长支付" .-> parent2
+    provider2 -. "不能审核自己的任务" .-> owner2
+    relayer2 -. "不能授予角色或暂停" .-> owner2
+```
+
+## 当前图像证据
+
+`docs/architecture/starbuddy-web3-architecture.png` 是现有 StarBuddy 主题图。Phase 1 先维护本 Mermaid 源；最终图像必须依据真实代码和部署重新生成，未实现节点继续标注“计划”或“待验证”。
