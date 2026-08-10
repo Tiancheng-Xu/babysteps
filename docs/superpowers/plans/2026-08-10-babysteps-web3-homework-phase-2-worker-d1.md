@@ -11,7 +11,7 @@
 ## Global constraints
 
 - Work directly in `/Users/shier/Desktop/babysteps`; do not create or switch a worktree.
-- Use `wrangler.jsonc`, compatibility date `2026-08-10`, `nodejs_compat`, observability, and generated Worker environment types.
+- Use `wrangler.jsonc`, the newest date supported by the installed Workerd runtime (`2026-08-08` at implementation time), `nodejs_compat`, observability, and generated Worker environment types.
 - Access D1 only through the Worker binding. Do not use Cloudflare management REST APIs.
 - Do not store credentials, RPC keys, signatures, raw session tokens, raw nonces, child names, birthdays, schools, locations, health data, feeding/sleep data, or child photos in D1.
 - Use Web Crypto for UUIDs, nonces, and opaque session tokens. Store only SHA-256 hashes of nonce/session tokens.
@@ -66,7 +66,7 @@ Expected: FAIL because the Worker package, app, and migration do not exist.
 Add Hono, viem, and Zod runtime dependencies; add Wrangler, TypeScript, Vitest, Workers types, and the Cloudflare Vitest pool as development dependencies. Configure:
 
 - `main: src/index.ts`
-- `compatibility_date: 2026-08-10`
+- `compatibility_date: 2026-08-08`, the newest date accepted by the installed Workerd runtime
 - `compatibility_flags: ["nodejs_compat"]`
 - local-development D1 binding named `DB`, with a non-production database identifier
 - observability enabled
