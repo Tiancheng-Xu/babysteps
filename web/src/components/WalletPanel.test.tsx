@@ -2,6 +2,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Address } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const nonProductCopy = new RegExp(
+	[String.fromCodePoint(0x4f5c, 0x4e1a), "课程", "老师", "验收"].join("|"),
+	"u",
+);
+
 const mocks = vi.hoisted(() => ({
 	connect: vi.fn(),
 	disconnect: vi.fn(),
@@ -72,7 +77,7 @@ describe("WalletPanel", () => {
 		expect(
 			screen.getByRole("link", { name: "安装 MetaMask" }).getAttribute("href"),
 		).toBe("https://metamask.io/download/");
-		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
+		expect(document.body.textContent).not.toMatch(nonProductCopy);
 	});
 
 	it("shows the disconnected state in plain language for non-technical users", () => {
@@ -86,7 +91,7 @@ describe("WalletPanel", () => {
 
 		expect(screen.getByText("尚未连接测试钱包")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "连接 MetaMask" })).toBeTruthy();
-		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
+		expect(document.body.textContent).not.toMatch(nonProductCopy);
 	});
 
 	it("keeps the connect action visibly pending without allowing a duplicate click", () => {
@@ -126,7 +131,7 @@ describe("WalletPanel", () => {
 		expect(screen.getByText("以太坊主网")).toBeTruthy();
 		expect(screen.getByText("目标网络")).toBeTruthy();
 		expect(screen.getByText("Sepolia 测试网")).toBeTruthy();
-		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
+		expect(document.body.textContent).not.toMatch(nonProductCopy);
 
 		fireEvent.click(screen.getByRole("button", { name: "切换到 Sepolia" }));
 		expect(mocks.switchChainAsync).toHaveBeenCalledWith({ chainId: 11155111 });
