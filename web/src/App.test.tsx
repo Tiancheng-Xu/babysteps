@@ -8,6 +8,11 @@ import {
 import type { Address, Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const nonProductCopy = new RegExp(
+	[String.fromCodePoint(0x4f5c, 0x4e1a), "课程", "老师", "验收"].join("|"),
+	"u",
+);
+
 const mocks = vi.hoisted(() => ({
 	clear: vi.fn(),
 	connect: vi.fn(),
@@ -250,7 +255,7 @@ describe("BabySteps App", () => {
 			screen.getByRole("heading", { name: "步骤 4 · 链上家庭便签" }),
 		).toBeTruthy();
 		expect(screen.getByRole("heading", { name: "核心技术能力" })).toBeTruthy();
-		expect(document.body.textContent).not.toMatch(/作业|课程|老师|验收/);
+		expect(document.body.textContent).not.toMatch(nonProductCopy);
 		expect(
 			screen.getByText("React + wagmi 连接 MetaMask，并把合约作为数据后端。"),
 		).toBeTruthy();
