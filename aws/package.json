@@ -15,5 +15,8 @@
 		"typescript": "catalog:",
 		"vitest": "4.1.10",
 		"yaml": "2.8.1"
+	},
+	"dependencies": {
+		"viem": "2.55.10"
 	}
 }
