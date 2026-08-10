@@ -47,6 +47,28 @@ BabySteps 保留以下差异：
 - 使用 Circle 官方 Sepolia USDC 与官方 WETH9，不部署 MockUSDC
 - 使用 StarBuddy 成长形象表达产品和架构
 
+### 参考架构复核与取舍
+
+2026-08-10 再次对照 `HOMEWORKS.md`、公开同学项目 `Chi111/web3-university`，以及学习资料中的 Worker/Lambda 与 AWS 部署架构图。`Adophlidu/yd-web3-course` 当前无法通过公开 GitHub API 读取，因此只保留作业参考库已经记录的高层描述，不把不可核验细节写成本项目依据。
+
+本项目吸收以下可验证做法：
+
+- 使用同一个稳定业务键合并链上事实与 D1 富内容，不让前端用标题或数组下标猜关联
+- 所有链下写操作使用一次性 nonce、固定 action 和短期会话，评论与进度写入前重新读取链上购买事实
+- 自动发证使用幂等作业、交易哈希、失败原因和补偿重试，而不是把一次 HTTP 请求当成最终状态
+- 将公开低延迟 API 放在 Cloudflare Worker，将不可导出签名和最小权限执行放在 Lambda/KMS
+- CI/CD 区分本地、preview、Sepolia 和 production，并在每次跨环境写入后执行独立读取与 Evidence gate
+
+明确不吸收以下复杂度或风险：
+
+- 不部署 MockUSDC、测试币水龙头或第二套 BabyCoin
+- 不在 Worker、前端变量或仓库中保存执行私钥
+- 不引入当前负载不需要的 VPC、NAT Gateway、RDS 读写副本或多可用区数据库
+- 不把全部 API、链上读取、权限和作业执行塞进单个 Worker 文件
+- 不引入 Google 登录、Smart Wallet、Paymaster、自定义 AMM 或主网资产
+
+完整架构采用由粗到细的视图：系统上下文、运行时读写流、链上/链下事实所有权、信任与权限边界、部署与 CI/CD、失败恢复与 Evidence。每张图都必须标注 `现有`、`本地已验证`、`待部署` 或 `计划`，防止目标架构被误读为线上现状。
+
 ## 当前部署与 V2 演进
 
 现有 Sepolia 闭环已经证明 BabyCoin 奖励、VRF、Approve、Buy、Provider 收款和 ERC-721 发证可以工作。该部署保持只读，不迁移状态，也不伪装成可升级合约。
@@ -73,10 +95,10 @@ flowchart LR
     worker --> d1["计划<br/>Cloudflare D1<br/>任务资料、视频、评论、用户名、nonce、审计"]
 
     web --> router["计划并待验证<br/>Uniswap v3 官方 Router<br/>USDC 或 ETH 换 BABY"]
-    web --> market["计划<br/>TaskMarketplaceV2<br/>Sepolia"]
+    web --> market["本地已验证、待部署<br/>TaskMarketplaceV2<br/>Sepolia"]
     market --> coin["已部署<br/>BabyCoin ERC-20"]
     market --> vrf["现有闭环已验证<br/>Chainlink VRF"]
-    market --> sbt["计划<br/>GrowthCertificateSBT<br/>ERC-5192"]
+    market --> sbt["本地已验证、待部署<br/>GrowthCertificateSBT<br/>ERC-5192"]
     sbt --> ipfs["计划并待验证<br/>IPFS metadata"]
 
     worker --> lambda["计划<br/>AWS Lambda Relayer"]
@@ -106,7 +128,7 @@ flowchart LR
     awsDeploy --> relayerGate["IAM、KMS 与幂等验收"]
 ```
 
-当前仓库已具备 Git 集成 Pages 的历史部署链路。V2 合约、D1、Worker、AWS、The Graph 和新 Evidence 尚未完成，不能把图中的目标节点写成已上线。
+当前仓库已具备 Git 集成 Pages 的历史部署链路。V2 合约、本地部署图和 Phase 1 Evidence 已完成；Sepolia V2、D1、Worker、AWS 与 The Graph 尚未完成，不能把图中的目标节点写成已上线。
 
 ## 权限与安全时序
 
@@ -138,7 +160,7 @@ sequenceDiagram
     S-->>B: 锁定证书
 ```
 
-该时序是目标行为。已有 Sepolia 闭环只验证了 VRF、Approve、Buy、完成调用和可转让 ERC-721 发证；Provider 审核、Worker/D1、KMS 和 ERC-5192 仍待实现。
+该时序是目标行为。已有 Sepolia V1 闭环验证了 VRF、Approve、Buy、完成调用和可转让 ERC-721 发证；V2 的 Provider 审核、购买、幂等完成与 ERC-5192 已在本地验证，但 Worker/D1、KMS 和 V2 Sepolia 部署仍待实现。
 
 ## 关键节点交付协议
 
