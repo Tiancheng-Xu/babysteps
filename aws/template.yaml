@@ -504,6 +504,8 @@ Resources:
   RelayerExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-relayer-execution"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:

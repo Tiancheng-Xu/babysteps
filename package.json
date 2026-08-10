@@ -13,6 +13,7 @@
 		"validate:standalone": "node scripts/validate-standalone.mjs",
 		"validate:public-copy": "node scripts/validate-public-copy.mjs",
 		"validate:pages-workflow": "node scripts/validate-pages-workflow.mjs",
+		"validate:aws-readiness": "node scripts/validate-aws-readiness.mjs",
 		"validate:public-artifact": "node scripts/validate-public-artifact.mjs",
 		"validate:homework-evidence": "node scripts/validate-homework-evidence.mjs"
 	},

@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - corepack enable
+      - corepack prepare pnpm@11.17.0 --activate
+      - pnpm install --frozen-lockfile
+  pre_build:
+    commands:
+      - pnpm --filter @babysteps/aws test
+      - pnpm --filter @babysteps/aws typecheck
+      - sam validate --region "$AWS_REGION" --template-file aws/bootstrap.yaml
+      - sam validate --region "$AWS_REGION" --template-file aws/template.yaml
+      - pnpm validate:aws-readiness
+  build:
+    commands:
+      - node scripts/validate-aws-readiness.mjs --deploy
+      - pnpm --filter @babysteps/aws build
+      - >-
+        sam deploy
+        --region "$AWS_REGION"
+        --template-file aws/dist/template.yaml
+        --stack-name "$RUNTIME_STACK_NAME"
+        --s3-bucket "$ARTIFACT_BUCKET"
+        --s3-prefix packaged
+        --role-arn "$CLOUDFORMATION_EXECUTION_ROLE_ARN"
+        --capabilities CAPABILITY_NAMED_IAM
+        --no-confirm-changeset
+        --no-fail-on-empty-changeset
+        --parameter-overrides
+        EnvironmentName="$RUNTIME_ENVIRONMENT_NAME"
+        ExpiresAt="$RUNTIME_EXPIRES_AT"
+        SepoliaRpcUrl="$RUNTIME_SEPOLIA_RPC_URL"
+        MarketplaceAddress="$RUNTIME_MARKETPLACE_ADDRESS"
+        CertificateBaseUri="$RUNTIME_CERTIFICATE_BASE_URI"
