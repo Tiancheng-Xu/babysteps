@@ -16,6 +16,14 @@ const architectureSections = [
 	"权限与安全边界",
 ];
 const architectureMarkers = ["现有", "计划", "待验证"];
+const workerEvidenceMarkers = [
+	"chainId:marketplaceAddress:taskId",
+	"nonce",
+	"D1 migrations",
+	"purchaseIdForBuyer",
+	"local only",
+	"no remote D1 or Worker deployment",
+];
 
 function tableCells(line) {
 	if (!line.trim().startsWith("|")) return [];
@@ -30,7 +38,11 @@ function normalizeStatus(value) {
 	return value.replaceAll("`", "").trim().toLowerCase();
 }
 
-export function validateHomeworkEvidence(mapText, architectureText) {
+export function validateHomeworkEvidence(
+	mapText,
+	architectureText,
+	workerEvidenceText,
+) {
 	const errors = [];
 	const lines = mapText.split(/\r?\n/);
 	const headerLineIndex = lines.findIndex((line) => {
@@ -71,6 +83,18 @@ export function validateHomeworkEvidence(mapText, architectureText) {
 			errors.push(`architecture is missing status marker: ${marker}`);
 		}
 	}
+	if (!architectureText.includes("Worker/D1 本地已验证")) {
+		errors.push("architecture must mark Worker/D1 本地已验证");
+	}
+	if (!workerEvidenceText) {
+		errors.push("Phase 2 evidence is missing");
+	} else {
+		for (const marker of workerEvidenceMarkers) {
+			if (!workerEvidenceText.includes(marker)) {
+				errors.push(`Phase 2 evidence is missing marker: ${marker}`);
+			}
+		}
+	}
 
 	return errors;
 }
@@ -80,11 +104,18 @@ async function main() {
 		process.argv[2] ?? "docs/homework/web3-homework-implementation-map.md";
 	const architecturePath =
 		process.argv[3] ?? "docs/architecture/starbuddy-web3-architecture.mmd";
-	const [mapText, architectureText] = await Promise.all([
+	const workerEvidencePath =
+		process.argv[4] ?? "docs/evidence/testing/2026-08-10-worker-d1.md";
+	const [mapText, architectureText, workerEvidenceText] = await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
+		readFile(workerEvidencePath, "utf8"),
 	]);
-	const errors = validateHomeworkEvidence(mapText, architectureText);
+	const errors = validateHomeworkEvidence(
+		mapText,
+		architectureText,
+		workerEvidenceText,
+	);
 	if (errors.length > 0) {
 		for (const error of errors) console.error(error);
 		process.exitCode = 1;

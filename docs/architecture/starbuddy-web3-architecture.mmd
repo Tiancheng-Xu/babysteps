@@ -40,8 +40,8 @@ flowchart LR
     provider["机构或育婴师<br/>现有 V2 审核代码，待部署"] --> web
     owner["Owner<br/>现有管理员"] --> web
 
-    web --> worker["Worker API<br/>Phase 2 计划"]
-    worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>Phase 2 计划")]
+    web --> worker["Worker API<br/>本地已验证，待部署"]
+    worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>本地已验证，待部署")]
     web --> router["Uniswap v3 Router<br/>计划，待验证"]
     web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
     web --> marketV2["Marketplace V2<br/>现有审核、购买与幂等完成代码<br/>待验证部署"]
@@ -61,12 +61,12 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    draft["D1 draftId<br/>标题、说明、封面、视频、完成规则<br/>计划"]
-    canonical["规范化 metadata JSON<br/>keccak256 哈希<br/>计划"]
+    draft["D1 draftId<br/>标题、说明、封面、视频、完成规则<br/>本地已验证"]
+    canonical["规范化 metadata JSON<br/>keccak256 哈希<br/>本地已验证"]
     event["TaskRequested event<br/>taskId + metadataHash<br/>本地已验证合约"]
-    key["稳定业务键<br/>chainId:marketplace:taskId<br/>计划"]
-    task["D1 published_task<br/>保存 key、draftId、txHash、哈希<br/>计划"]
-    read["详情聚合器<br/>链上状态 + D1 富内容<br/>计划"]
+    key["稳定业务键<br/>chainId:marketplace:taskId<br/>本地已验证"]
+    task["D1 published_task<br/>保存 key、draftId、txHash、哈希<br/>本地已验证"]
+    read["详情聚合器<br/>链上状态 + D1 富内容<br/>本地已验证"]
 
     draft --> canonical
     canonical -->|"Provider requestTask"| event
@@ -76,8 +76,8 @@ flowchart TB
     event --> read
     task --> read
 
-    comments[("D1 comments<br/>公开读、购买后写、软隐藏<br/>计划")] --> read
-    audit[("D1 audit_log<br/>nonce、绑定、审核、隐藏、作业<br/>计划")] -.-> task
+    comments[("D1 comments<br/>公开读、购买后写、软隐藏<br/>本地已验证")] --> read
+    audit[("D1 audit_log<br/>nonce、绑定、资料、隐藏<br/>本地已验证")] -.-> task
 ```
 
 链上拥有 Provider、payee、状态、随机价格/时间、购买、完成和证书事实；D1 拥有富文本、视频 URL、用户名、评论、nonce、会话与审计。任何链上/D1 哈希不一致都返回明确冲突，不自动覆盖。
@@ -92,8 +92,8 @@ flowchart TB
     end
     subgraph cloudflare["Cloudflare 边界"]
         pages["Pages<br/>现有 Git 集成"]
-        worker2["Worker<br/>计划鉴权、聚合与 API"]
-        d12[("D1<br/>计划富内容、会话、审计")]
+        worker2["Worker<br/>本地已验证鉴权、聚合与 API<br/>外部待部署"]
+        d12[("D1<br/>本地已验证富内容、会话、审计<br/>外部待部署")]
     end
     subgraph ethereum["Ethereum Sepolia 边界"]
         baby["BabyCoin<br/>现有：0x108a…5471b"]
@@ -121,6 +121,8 @@ flowchart TB
 ```
 
 ## 登录、写入与购买校验时序
+
+Worker/D1 本地已验证以下时序；Privy 邮箱入口与外部部署仍是计划，当前自动化测试使用运行时生成的测试钱包签名。
 
 ```mermaid
 sequenceDiagram
@@ -155,7 +157,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    feature["Feature branch<br/>现有"] --> local["本地门禁<br/>测试、类型、构建、迁移、公开扫描<br/>现有并扩展"]
+    feature["Feature branch<br/>现有"] --> local["本地门禁<br/>Worker 47 测试、类型、dry-run、D1 migrations<br/>本地已验证"]
     local --> preview["Preview<br/>独立 Worker + D1 + Pages<br/>计划"]
     preview --> evidence["Evidence gate<br/>现有规则，持续更新"]
     evidence --> approval["人工授权<br/>生产与付费资源"]
@@ -175,7 +177,7 @@ flowchart LR
 flowchart LR
     owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限与结算代码现有<br/>部署待验证"]
     provider2["Provider<br/>提交任务与完成证据"] --> market
-    provider2 --> api["Worker API<br/>计划 challenge-sign-verify"]
+    provider2 --> api["Worker API<br/>challenge-sign-verify 本地已验证<br/>外部待部署"]
     parent2["Parent<br/>Swap、Approve、Buy"] --> market
     relayer2["KMS Relayer<br/>云端计划<br/>仅 COMPLETION_RELAYER_ROLE"] --> market
     coordinator["VRF Coordinator<br/>仅随机回调"] --> market
@@ -186,7 +188,7 @@ flowchart LR
     relayer2 -. "不能授予角色或暂停" .-> owner2
 ```
 
-安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 使用 Web Crypto；所有异步工作必须 await 或进入明确的 `waitUntil`/后续 Queue 边界。Lambda 只允许指定 KMS key 的 `Sign`，KMS 钱包只拥有 `COMPLETION_RELAYER_ROLE`。
+安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 和会话令牌使用 Web Crypto 且 D1 只保存 SHA-256 哈希；nonce 通过条件更新原子消费；评论写入前重新读取链上 `purchaseIdForBuyer`；所有异步工作必须 await 或进入明确的 `waitUntil`/后续 Queue 边界。Lambda 只允许指定 KMS key 的 `Sign`，KMS 钱包只拥有 `COMPLETION_RELAYER_ROLE`。
 
 ## 失败恢复与 Evidence
 
@@ -205,4 +207,4 @@ flowchart LR
 
 `docs/architecture/starbuddy-web3-architecture.png` 是现有 StarBuddy 主题图。最终图像依据本 Mermaid 真相源和 StarBuddy 四阶段形象重新生成；未实现节点继续标注“计划”或“待部署”。
 
-Phase 1 的合约、部署图、测试与未部署边界已记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`。本 Mermaid 是当前架构真相源；PNG 在按此源重新生成前只作为历史主题证据。
+Phase 1 的合约、部署图、测试与未部署边界已记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；Worker/D1 本地实现记录在 `docs/evidence/testing/2026-08-10-worker-d1.md`。本 Mermaid 是当前架构真相源；PNG 在按此源重新生成前只作为历史主题证据。

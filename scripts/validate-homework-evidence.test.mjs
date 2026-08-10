@@ -5,11 +5,20 @@ import { validateHomeworkEvidence } from "./validate-homework-evidence.mjs";
 const validArchitecture = `
 # BabySteps Web3 architecture
 ## 运行时请求与数据流
-现有：React。计划：Worker。待验证：Sepolia V2。
+现有：React。Worker/D1 本地已验证。计划：Privy。待验证：Sepolia V2。
 ## 部署与 CI/CD
 现有：Pages。计划：Worker preview。待验证：production。
 ## 权限与安全边界
 现有：Owner。计划：KMS Relayer。待验证：IAM。
+`;
+
+const validWorkerEvidence = `
+# Worker/D1 Phase 2 evidence
+Stable task key: chainId:marketplaceAddress:taskId
+Replay-safe nonce and session tests: passed
+D1 migrations: seven tables applied
+Purchase gate: purchaseIdForBuyer must be non-zero
+Boundary: local only; no remote D1 or Worker deployment
 `;
 
 function mapWith(headers, rows) {
@@ -48,7 +57,10 @@ test("accepts a complete evidence mapping contract", () => {
 		],
 	]);
 
-	assert.deepEqual(validateHomeworkEvidence(validMap, validArchitecture), []);
+	assert.deepEqual(
+		validateHomeworkEvidence(validMap, validArchitecture, validWorkerEvidence),
+		[],
+	);
 });
 
 test("rejects a map without the evidence column", () => {
@@ -58,7 +70,7 @@ test("rejects a map without the evidence column", () => {
 	);
 
 	assert.match(
-		validateHomeworkEvidence(invalidMap, validArchitecture)[0],
+		validateHomeworkEvidence(invalidMap, validArchitecture, validWorkerEvidence)[0],
 		/验证证据/,
 	);
 });
@@ -69,7 +81,11 @@ test("rejects an unsupported status", () => {
 	]);
 
 	assert.match(
-		validateHomeworkEvidence(invalidMap, validArchitecture).join("\n"),
+		validateHomeworkEvidence(
+			invalidMap,
+			validArchitecture,
+			validWorkerEvidence,
+		).join("\n"),
 		/invalid status: done/,
 	);
 });
@@ -89,7 +105,25 @@ test("rejects architecture without truthful status markers", () => {
 		validateHomeworkEvidence(
 			validMap,
 			"# Architecture\n## 运行时请求与数据流\nReact to Sepolia",
+			validWorkerEvidence,
 		).join("\n"),
 		/计划/,
+	);
+});
+
+test("rejects missing Worker and D1 Phase 2 proof", () => {
+	const validMap = mapWith(requiredHeaders, [
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"本地测试",
+			"`partial`",
+		],
+	]);
+
+	assert.match(
+		validateHomeworkEvidence(validMap, validArchitecture, "").join("\n"),
+		/Phase 2 evidence/,
 	);
 });
