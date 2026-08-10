@@ -2,20 +2,58 @@ import { Hono } from "hono";
 import type { WorkerApp } from "./auth/session";
 import type { MarketplaceReaderFactory } from "./chain/marketplaceReader";
 import { createViemMarketplaceReader } from "./chain/viemMarketplaceReader";
+import { readConfig } from "./config";
 import { AppError } from "./http/errors";
 import { errorEnvelope } from "./http/respond";
 import { authRoutes } from "./routes/auth";
+import {
+	createCommentRoutes,
+	type OwnerWalletFactory,
+} from "./routes/comments";
 import { profileRoutes } from "./routes/profile";
 import { createTaskRoutes } from "./routes/tasks";
 
 export type AppDependencies = {
 	marketplaceReaderFactory?: MarketplaceReaderFactory;
+	ownerWalletFactory?: OwnerWalletFactory;
 };
 
 export function createApp(_dependencies: AppDependencies = {}) {
 	const application = new Hono<WorkerApp>();
 	const marketplaceReaderFactory =
 		_dependencies.marketplaceReaderFactory ?? createViemMarketplaceReader;
+	const ownerWalletFactory =
+		_dependencies.ownerWalletFactory ??
+		((env: Env) => readConfig(env).ownerWallet);
+
+	application.use("*", async (context, next) => {
+		const requestId = crypto.randomUUID();
+		const startedAt = Date.now();
+		context.set("requestId", requestId);
+		try {
+			await next();
+			console.log(
+				JSON.stringify({
+					requestId,
+					method: context.req.method,
+					path: context.req.path,
+					status: context.res.status,
+					durationMs: Date.now() - startedAt,
+				}),
+			);
+		} catch (error) {
+			console.log(
+				JSON.stringify({
+					requestId,
+					method: context.req.method,
+					path: context.req.path,
+					status: error instanceof AppError ? error.status : 500,
+					durationMs: Date.now() - startedAt,
+				}),
+			);
+			throw error;
+		}
+	});
 
 	application.get("/api/health", (context) =>
 		context.json({
@@ -28,6 +66,10 @@ export function createApp(_dependencies: AppDependencies = {}) {
 	application.route("/api/auth", authRoutes);
 	application.route("/api/profile", profileRoutes);
 	application.route("/api", createTaskRoutes(marketplaceReaderFactory));
+	application.route(
+		"/api",
+		createCommentRoutes(marketplaceReaderFactory, ownerWalletFactory),
+	);
 
 	application.onError((error, context) => {
 		if (error instanceof AppError) {

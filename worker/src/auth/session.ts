@@ -12,6 +12,7 @@ export type WorkerApp = {
 	Variables: {
 		wallet: string;
 		sessionId: string;
+		requestId: string;
 	};
 };
 
