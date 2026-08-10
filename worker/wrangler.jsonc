@@ -12,7 +12,9 @@
 		"APP_DOMAIN": "babysteps.baby2b.online",
 		"APP_URI": "https://babysteps.baby2b.online",
 		"CHAIN_ID": "11155111",
-		"OWNER_WALLET": "0x0000000000000000000000000000000000000000"
+		"OWNER_WALLET": "0x0000000000000000000000000000000000000000",
+		"MARKETPLACE_V2_ADDRESS": "0x0000000000000000000000000000000000000000",
+		"SEPOLIA_RPC_URL": "https://ethereum-sepolia-rpc.publicnode.com"
 	},
 	"d1_databases": [
 		{

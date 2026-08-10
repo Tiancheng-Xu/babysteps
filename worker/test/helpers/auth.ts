@@ -1,5 +1,5 @@
 import type { PrivateKeyAccount } from "viem";
-import { request } from "./request";
+import { request, type TestRequest } from "./request";
 
 export type ChallengeResponse = {
 	challengeId: string;
@@ -10,8 +10,9 @@ export type ChallengeResponse = {
 export async function createChallenge(
 	account: PrivateKeyAccount,
 	action = "login",
+	requester: TestRequest = request,
 ): Promise<ChallengeResponse> {
-	const response = await request("/api/auth/challenges", {
+	const response = await requester("/api/auth/challenges", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify({ address: account.address, action }),
@@ -29,10 +30,11 @@ export async function createChallenge(
 export async function createSession(
 	account: PrivateKeyAccount,
 	challenge: ChallengeResponse,
+	requester: TestRequest = request,
 ): Promise<Response> {
 	const signature = await account.signMessage({ message: challenge.message });
 
-	return request("/api/auth/sessions", {
+	return requester("/api/auth/sessions", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify({
