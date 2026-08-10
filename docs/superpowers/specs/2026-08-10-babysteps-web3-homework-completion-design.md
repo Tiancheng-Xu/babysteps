@@ -57,13 +57,14 @@ BabySteps 保留以下差异：
 - 所有链下写操作使用一次性 nonce、固定 action 和短期会话，评论与进度写入前重新读取链上购买事实
 - 自动发证使用幂等作业、交易哈希、失败原因和补偿重试，而不是把一次 HTTP 请求当成最终状态
 - 将公开低延迟 API 放在 Cloudflare Worker，将不可导出签名和最小权限执行放在 Lambda/KMS
+- 使用 SAM/CloudFormation 创建可重复部署和销毁的 AWS 边界，所有资源带统一项目与环境标签
 - CI/CD 区分本地、preview、Sepolia 和 production，并在每次跨环境写入后执行独立读取与 Evidence gate
 
 明确不吸收以下复杂度或风险：
 
 - 不部署 MockUSDC、测试币水龙头或第二套 BabyCoin
 - 不在 Worker、前端变量或仓库中保存执行私钥
-- 不引入当前负载不需要的 VPC、NAT Gateway、RDS 读写副本或多可用区数据库
+- 不引入多可用区数据库、读副本、ECS、ALB、Cloud Map 或长期运行的迁移主机
 - 不把全部 API、链上读取、权限和作业执行塞进单个 Worker 文件
 - 不引入 Google 登录、Smart Wallet、Paymaster、自定义 AMM 或主网资产
 
@@ -82,7 +83,7 @@ V2 优先复用已部署的 `BabyCoin` 与 `GrowthActivities`。部署脚本在�
 
 ## 目标架构
 
-目标架构把可信状态放到 Sepolia，把富内容和隐私较高的数据放到 D1，把签名密钥限制在 AWS KMS。图中“现有”表示已有代码或部署，“计划”表示本设计尚待实施，“待验证”表示依赖真实外部环境验收。
+目标架构把可信状态放到 Sepolia，把富内容和隐私较高的数据放到 D1，把 Relayer 幂等作业和审计状态放到私有 RDS，把签名密钥限制在 AWS KMS。RDS 不复制视频、评论、用户名或链上业务事实，只记录完成请求、状态、交易哈希和重试次数。图中“现有”表示已有代码或部署，“计划”表示本设计尚待实施，“待验证”表示依赖真实外部环境验收。
 
 ```mermaid
 flowchart LR
@@ -101,13 +102,34 @@ flowchart LR
     market --> sbt["本地已验证、待部署<br/>GrowthCertificateSBT<br/>ERC-5192"]
     sbt --> ipfs["计划并待验证<br/>IPFS metadata"]
 
-    worker --> lambda["计划<br/>AWS Lambda Relayer"]
+    worker --> api["计划<br/>API Gateway<br/>完成请求入口"]
+    api --> lambda["计划<br/>私有子网 Lambda Relayer"]
+    lambda --> rds["计划<br/>私有 RDS PostgreSQL<br/>幂等作业与审计"]
     lambda --> kms["计划并待验证<br/>AWS KMS 非导出签名密钥"]
+    lambda --> nat["计划<br/>单 AZ NAT Gateway"]
+    nat --> rpc["计划<br/>Sepolia RPC"]
     kms --> market
 
     market --> graph["计划并待验证<br/>The Graph Subgraph"]
-    market --> rpc["计划<br/>公共 RPC、Infura、Alchemy<br/>ethers.js 对照读取"]
+    market --> rpcRead["计划<br/>公共 RPC、Infura、Alchemy<br/>ethers.js 对照读取"]
 ```
+
+### AWS 运行时边界
+
+AWS 开发环境使用 `us-east-1`，由一个名为 `babysteps-readiness` 的 SAM/CloudFormation Stack 管理：
+
+- 一个 VPC，跨两个可用区创建公有与私有子网；RDS 和 Lambda 只放入私有子网
+- 一个公有 NAT Gateway 与一个 Elastic IP，为私有 Lambda 提供 Sepolia RPC 出口；不允许互联网主动进入私网
+- 一个 Single-AZ `db.t4g.micro` PostgreSQL，20 GB gp3，禁止公网访问；数据库安全组只允许 Relayer 安全组访问 `5432`
+- 一个 Secrets Manager Secret 保存数据库凭据，模板和日志不得输出 Secret 值
+- 一个独立 HMAC Webhook Secret 同时以 Cloudflare Secret 和 Secrets Manager Secret 保存；Worker 使用时间戳、nonce 与规范化请求体签名，Lambda 拒绝过期、重放或签名不匹配的请求
+- 一个 API Gateway HTTP API 接收完成请求并调用 Lambda Relayer；Relayer 在执行业务前完成 HMAC 验证，不依赖来源 IP
+- 一个 `ECC_SECG_P256K1`、`SIGN_VERIFY` KMS Key；Lambda 只允许对该 Key 调用 `GetPublicKey` 与 `Sign`
+- CloudWatch Logs 保存脱敏日志并设置 7 天保留期；禁止记录签名原文、数据库密码、AWS 凭据和用户个人信息
+
+Stack 和其全部资源必须带 `Project=babysteps`、`Environment=homework-readiness`、`ManagedBy=cloudformation` 与 UTC `ExpiresAt` 标签。部署前先只读核对账号计划、调用身份和配额；如果账号计划限制、身份异常、NAT/RDS 配额不足或模板需要超出已批准规格，部署立即停止，不自动升级账号或请求提额。
+
+Cloudflare Worker 仍是面向产品的链下 API。Worker 调用 AWS 完成入口时只发送 `purchaseId`、`evidenceHash`、幂等键和签名身份摘要。Lambda 在 RDS 的 `completion_jobs` 表中原子登记作业；`idempotency_key` 与 `purchase_id` 均唯一，记录状态、尝试次数、交易哈希和时间戳，不保存儿童信息。重复请求返回同一结果；首次请求才通过 KMS 签署并经 NAT 向 Sepolia 提交交易。
 
 ## 部署与 CI/CD 架构
 
@@ -115,17 +137,20 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    branch["Feature branch"] --> checks["本地与 CI 门禁<br/>测试、类型、构建、链接、敏感信息"]
-    checks --> preview["开发环境<br/>D1 preview、Worker preview、Sepolia"]
+    branch["Feature branch"] --> checks["本地与 GitHub Actions 门禁<br/>测试、类型、构建、链接、敏感信息"]
+    checks --> oidc["GitHub OIDC<br/>短期 AWS 身份"]
+    oidc --> codebuild["CodeBuild Linux/Small<br/>并发上限 1"]
+    codebuild --> sam["SAM/CloudFormation<br/>验证并部署 readiness Stack"]
+    sam --> preview["开发环境<br/>API、RDS、KMS、Sepolia"]
     preview --> evidence["Evidence gate<br/>地址、交易、日志、截图、实现映射"]
     evidence --> review["人工审查与授权"]
     review --> main["合并 main"]
     main --> pages["Git 集成 Cloudflare Pages"]
     main --> workerDeploy["Worker 与 D1 production migration"]
-    main --> awsDeploy["AWS Lambda 与 KMS 配置"]
+    main --> awsDeploy["AWS SAM Stack<br/>VPC、NAT、RDS、API、Lambda、KMS"]
     pages --> httpGate["HTTP、TLS、深链与非空产物验收"]
     workerDeploy --> apiGate["API、migration 与权限验收"]
-    awsDeploy --> relayerGate["IAM、KMS 与幂等验收"]
+    awsDeploy --> relayerGate["网络、RDS、IAM、KMS 与幂等验收"]
 ```
 
 当前仓库已具备 Git 集成 Pages 的历史部署链路。V2 合约、本地部署图和 Phase 1 Evidence 已完成；Sepolia V2、D1、Worker、AWS 与 The Graph 尚未完成，不能把图中的目标节点写成已上线。
@@ -292,7 +317,7 @@ Worker 使用 challenge-sign-verify 建立会话：
 
 Provider 在 Worker 提交完成请求。请求包含 `purchaseId`、证据摘要、Provider 签名和幂等键，不包含儿童个人信息。
 
-Worker 验证 Provider 角色、购买归属、签名和幂等键，然后调用开发环境的 Lambda Relayer。Lambda 的执行角色只允许调用指定 KMS key 的 `Sign`，KMS 私钥不可导出。KMS 钱包只持有 `COMPLETION_RELAYER_ROLE`，该角色只能调用完成确认入口，不能授予角色、暂停任务、转移代币或更改配置。
+Worker 验证 Provider 角色、购买归属、签名和幂等键，然后调用开发环境的 API Gateway 与 Lambda Relayer。Lambda 先在私有 RDS 中原子创建或读取幂等作业，再调用指定 KMS Key 的 `Sign`；KMS 私钥不可导出。KMS 钱包只持有 `COMPLETION_RELAYER_ROLE`，该角色只能调用完成确认入口，不能授予角色、暂停任务、转移代币或更改配置。Lambda 通过 NAT Gateway 调用 Sepolia RPC，RDS 不开放公网，KMS 与 Secrets Manager 访问受最小权限 IAM 限制。
 
 `confirmCompletion(purchaseId, evidenceHash)` 在一个交易中完成以下操作：
 
@@ -380,8 +405,9 @@ ethers.js 读取脚本分别连接公共 RPC、Infura 和 Alchemy，并输出统
 
 - **合约测试**：角色、审核、VRF、随机边界、重复购买、精确收款、暂停、幂等完成、ERC-5192 和失败路径
 - **Worker 测试**：nonce 重放、签名过期、ID 绑定、购买资格、评论权限、软隐藏、完成幂等和脱敏
+- **AWS IaC 测试**：SAM validate、CloudFormation lint、IAM 权限断言、RDS 公网关闭、私网路由、Security Group 端口和统一标签
 - **前端测试**：错误网络、Router 报价、余额不足、有限授权、拒签、交易恢复和只读模式
-- **集成测试**：D1 draft 绑定链上 taskId、Swap 后购买、Relayer 完成、自动发证和 Subgraph 查询
+- **集成测试**：D1 draft 绑定链上 taskId、API Gateway 到 Lambda/RDS、NAT 到 Sepolia RPC、KMS Relayer 完成、自动发证和 Subgraph 查询
 - **发布门禁**：类型检查、单元测试、生产构建、链接检查、375/390/430/1440 px 响应式检查和公开内容扫描
 
 Evidence 必须保存以下真实结果：
@@ -391,6 +417,7 @@ Evidence 必须保存以下真实结果：
 - Approve、Swap、Buy、Completion 和 Mint 的交易回执
 - 三个 RPC 的规范化读取结果与 The Graph 查询结果
 - KMS key 类型、Lambda IAM 权限摘要和去敏后的 Relayer 日志
+- CloudFormation Stack ID 摘要、资源标签、私网/RDS/NAT 检查、CodeBuild build ID 与清理清单
 - 关键页面截图、StarBuddy 主题架构图和故障复盘
 
 Evidence 不复制源码，不包含密钥，不伪造缺失记录。未完成的外部验证必须标为 pending。
@@ -431,7 +458,19 @@ Evidence 不复制源码，不包含密钥，不伪造缺失记录。未完成�
 - 借贷、清算、跨链桥、ENS 发布和 NFT 交易市场
 - Cosmos 自建链与挖矿演示
 
-Sepolia Gas、测试 USDC、测试 WETH 和测试 BABY 没有真实价值。Cloudflare D1、The Graph 和 AWS 先使用开发或免费额度。创建付费 AWS 资源、提升 KMS 或 Lambda 配额、生产发布、自定义域名变更和主网部署都需要人工确认。
+Sepolia Gas、测试 USDC、测试 WETH 和测试 BABY 没有真实价值。Cloudflare D1、The Graph 和 AWS 先使用开发或免费额度。用户已于 2026-08-10 授权创建 `babysteps-readiness` 开发 Stack；按 48 小时估算，单 NAT、单可用区微型 RDS、一个 KMS Key 和一个 Secret 的基础费用约为 3.5 至 4.5 美元，实际账单以 AWS 为准。扩大资源规格、提升配额、创建第二个 NAT、改为 Multi-AZ、生产发布、自定义域名变更和主网部署仍需单独人工确认。
+
+### 48 小时保留与清理门禁
+
+Readiness Stack 只有在以下证据全部生成后才允许进入清理：
+
+1. `API Gateway → Lambda → RDS` 健康检查成功
+2. `Lambda → NAT → Sepolia RPC` 读取成功
+3. KMS 公钥已解析为 Relayer 地址，最小权限签名与一笔测试链交易可核验
+4. CodeBuild、SAM、CloudFormation、应用日志和架构图已去敏归档
+5. 作业实现映射已更新，且清理 Manifest 已列出 Stack、NAT、EIP、RDS、Secret、KMS、日志与 IAM 资源
+
+未达到以上条件时，不因单个测试成功而提前销毁。达到条件后，先停止会重新部署资源的 GitHub Actions、CodeBuild Webhook 或计划任务，再按 `aws-homework-cleanup` 规则执行：用户已经授权发现和可逆暂停；CloudFormation Stack、RDS、KMS Key、Secret、日志及唯一恢复副本的永久删除，必须在展示最终 ARN/ID 清单后取得一次新的行动时确认。Readiness RDS 只含合成作业数据，默认不创建最终快照；改变快照选择仍需行动时确认。RDS 最多只能连续停止七天且仍收取存储费；NAT Gateway 不能暂停，只能删除。
 
 ## 发布顺序与停止门禁
 
@@ -441,10 +480,11 @@ Sepolia Gas、测试 USDC、测试 WETH 和测试 BABY 没有真实价值。Clou
 2. D1 schema、Worker API 与签名测试
 3. Privy、Owner、Provider 和购买页面
 4. Uniswap Router adapter 与本地状态机测试
-5. IPFS、KMS Lambda Relayer、The Graph 和 RPC 读取
-6. Sepolia 开发部署与真实闭环证据
-7. Evidence、实现映射、架构图和响应式验收
-8. 经人工确认后合并 `main` 并触发生产部署
+5. AWS SAM readiness Stack、KMS Lambda Relayer、RDS 幂等作业与私网/NAT 验收
+6. IPFS、The Graph 和 RPC 读取
+7. Sepolia 开发部署与真实闭环证据
+8. Evidence、实现映射、架构图、费用与清理 Manifest 验收
+9. 经人工确认后合并 `main` 并触发生产部署
 
 任何阶段出现 P0 测试失败、敏感信息泄漏、地址不匹配、空部署产物或无法复现的链上结果时，后续发布停止。生产发布、DNS 变更、公开 Evidence 和付费资源创建必须单独获得授权。
 
