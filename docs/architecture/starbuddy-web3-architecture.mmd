@@ -15,7 +15,7 @@ flowchart LR
     worker --> d1[("D1<br/>metadata、视频、评论、nonce<br/>计划")]
     web --> router["Uniswap v3 Router<br/>计划，待验证"]
     web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
-    web --> marketV2["Marketplace V2<br/>现有审核代码，待验证部署"]
+    web --> marketV2["Marketplace V2<br/>现有审核、购买与幂等完成代码<br/>待验证部署"]
     marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
     marketV2 --> coin
     marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
@@ -23,7 +23,7 @@ flowchart LR
     sbt --> ipfs[("IPFS metadata<br/>计划，待验证")]
     worker --> lambda["Lambda Relayer<br/>计划"]
     lambda --> kms["AWS KMS<br/>计划，待验证"]
-    kms --> marketV2
+    kms -->|"COMPLETION_RELAYER_ROLE<br/>代码现有，云端待验证"| marketV2
     marketV2 --> graph["The Graph<br/>计划，待验证"]
     marketV2 --> rpc["公共 RPC、Infura、Alchemy<br/>计划三源对照"]
 ```
@@ -44,7 +44,7 @@ flowchart TB
     subgraph ethereum["Ethereum Sepolia 边界"]
         baby["BabyCoin<br/>现有：0x108a…5471b"]
         oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
-        newMarket["Marketplace V2<br/>现有审核代码，待验证部署"]
+        newMarket["Marketplace V2<br/>现有审核、购买、完成代码<br/>待验证部署"]
         cert["ERC-5192<br/>现有代码，待验证部署"]
         uni["Uniswap v3<br/>待验证"]
         chainlink["Chainlink VRF<br/>现有闭环证据"]
@@ -88,11 +88,11 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>计划"]
+    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限与结算代码现有<br/>部署待验证"]
     provider2["Provider<br/>提交任务与完成证据"] --> market
     provider2 --> api["Worker API<br/>计划签名验证"]
     parent2["Parent<br/>Swap、Approve、Buy"] --> market
-    relayer2["KMS Relayer<br/>仅 COMPLETION_RELAYER_ROLE"] --> market
+    relayer2["KMS Relayer<br/>云端计划<br/>仅 COMPLETION_RELAYER_ROLE"] --> market
     coordinator["VRF Coordinator<br/>仅随机回调"] --> market
     market --> sbt2["SBT<br/>Marketplace 持 MINTER_ROLE"]
 
