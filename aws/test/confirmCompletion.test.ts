@@ -146,7 +146,7 @@ describe("confirmCompletion application", () => {
 	it("reports a redacted persistence failure after a successful broadcast", async () => {
 		const dependencies = setup();
 		vi.mocked(dependencies.repository.markSubmitted).mockRejectedValue(
-			new Error("postgres://user:password@private-host/internal"),
+			new Error("sensitive database diagnostics from a private host"),
 		);
 
 		await expect(

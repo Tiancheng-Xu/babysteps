@@ -13,7 +13,8 @@
 | Chainlink 随机价格和开放时间 | V1 使用 VRF v2.5 两个随机数锁定 2 至 4 BABY 与活动时长；V2 仅在 Owner 审核后请求随机数 | `contracts/contracts/TaskMarketplaceV2.sol:149`<br>`contracts/contracts/TaskMarketplace.sol:253` | `contracts/test/TaskMarketplaceV2.ts` 边界测试；Sepolia request ID 与完成闭环见 `docs/evidence/deployment/2026-08-09-business-closed-loop.json` | `complete` |
 | 完成后自动发放带名称和图片的 ERC-5192 证书 | V2 已在本地实现正式 ERC-5192、不可转让语义、`COMPLETION_RELAYER_ROLE` 完成确认和按购买幂等；IPFS 与 Sepolia V2 尚未验证 | `contracts/contracts/GrowthCertificateSBT.sol:1`<br>`contracts/contracts/interfaces/IERC5192.sol:1`<br>`contracts/contracts/TaskMarketplaceV2.sol:280` | `contracts/test/GrowthCertificateSBT.ts` 6 个本地测试和 `contracts/test/TaskMarketplaceV2.ts` 证书幂等闭环通过；完整输出见 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；V1 Sepolia token ID `1`；V2 地址与 IPFS 证据缺失 | `partial` |
 | Privy 登录、用户名修改与签名 | Worker 已在本地实现 EIP-4361 风格 challenge、一次性 nonce 原子消费、viem 验签、12 小时 HttpOnly 会话、注销和用户名更新；Privy 邮箱/外部钱包 UI 尚未接入 | `worker/src/routes/auth.ts:41`<br>`worker/src/auth/session.ts:18`<br>`worker/src/routes/profile.ts:46` | `worker/test/auth.test.ts` 与 `worker/test/profile.test.ts` 本地通过；原 nonce/token 不落库测试通过；Privy 页面与真实登录证据缺失 | `partial` |
-| KMS + Lambda Relayer 完成确认 | 计划使用不可导出的 secp256k1 KMS key 与最小权限 Relayer | 尚无实现文件 | AWS 资源、IAM 摘要和完成交易缺失 | `pending` |
+| KMS + Lambda Relayer 完成确认 | 已实现 HMAC 时间窗与 nonce 防重放、RDS 幂等 claim、运行时 schema 初始化、KMS SPKI 地址派生、DER/low-s/recovery、EIP-1559 模拟/签名/广播和脱敏 HTTP 错误；云端尚未启动 | `aws/src/auth/webhook.ts:46`<br>`aws/src/repositories/postgresCompletionJobs.ts:39`<br>`aws/src/repositories/schema.ts:3`<br>`aws/src/signing/kmsEthereumSigner.ts:27`<br>`aws/src/application/confirmCompletion.ts:40`<br>`aws/src/handler.ts:71` | AWS 包 11 个测试文件、39 项测试通过；SAM 生产构建生成非空 handler；本地证据见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`；API、RDS、KMS ARN 与 Sepolia V2 完成交易待云端启动 | `partial` |
+| AWS VPC/NAT/RDS 与 OIDC/CodeBuild 部署闭环 | 已实现双 AZ 公私子网、单 NAT/EIP、私有 Single-AZ RDS、SG-only 5432、Secrets、KMS、API/Lambda、7 天日志；GitHub OIDC 受 Environment 限制，S3 源码 7 天生命周期，CodeBuild Small/并发 1，付费部署双门禁 | `aws/template.yaml:45`<br>`aws/bootstrap.yaml:90`<br>`aws/bootstrap.yaml:295`<br>`aws/buildspec.yml:1`<br>`.github/workflows/aws-readiness.yml:1`<br>`scripts/validate-aws-readiness.mjs:5` | 两份模板 `sam validate --lint` 通过；AWS 包 11 个测试文件、39 项测试与 9 项仓库 validator 通过；没有 AWS 资源或费用证据，因为用户要求晚些启动 | `partial` |
 | ethers.js 对照公共 RPC、Infura 和 Alchemy | V1 已通过公共 RPC 读取链上闭环；ethers.js 与三源对照尚未实现 | `contracts/scripts/inspectSepolia.ts:1` | `docs/evidence/deployment/2026-08-09-rpc-verification.json` 仅证明公共 RPC | `partial` |
 | The Graph 事件索引与 GraphQL Demo | 计划索引角色、任务、随机数、购买、完成和证书事件 | 尚无实现文件 | Schema、Mapping、部署 ID 和 GraphQL 输出缺失 | `pending` |
 
@@ -25,6 +26,7 @@
 - GrowthCertificate V1：`0x4d594aeeAAfb4280D95CD60940AeBd3d11DBAFa3`
 - TaskMarketplace V1：`0x2D1107610eBaBbFa7CD9569eb42eF315eb6F25BE`
 - V2 contracts：`pending`
+- AWS runtime/bootstrap stacks：`not created`（本地 IaC 已验证，云端待启动）
 
 ## 更新规则
 

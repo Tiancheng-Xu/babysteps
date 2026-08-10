@@ -1,43 +1,37 @@
-# BabySteps 架构
+# BabySteps / StarBuddy 架构
 
-## 系统边界
+完整、可执行的架构真相源见 [`docs/architecture/starbuddy-web3-architecture.mmd`](architecture/starbuddy-web3-architecture.mmd)。StarBuddy 主题业务图见 [`docs/architecture/starbuddy-web3-architecture.png`](architecture/starbuddy-web3-architecture.png)。
 
-BabySteps 是静态前端与 Sepolia 智能合约组成的 DApp。浏览器负责界面、钱包连接和
-交易状态展示；MetaMask 管理签名；链上合约负责活动冷却、积分账本、赠送和公开便签。
-当前系统没有中心化 API 或数据库。
+## 当前边界
 
-```text
-React UI ──wagmi/viem──> MetaMask ──签名交易──> Sepolia
-    │                                           │
-    └────────────── eth_call 读取状态 <─────────┘
+- 浏览器：React、外部钱包；Privy 邮箱入口仍待接入。
+- Cloudflare：Pages 已有历史上线证据；Worker/D1 已完成本地实现，远程待部署。
+- Sepolia：V1 BabyCoin、Marketplace 和 VRF 闭环已有交易证据；V2 审核、幂等完成和 ERC-5192 已本地验证，待部署。
+- AWS：API Gateway、Lambda、私有 RDS、KMS、VPC/NAT、GitHub OIDC 与 CodeBuild 已通过本地模板、单测和构建；没有创建或修改云资源。
+- 读取：公共 RPC 有历史证据；ethers.js 三源对照与 The Graph 仍待实现。
+
+## 核心数据流
+
+```mermaid
+flowchart LR
+    user["家长 / Provider / Owner"] --> web["React + wallet"]
+    web --> worker["Cloudflare Worker"]
+    worker --> d1[("D1 富内容、评论、会话、审计")]
+    web --> market["Marketplace V2 / Sepolia"]
+    worker -->|"HMAC + nonce"| api["API Gateway"]
+    api --> lambda["Lambda Relayer"]
+    lambda --> rds[("RDS 幂等作业")]
+    lambda --> kms["KMS secp256k1"]
+    lambda -->|"NAT → RPC"| market
+    market --> vrf["Chainlink VRF"]
+    market --> coin["BabyCoin"]
+    market --> sbt["ERC-5192 证书"]
 ```
 
-## 双账本模型
+链上保存角色、任务状态、随机价格/时间、支付、完成哈希与证书；D1 保存视频 URL、评论、用户名和审计；RDS 只保存完成请求的幂等状态和 webhook nonce hash。三个存储不保存儿童敏感信息。
 
-- `lifetimeGrowth`：累计成长值，只在钱包完成活动时增加，驱动星宝阶段。
-- `transferablePoints`：可转余额，活动领取时增加，赠送时从发送方转到接收方。
+## AWS 启动与清理门禁
 
-因此赠送不会降低发送方已经获得的成长阶段，也不会让接收方冒充完成过活动。
+AWS 工作流仅允许 `workflow_dispatch`。只有 main、`start_services=true`、GitHub `aws-readiness` Environment 人工审批和 OIDC 短期身份同时满足，才会上传 S3 源码包并启动单并发 CodeBuild。buildspec 在测试、类型和 SAM lint 后再次检查 `ALLOW_AWS_PAID_DEPLOYMENT=true`，然后才允许 `sam deploy`。
 
-## 活动与冷却
-
-`Meal = 0`、`Walk = 1`、`Read = 2` 分别奖励 3、5、7 枚成长星。合约是规则的唯一
-可信来源；前端只把链上状态转成易理解的按钮状态。按钮禁用只是体验层提示，无法
-替代合约校验。
-
-每日上限使用北京时间边界：`dayId = (block.timestamp + 8 hours) / 1 day`。合约在
-mapping 中保存 `dayId + 1`，让真实第一天不会和 Solidity 的默认零值混淆；跨过
-UTC 午夜不会提前重置，北京时间午夜也不会绕过尚未结束的随机冷却。
-
-## 交易确认与刷新
-
-写操作遵循“模拟 → 钱包签名 → 广播 → 等待 receipt → 重新查询”的顺序。交易哈希
-出现时只能进入确认中；只有 receipt 状态成功才显示成功。拒签或链上回滚不会在本地
-增加积分。成功后按提交交易时的钱包地址失效相关查询缓存，再从合约恢复真实状态。
-
-## 发布模型
-
-GitHub Actions 在每次 `main` 更新后运行静态检查、测试、类型检查和生产构建，再将
-`web/dist` 发布到 GitHub Pages。公开合约地址只由 `web/.env.production` 提供，避免
-工作流与本地命令各自维护不同值。Vite 使用相对资源路径，因此默认 Pages 地址和
-`babysteps.baby2b.online` 都能加载同一份构建产物。
+当前该门禁未被打开。未来云端闭环和 Evidence 通过后，触发费用/资源清单与 `aws-homework-cleanup` 检查；可逆停用优先，永久删除 CloudFormation Stack 前仍需按精确 Region、Stack 和资源列表再次确认。
