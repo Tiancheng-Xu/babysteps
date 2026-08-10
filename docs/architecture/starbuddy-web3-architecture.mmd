@@ -8,14 +8,14 @@
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
 flowchart LR
     parent["家长<br/>现有：外部钱包<br/>计划：Privy 邮箱"] --> web["BabySteps React<br/>现有并扩展"]
-    provider["机构或育婴师<br/>现有角色，计划审核流"] --> web
+    provider["机构或育婴师<br/>现有 V2 审核代码，待部署"] --> web
     owner["Owner<br/>现有管理员"] --> web
 
     web --> worker["Worker API<br/>计划"]
     worker --> d1[("D1<br/>metadata、视频、评论、nonce<br/>计划")]
     web --> router["Uniswap v3 Router<br/>计划，待验证"]
     web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
-    web --> marketV2["Marketplace V2<br/>计划"]
+    web --> marketV2["Marketplace V2<br/>现有审核代码，待验证部署"]
     marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
     marketV2 --> coin
     marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
@@ -44,7 +44,7 @@ flowchart TB
     subgraph ethereum["Ethereum Sepolia 边界"]
         baby["BabyCoin<br/>现有：0x108a…5471b"]
         oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
-        newMarket["Marketplace V2<br/>计划"]
+        newMarket["Marketplace V2<br/>现有审核代码，待验证部署"]
         cert["ERC-5192<br/>现有代码，待验证部署"]
         uni["Uniswap v3<br/>待验证"]
         chainlink["Chainlink VRF<br/>现有闭环证据"]
