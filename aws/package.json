@@ -6,17 +6,23 @@
 		"check": "biome check src test vitest.config.ts",
 		"test": "vitest run",
 		"typecheck": "tsc --noEmit",
-		"build": "sam build --template-file template.yaml --build-dir dist",
+		"build": "sam build --template-file template.yaml --build-dir dist --manifest lambda-package/package.json",
 		"validate": "sam validate --template-file template.yaml"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",
+		"@types/aws-lambda": "^8.10.162",
 		"@types/node": "catalog:",
+		"@types/pg": "^8.21.0",
 		"typescript": "catalog:",
 		"vitest": "4.1.10",
 		"yaml": "2.8.1"
 	},
 	"dependencies": {
-		"viem": "2.55.10"
+		"@aws-sdk/client-kms": "3.1106.0",
+		"@aws-sdk/client-secrets-manager": "3.1106.0",
+		"pg": "8.23.0",
+		"viem": "2.55.10",
+		"zod": "4.4.3"
 	}
 }

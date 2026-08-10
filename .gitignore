@@ -5,6 +5,7 @@
 node_modules/
 .pnpm-store/
 dist/
+aws/build.toml
 coverage/
 *.log
 .DS_Store
