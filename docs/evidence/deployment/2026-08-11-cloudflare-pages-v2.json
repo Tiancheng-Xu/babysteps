@@ -1,0 +1,44 @@
+{
+  "status": "complete",
+  "verifiedAt": "2026-08-11T19:04:04Z",
+  "repository": "Tiancheng-Xu/babysteps",
+  "pullRequest": "https://github.com/Tiancheng-Xu/babysteps/pull/5",
+  "mergeCommit": "525b858483b839dceae93eb0e6f2b87d79e265f9",
+  "preview": {
+    "deploymentId": "c413bc02-15de-47b6-b87f-fbc309a3ac17",
+    "sourceCommit": "631b7ba",
+    "url": "https://c413bc02.babysteps-83x.pages.dev",
+    "root": "HTTP 200; TLS verified",
+    "certificateMetadata": "HTTP 200; ERC-5192; stable image URL",
+    "certificateImage": "HTTP 200; 413540 bytes"
+  },
+  "production": {
+    "deploymentId": "cabb5779-1eb1-455b-b65b-9df5e88a9acc",
+    "sourceCommit": "525b858",
+    "deploymentUrl": "https://cabb5779.babysteps-83x.pages.dev",
+    "customDomain": "https://babysteps.baby2b.online",
+    "root": "HTTP 200; TLS verified",
+    "certificateMetadata": "HTTP 200; name, image, Locked attribute and ERC-5192 standard verified",
+    "certificateImage": "HTTP 200; TLS verified; 413540 bytes"
+  },
+  "worker": {
+    "url": "https://babysteps-api.baby2b.online/api/health",
+    "result": "HTTP 200; status=ok; service=babysteps-worker; schemaVersion=1"
+  },
+  "gates": {
+    "repositoryPolicy": "pass",
+    "cloudflarePages": "pass",
+    "contracts": "82 passing",
+    "web": "157 passing; typecheck and production build pass",
+    "worker": "48 passing; typecheck pass",
+    "subgraph": "4 Matchstick tests and build pass",
+    "certificateMetadataContract": "1 passing"
+  },
+  "remainingExternalBoundaries": [
+    "Uniswap v3 BABY/USDC and BABY/WETH pools plus real swaps await official Sepolia USDC funding",
+    "Privy production login awaits dashboard App ID and allowed-origin configuration",
+    "The Graph Studio deployment awaits a deploy key and subgraph name",
+    "Infura and Alchemy comparison awaits protected provider endpoints"
+  ],
+  "security": "No credential, private key, wallet password, RPC secret, cookie or API token is recorded. No AWS resource was created or started by this release."
+}

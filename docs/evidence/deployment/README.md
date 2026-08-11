@@ -20,6 +20,8 @@
 
 同日 Cloudflare Worker V2 已绑定远程 D1 与 `babysteps-api.baby2b.online`，通过 HTTP 200、TLS、允许/拒绝 Origin CORS 和远程 D1 只读验证；见 [`2026-08-11-cloudflare-worker-v2.json`](2026-08-11-cloudflare-worker-v2.json)。源码浏览器验证仍待 Etherscan API key。
 
+Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，并在 deployment-specific URL 和 `babysteps.baby2b.online` 验证根页面、ERC-5192 metadata 与稳定证书图片；见 [`2026-08-11-cloudflare-pages-v2.json`](2026-08-11-cloudflare-pages-v2.json)。
+
 ## 后续业务闭环证据清单
 
 部署时必须逐项保存以下证据：
