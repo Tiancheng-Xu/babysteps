@@ -1,0 +1,38 @@
+{
+  "status": "planned",
+  "updatedAt": "2026-08-11T02:30:16.416Z",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+  "addresses": {
+    "babyCoin": "0x108a55217011983b93C3A95aD8D3B3343Bd5471b",
+    "officialUsdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    "weth9": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    "factory": "0x0227628f3F023bb0B980b67D528571c95c6DaC1c",
+    "positionManager": "0x1238536071E1c677A632429e3655c799b22cDA52"
+  },
+  "fee": 3000,
+  "pairs": [
+    {
+      "name": "BABY/USDC",
+      "status": "planned",
+      "pool": "0x0000000000000000000000000000000000000000",
+      "amounts": {
+        "BABY": "8 (balance 18)",
+        "USDC": "8 (balance 0)"
+      },
+      "transactions": {}
+    },
+    {
+      "name": "BABY/WETH",
+      "status": "planned",
+      "pool": "0x0000000000000000000000000000000000000000",
+      "amounts": {
+        "BABY": "8 (balance 18)",
+        "WETH": "0.002 (balance 0)"
+      },
+      "transactions": {}
+    }
+  ],
+  "limitations": "Test assets have no monetary value. Planned mode sends no transaction; UNISWAP_EXECUTE=1 is required to create or fund pools."
+}

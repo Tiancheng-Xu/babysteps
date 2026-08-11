@@ -1379,7 +1379,8 @@ textarea[aria-invalid="true"] {
 
 .provider-layout,
 .evidence-grid,
-.identity-layout {
+.identity-layout,
+.exchange-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
 	gap: 22px;
@@ -1417,6 +1418,25 @@ textarea[aria-invalid="true"] {
 	border-radius: 15px;
 	background: var(--paper-strong);
 	color: var(--ink);
+}
+
+.identity-card select {
+	min-height: 52px;
+	padding: 11px 14px;
+	border: 2px solid var(--ink);
+	border-radius: 15px;
+	background: var(--paper-strong);
+	color: var(--ink);
+}
+
+.exchange-quote {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px;
+	border: 2px dashed var(--ink);
+	border-radius: 16px;
+	background: var(--sage-soft);
 }
 
 .identity-status-grid {
@@ -1584,7 +1604,8 @@ textarea[aria-invalid="true"] {
 	.product-page__hero,
 	.provider-layout,
 	.evidence-grid,
-	.identity-layout {
+	.identity-layout,
+	.exchange-layout {
 		grid-template-columns: 1fr;
 	}
 

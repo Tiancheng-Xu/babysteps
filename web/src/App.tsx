@@ -12,6 +12,7 @@ import { GrowthPanel } from "./features/growth/GrowthPanel";
 import { PointTransferPanel } from "./features/growth/PointTransferPanel";
 import { NotebookPanel } from "./features/notebook/NotebookPanel";
 import { EvidencePage } from "./pages/EvidencePage";
+import { ExchangePage } from "./pages/ExchangePage";
 import { GrowthMarketplacePage } from "./pages/GrowthMarketplacePage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -44,6 +45,7 @@ export default function App() {
 			{currentView === "marketplace" ? <GrowthMarketplacePage /> : null}
 			{currentView === "parent" ? <ParentDashboardPage /> : null}
 			{currentView === "provider" ? <ProviderConsolePage /> : null}
+			{currentView === "exchange" ? <ExchangePage /> : null}
 			{currentView === "profile" ? <ProfilePage /> : null}
 			{currentView === "evidence" ? <EvidencePage /> : null}
 		</main>

@@ -21,6 +21,7 @@
 		"finalize:web3:sepolia": "bash scripts/finalizeSepoliaSetup.sh",
 		"business:closed-loop:sepolia": "hardhat run scripts/runSepoliaBusinessClosedLoop.ts --network sepoliaPublic",
 		"read:rpcs:sepolia": "tsx scripts/readSepoliaAcrossProviders.ts",
+		"uniswap:v3:sepolia": "hardhat run scripts/provisionSepoliaUniswapV3.ts --network sepoliaPublic",
 		"deploy:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia",
 		"deploy:verify:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia --verify"
 	},

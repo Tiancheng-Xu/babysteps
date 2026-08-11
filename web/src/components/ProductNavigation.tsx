@@ -3,6 +3,7 @@ export type ProductView =
 	| "marketplace"
 	| "parent"
 	| "provider"
+	| "exchange"
 	| "profile"
 	| "evidence";
 
@@ -11,6 +12,7 @@ const NAVIGATION_ITEMS: Array<{ id: ProductView; label: string }> = [
 	{ id: "marketplace", label: "成长任务" },
 	{ id: "parent", label: "家长中心" },
 	{ id: "provider", label: "Provider 控制台" },
+	{ id: "exchange", label: "兑换" },
 	{ id: "profile", label: "个人中心" },
 	{ id: "evidence", label: "工作证据" },
 ];
