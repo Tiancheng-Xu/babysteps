@@ -70,9 +70,7 @@ describe("AWS CI bootstrap template", () => {
 		expect(source).toContain(
 			"arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31",
 		);
-		expect(source).toContain(
-			"arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*",
-		);
+		expect(source).not.toContain("apigateway:");
 		expect(source).not.toContain("ec2:CreateNatGateway");
 	});
 });

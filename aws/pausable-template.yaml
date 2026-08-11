@@ -319,18 +319,6 @@ Resources:
           - StopDatabaseSchedule
           - Arn
 
-  ReadinessApi:
-    Type: AWS::Serverless::HttpApi
-    Properties:
-      StageName: readiness
-      Tags:
-        Project: babysteps
-        Environment:
-          Ref: EnvironmentName
-        ManagedBy: cloudformation
-        ExpiresAt:
-          Ref: ExpiresAt
-
   ReadinessProbeFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -387,14 +375,6 @@ Resources:
             persistentRelayerServices: "deferred"
           })
         });
-      Events:
-        Health:
-          Type: HttpApi
-          Properties:
-            ApiId:
-              Ref: ReadinessApi
-            Method: GET
-            Path: /health
 
   StopDatabaseLogGroup:
     Type: AWS::Logs::LogGroup
@@ -426,8 +406,8 @@ Outputs:
       Fn::GetAtt:
         - Database
         - Endpoint.Address
-  ReadinessEndpoint:
+  ReadinessFunctionName:
     Value:
-      Fn::Sub: "https://${ReadinessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/readiness/health"
+      Ref: ReadinessProbeFunction
   DeferredResources:
     Value: NAT Gateway, public IPv4/EIP, KMS key, Secrets Manager secrets, and the production relayer

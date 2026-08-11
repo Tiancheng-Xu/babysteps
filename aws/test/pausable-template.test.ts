@@ -30,7 +30,10 @@ describe("AWS pausable readiness stage", () => {
 		expect(resources.StopDatabaseFunction?.Type).toBe(
 			"AWS::Serverless::Function",
 		);
-		expect(resources.ReadinessApi?.Type).toBe("AWS::Serverless::HttpApi");
+		expect(resources.ReadinessApi).toBeUndefined();
+		expect(resources.ReadinessProbeFunction?.Properties?.Events).toBeUndefined();
+		expect(source).toContain("ReadinessFunctionName:");
+		expect(source).not.toContain("AWS::Serverless::HttpApi");
 		expect(source).not.toMatch(/NatGateway|AWS::EC2::EIP/u);
 		expect(source).not.toMatch(/AWS::KMS::Key|AWS::SecretsManager::Secret/u);
 	});

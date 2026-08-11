@@ -196,16 +196,6 @@ Resources:
                   Fn::Sub: "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${RuntimeStackName}-*"
               - Effect: Allow
                 Action:
-                  - apigateway:DELETE
-                  - apigateway:GET
-                  - apigateway:PATCH
-                  - apigateway:POST
-                  - apigateway:PUT
-                Resource:
-                  - Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis*"
-                  - Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*"
-              - Effect: Allow
-                Action:
                   - logs:CreateLogGroup
                   - logs:DeleteLogGroup
                   - logs:DescribeLogGroups
