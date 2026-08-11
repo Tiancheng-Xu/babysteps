@@ -1,0 +1,53 @@
+{
+  "status": "complete",
+  "phase": "verified",
+  "updatedAt": "2026-08-11T18:17:26.815Z",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+  "addresses": {
+    "babyCoin": "0x108a55217011983b93C3A95aD8D3B3343Bd5471b",
+    "growthCertificateSBT": "0xF4efB99228f3ae6733d0c6CC5C5772bB5b37F654",
+    "taskMarketplaceV2": "0x2EE9fAFE99e143e5a1376805753D026bDac715de",
+    "providerPayee": "0xdd4289058A13bDa3B8119CB21a7412C52D634bc6"
+  },
+  "metadata": {
+    "task": "https://babysteps.baby2b.online/metadata/sepolia-demo-task.json",
+    "taskHash": "0xd21beacf6504bde38972dde94e39ba987ff5e9bb679c78e47c9a765f3d98f6ec",
+    "certificate": "https://babysteps.baby2b.online/metadata/sepolia-demo-certificate.json",
+    "completionEvidenceHash": "0x3ad1dabec5c0007f8ee7caf879c35f49f0559bff6e50ff421a30180906a5cf62"
+  },
+  "transactions": {
+    "requestTask": "0x7e8acfcfb8c602b4931e1a685028bace4ba3c131d445f52dc2ff6531de682805",
+    "approveTask": "0x292d27724084a5cf6199dc9e52bd04969abb8c90213cdb5196ccc7532530229a",
+    "approveExactBabyCoinPrice": "0x3b0807b653f3242cd3e596b9f7f24f55efc57616114d9cf5aec1b4c3d353593b",
+    "buy": "0x1aaf025303771d250626c9db025556771ac3cc55a166690746ea668667267302",
+    "grantTemporaryCompletionRelayerRole": "0xab9d19e58f09788fee146bf2bb2688c7db9a6a45b779584d0bda5b811bd9eee7",
+    "confirmCompletion": "0x88973d1904c2e07324b92e5eeb251531857759aadfd8d7da2de5e7d77dc200f0",
+    "revokeTemporaryCompletionRelayerRole": "0x4dbdd5746905e0e4cee9c24e1329f82d6570512742166153c6c5d402279fc62c"
+  },
+  "taskId": "1",
+  "requestId": "44369624130843878134593594059633620533598453760011150236761169573363879197162",
+  "providerBalanceBeforeWei": "0",
+  "purchaseId": "1",
+  "temporaryCompletionRoleGranted": false,
+  "certificateTokenId": "1",
+  "verification": {
+    "taskStatus": 3,
+    "activityType": 2,
+    "priceWei": "2000000000000000000",
+    "priceBABY": "2",
+    "opensAt": "1786472184",
+    "closesAt": "1786490184",
+    "durationSeconds": "18000",
+    "purchaseCompleted": true,
+    "buyer": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "providerPayee": "0xdd4289058A13bDa3B8119CB21a7412C52D634bc6",
+    "providerPayoutWei": "2000000000000000000",
+    "remainingAllowanceWei": "0",
+    "certificateOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "certificateTokenUri": "https://babysteps.baby2b.online/metadata/sepolia-demo-certificate.json",
+    "certificateLocked": true,
+    "completionRelayerRoleRevoked": true
+  }
+}
