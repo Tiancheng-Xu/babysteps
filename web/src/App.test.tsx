@@ -343,6 +343,15 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByRole("img", { name: "StarBuddy Web3 架构图" }),
 		).toBeTruthy();
+		expect(screen.getByText("Sepolia V2 闭环已验证")).toBeTruthy();
+		expect(screen.getByText("TaskMarketplaceV2")).toBeTruthy();
+		expect(screen.getByText(/0x2EE9/u)).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", { name: "验证 Worker 健康状态" })
+				.getAttribute("href"),
+		).toBe("https://babysteps-api.baby2b.online/api/health");
+		expect(screen.getByText(/仍待外部闭环/u)).toBeTruthy();
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {

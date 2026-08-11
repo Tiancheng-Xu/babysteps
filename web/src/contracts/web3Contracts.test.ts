@@ -6,6 +6,7 @@ import {
 	babyCoinAbi,
 	parseOptionalContractAddress,
 	taskMarketplaceAbi,
+	taskMarketplaceV2Abi,
 } from "./web3Contracts";
 
 describe("web3 contract configuration", () => {
@@ -45,6 +46,23 @@ describe("web3 contract configuration", () => {
 				args: [7n],
 			}),
 		).toMatch(/^0x/);
+	});
+
+	it("exposes the V2 task and purchase calls used by the deployed marketplace", () => {
+		expect(
+			encodeFunctionData({
+				abi: taskMarketplaceV2Abi,
+				functionName: "getTask",
+				args: [1n],
+			}),
+		).toMatch(/^0x/u);
+		expect(
+			encodeFunctionData({
+				abi: taskMarketplaceV2Abi,
+				functionName: "purchaseIdForBuyer",
+				args: [1n, "0x1111111111111111111111111111111111111111"],
+			}),
+		).toMatch(/^0x/u);
 	});
 
 	it("pins the official Sepolia Uniswap v3 and test-token addresses", () => {

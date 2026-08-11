@@ -1,0 +1,29 @@
+{
+  "status": "partially-finalized",
+  "updatedAt": "2026-08-11T17:46:51.797Z",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+  "subscriptionId": "71373032545190242781617190213327705196443132403442427466313474597415853818930",
+  "addresses": {
+    "certificate": "0xF4efB99228f3ae6733d0c6CC5C5772bB5b37F654",
+    "marketplace": "0x2EE9fAFE99e143e5a1376805753D026bDac715de",
+    "vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B"
+  },
+  "transactions": [
+    {
+      "action": "grant PROVIDER_ROLE to demo operator",
+      "hash": "0xaeb99778de76599818cf756a3a427d9e81a81b1515cbece72c9751f2d0251efb"
+    },
+    {
+      "action": "add TaskMarketplaceV2 as VRF consumer",
+      "hash": "0x73010927ba86ff2fe2d15d24b651a5321aacf25229503c3a5d1df8cb2ddb89d1"
+    }
+  ],
+  "verification": {
+    "providerConfigured": true,
+    "vrfConsumerConfigured": true,
+    "completionRelayerConfigured": false
+  },
+  "securityBoundary": "The deployer is intentionally not granted COMPLETION_RELAYER_ROLE. That role remains pending for an AWS KMS-backed non-exportable signer after explicit cost approval."
+}

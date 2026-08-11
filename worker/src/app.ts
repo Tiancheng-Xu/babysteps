@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { WorkerApp } from "./auth/session";
 import type { MarketplaceReaderFactory } from "./chain/marketplaceReader";
 import { createViemMarketplaceReader } from "./chain/viemMarketplaceReader";
@@ -25,6 +26,20 @@ export function createApp(_dependencies: AppDependencies = {}) {
 	const ownerWalletFactory =
 		_dependencies.ownerWalletFactory ??
 		((env: Env) => readConfig(env).ownerWallet);
+
+	application.use(
+		"/api/*",
+		cors({
+			origin: (origin, context) => {
+				const allowedOrigin = new URL(readConfig(context.env).uri).origin;
+				return origin === allowedOrigin ? origin : null;
+			},
+			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+			allowHeaders: ["Content-Type"],
+			credentials: true,
+			maxAge: 86_400,
+		}),
+	);
 
 	application.use("*", async (context, next) => {
 		const requestId = crypto.randomUUID();

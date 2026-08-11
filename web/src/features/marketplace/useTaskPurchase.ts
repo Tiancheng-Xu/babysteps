@@ -14,8 +14,8 @@ import { wagmiConfig } from "../../config/wagmi";
 import {
 	babyCoinAbi,
 	babyCoinAddress,
-	taskMarketplaceAbi,
-	taskMarketplaceAddress,
+	taskMarketplaceV2Abi,
+	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
@@ -49,7 +49,7 @@ type TransactionPhase = Extract<
 export function useTaskPurchase(
 	task: MarketplaceTask,
 	babyCoinContractAddress: Address | undefined = babyCoinAddress,
-	marketplaceContractAddress: Address | undefined = taskMarketplaceAddress,
+	marketplaceContractAddress: Address | undefined = taskMarketplaceV2Address,
 ) {
 	const { address, chainId, isConnected } = useAccount();
 	const { switchChainAsync } = useSwitchChain();
@@ -94,8 +94,8 @@ export function useTaskPurchase(
 	});
 	const purchasedRead = useReadContract({
 		address: marketplaceContractAddress,
-		abi: taskMarketplaceAbi,
-		functionName: "hasPurchased",
+		abi: taskMarketplaceV2Abi,
+		functionName: "purchaseIdForBuyer",
 		args: address ? [task.id, address] : undefined,
 		chainId: sepolia.id,
 		query: { enabled: readsEnabled },
@@ -185,7 +185,8 @@ export function useTaskPurchase(
 		typeof balanceRead.data === "bigint" ? balanceRead.data : undefined;
 	const allowance =
 		typeof allowanceRead.data === "bigint" ? allowanceRead.data : undefined;
-	const hasPurchased = purchasedRead.data === true;
+	const hasPurchased =
+		typeof purchasedRead.data === "bigint" && purchasedRead.data !== 0n;
 	const readsPending =
 		balanceRead.isPending || allowanceRead.isPending || purchasedRead.isPending;
 	const readsFailed =
@@ -266,7 +267,7 @@ export function useTaskPurchase(
 		try {
 			const simulation = await simulateContract(wagmiConfig, {
 				address: marketplaceContractAddress,
-				abi: taskMarketplaceAbi,
+				abi: taskMarketplaceV2Abi,
 				functionName: "buy",
 				args: [task.id],
 				account: address,

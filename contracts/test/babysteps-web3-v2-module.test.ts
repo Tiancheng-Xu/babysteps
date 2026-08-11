@@ -108,6 +108,23 @@ describe("BabySteps Web3 V2 Ignition modules", () => {
 		]) {
 			assert.ok(packageJson.scripts[script]);
 		}
+		for (const script of [
+			"deploy:web3:v2:sepolia",
+			"deploy:web3:v2:verify:sepolia",
+		]) {
+			assert.match(
+				packageJson.scripts[script] ?? "",
+				/--deployment-id babysteps-sepolia-v2/u,
+			);
+		}
+		const finalizeSource = await readFile(
+			new URL("../scripts/finalizeSepoliaV2.ts", import.meta.url),
+			"utf8",
+		);
+		assert.match(
+			finalizeSource,
+			/ignition\/deployments\/babysteps-sepolia-v2\/deployed_addresses\.json/u,
+		);
 
 		const parameters = JSON.parse(
 			await readFile(
@@ -134,6 +151,33 @@ describe("BabySteps Web3 V2 Ignition modules", () => {
 			"VITE_TASK_MARKETPLACE_V2_ADDRESS",
 		]) {
 			assert.match(envExample, new RegExp(`^${variable}=`, "m"));
+		}
+	});
+
+	it("defines a resumable Sepolia V2 business loop with temporary relayer access", async () => {
+		const packageJson = JSON.parse(
+			await readFile(new URL("../package.json", import.meta.url), "utf8"),
+		) as { scripts: Record<string, string> };
+		assert.match(
+			packageJson.scripts["business:closed-loop:v2:sepolia"] ?? "",
+			/runSepoliaV2BusinessClosedLoop\.ts --network sepoliaPublic/u,
+		);
+
+		const businessSource = await readFile(
+			new URL("../scripts/runSepoliaV2BusinessClosedLoop.ts", import.meta.url),
+			"utf8",
+		);
+		for (const requiredSource of [
+			"ignition/deployments/babysteps-sepolia-v2/deployed_addresses.json",
+			"requestTask",
+			"approveTask",
+			"COMPLETION_RELAYER_ROLE",
+			"grantRole",
+			"revokeRole",
+			"finally",
+			"2026-08-11-sepolia-v2-business.json",
+		]) {
+			assert.match(businessSource, new RegExp(requiredSource));
 		}
 	});
 });

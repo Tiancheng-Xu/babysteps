@@ -19,6 +19,16 @@ export function encodeSqrtRatioX96(amount1: bigint, amount0: bigint): bigint {
 	return integerSquareRoot((amount1 << 192n) / amount0);
 }
 
+export function minimumAmountOut(
+	quotedAmountOut: bigint,
+	slippageBasisPoints: number,
+): bigint {
+	if (slippageBasisPoints < 0 || slippageBasisPoints > 10_000) {
+		throw new Error("Slippage basis points must be between 0 and 10000.");
+	}
+	return (quotedAmountOut * BigInt(10_000 - slippageBasisPoints)) / 10_000n;
+}
+
 export function sortPairAmounts(
 	tokenA: Address,
 	tokenB: Address,

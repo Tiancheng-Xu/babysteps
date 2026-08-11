@@ -17,10 +17,10 @@ const PARAMETER_PATH = resolve(
 	"ignition/parameters/babysteps-web3-v2.sepolia.json",
 );
 const DEPLOYMENT_PATH = resolve(
-	"ignition/deployments/chain-11155111/deployed_addresses.json",
+	"ignition/deployments/babysteps-sepolia-v2/deployed_addresses.json",
 );
 const EVIDENCE_PATH = resolve(
-	"../docs/evidence/deployment/2026-08-10-sepolia-v2-finalize.json",
+	"../docs/evidence/deployment/2026-08-11-sepolia-v2-finalize.json",
 );
 
 const accessControlAbi = parseAbi([

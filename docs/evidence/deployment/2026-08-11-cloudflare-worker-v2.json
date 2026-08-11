@@ -1,0 +1,57 @@
+{
+  "status": "complete",
+  "updatedAt": "2026-08-11T18:38:57.000Z",
+  "service": "babysteps-worker",
+  "runtime": "Cloudflare Workers",
+  "versionId": "aa2cfd54-b4fe-4f9d-a927-1c78068aad4e",
+  "deploymentCreatedAt": "2026-08-11T18:38:24.000Z",
+  "customDomain": {
+    "hostname": "babysteps-api.baby2b.online",
+    "domainId": "917a62334e1f2c0f588dbdd1ac16b9f0d3682058",
+    "zoneName": "baby2b.online",
+    "enabled": true,
+    "certificateId": "059806c7-dc9e-4de9-94da-f07199a7507d",
+    "tls": "verified; ssl_verify_result=0",
+    "health": "HTTP 200; service=babysteps-worker; schemaVersion=1"
+  },
+  "bindings": {
+    "database": {
+      "name": "babysteps-production",
+      "id": "82d96e36-2adc-44f7-93b2-aeb19c075d09",
+      "region": "ENAM",
+      "migrationsPending": 0,
+      "tables": [
+        "audit_logs",
+        "auth_challenges",
+        "comments",
+        "profiles",
+        "published_tasks",
+        "sessions",
+        "task_drafts"
+      ]
+    },
+    "chainId": 11155111,
+    "marketplaceV2": "0x2EE9fAFE99e143e5a1376805753D026bDac715de",
+    "ownerWallet": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+    "rpc": "public Ethereum Sepolia endpoint"
+  },
+  "verification": {
+    "workerTests": "48/48 pass",
+    "configurationContract": "1/1 pass",
+    "typecheck": "pass",
+    "formatCheck": "pass",
+    "wranglerDryRun": "pass",
+    "controlPlaneDeployment": "100% on version aa2cfd54-b4fe-4f9d-a927-1c78068aad4e",
+    "remoteD1ReadOnlyQuery": "success; rowsWritten=0",
+    "allowedOriginPreflight": "HTTP 204 with exact Access-Control-Allow-Origin and credentials=true",
+    "rejectedOriginPreflight": "HTTP 204 without Access-Control-Allow-Origin"
+  },
+  "security": {
+    "allowedBrowserOrigin": "https://babysteps.baby2b.online",
+    "credentialedCors": true,
+    "sessionCookie": "HttpOnly; Secure; SameSite=Lax; host-only",
+    "taskPublication": "requires signed session plus verified Sepolia receipt, event and metadata hash",
+    "credentialsPublished": false
+  },
+  "rollback": "Use Wrangler version rollback for Worker code. Keep the D1 database and custom domain because both are protected delivery resources."
+}

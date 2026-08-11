@@ -1,6 +1,7 @@
 {
   "name": "StarBuddy 亲子共读成长证书",
-  "description": "完成 BabySteps 亲子共读星光任务后铸造的 Sepolia ERC-721 成长证书。",
+  "description": "完成 BabySteps 亲子共读星光任务后铸造的 Sepolia ERC-5192 灵魂绑定成长证书；不可批准、转让或销毁。",
+  "image": "https://babysteps.baby2b.online/media/starbuddy-certificate.jpg",
   "attributes": [
     {
       "trait_type": "Activity",
@@ -13,7 +14,17 @@
     {
       "trait_type": "Network",
       "value": "Ethereum Sepolia"
+    },
+    {
+      "trait_type": "Transferability",
+      "value": "Locked"
     }
   ],
-  "external_url": "https://babysteps.baby2b.online/evidence"
+  "external_url": "https://babysteps.baby2b.online/evidence",
+  "properties": {
+    "schema": "babysteps.certificate.v1",
+    "standard": "ERC-721 + ERC-5192",
+    "idempotencyKey": "purchaseId",
+    "childPersonalData": "excluded"
+  }
 }

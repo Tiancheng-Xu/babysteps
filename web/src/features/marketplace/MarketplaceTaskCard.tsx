@@ -6,10 +6,12 @@ import { useTaskPurchase } from "./useTaskPurchase";
 const EXPLORER_TX_BASE = "https://sepolia.etherscan.io/tx/";
 
 const TASK_STATE_LABELS = {
+	"pending-review": "等待 Owner 审核",
 	"pending-randomness": "等待 VRF",
 	active: "开放购买",
 	paused: "已暂停",
 	expired: "已结束",
+	rejected: "审核未通过",
 } as const;
 
 function shortAddress(address: string) {
