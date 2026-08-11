@@ -1,0 +1,19 @@
+{
+	"name": "@babysteps/subgraph",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"abi": "node scripts/export-abi.mjs",
+		"codegen": "pnpm abi && graph codegen",
+		"test": "pnpm codegen && graph test",
+		"build": "pnpm codegen && graph build"
+	},
+	"dependencies": {
+		"@graphprotocol/graph-ts": "0.38.2"
+	},
+	"devDependencies": {
+		"@graphprotocol/graph-cli": "0.98.1",
+		"assemblyscript": "0.19.23",
+		"matchstick-as": "0.6.0"
+	}
+}

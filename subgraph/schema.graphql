@@ -1,0 +1,62 @@
+enum TaskStatus {
+  PENDING_REVIEW
+  PENDING_RANDOMNESS
+  ACTIVE
+  REJECTED
+}
+
+type RoleAssignment @entity(immutable: false) {
+  id: ID!
+  role: Bytes!
+  account: Bytes!
+  sender: Bytes!
+  active: Boolean!
+  updatedAt: BigInt!
+  updatedBlock: BigInt!
+  transactionHash: Bytes!
+}
+
+type Task @entity(immutable: false) {
+  id: ID!
+  provider: Bytes!
+  payee: Bytes!
+  activityType: Int!
+  metadataUri: String!
+  metadataHash: Bytes!
+  status: TaskStatus!
+  requestId: BigInt
+  rejectionReasonHash: Bytes
+  price: BigInt
+  opensAt: BigInt
+  closesAt: BigInt
+  paused: Boolean!
+  createdAt: BigInt!
+  createdBlock: BigInt!
+  updatedAt: BigInt!
+  updatedBlock: BigInt!
+  transactionHash: Bytes!
+}
+
+type Purchase @entity(immutable: false) {
+  id: ID!
+  task: Task!
+  buyer: Bytes!
+  price: BigInt!
+  purchasedAt: BigInt!
+  completed: Boolean!
+  evidenceHash: Bytes
+  certificate: Certificate
+  updatedAt: BigInt!
+  updatedBlock: BigInt!
+  transactionHash: Bytes!
+}
+
+type Certificate @entity(immutable: true) {
+  id: ID!
+  purchase: Purchase!
+  tokenId: BigInt!
+  recipient: Bytes!
+  mintedAt: BigInt!
+  mintedBlock: BigInt!
+  transactionHash: Bytes!
+}

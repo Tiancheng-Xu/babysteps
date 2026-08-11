@@ -5,6 +5,7 @@
 node_modules/
 .pnpm-store/
 dist/
+aws/build.toml
 coverage/
 *.log
 .DS_Store
@@ -16,4 +17,5 @@ contracts/cache/
 contracts/artifacts/
 contracts/ignition/deployments/
 contracts/ignition/parameters/babysteps-web3.sepolia.json
+contracts/ignition/parameters/babysteps-web3-v2.sepolia.json
 web/.env.local

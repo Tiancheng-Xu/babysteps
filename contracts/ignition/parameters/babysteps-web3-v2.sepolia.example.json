@@ -1,0 +1,10 @@
+{
+	"BabyStepsWeb3V2Module": {
+		"babyCoinAddress": "0x108a55217011983b93C3A95aD8D3B3343Bd5471b",
+		"vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
+		"vrfSubscriptionId": "0",
+		"vrfKeyHash": "0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae",
+		"vrfRequestConfirmations": 3,
+		"vrfCallbackGasLimit": 500000
+	}
+}

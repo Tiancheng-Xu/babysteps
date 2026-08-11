@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - corepack enable
+      - corepack prepare pnpm@11.17.0 --activate
+      - pnpm install --frozen-lockfile
+  pre_build:
+    commands:
+      - pnpm --filter @babysteps/aws test
+      - pnpm --filter @babysteps/aws typecheck
+      - sam validate --lint --region "$AWS_REGION" --template-file aws/bootstrap.yaml
+      - sam validate --lint --region "$AWS_REGION" --template-file aws/pausable-template.yaml
+      - pnpm validate:aws-readiness
+  build:
+    commands:
+      - node scripts/validate-aws-readiness.mjs --deploy
+      - pnpm --filter @babysteps/aws build
+      - export DATABASE_MASTER_PASSWORD="$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9!#%+=_' | head -c 32)"
+      - >-
+        sam deploy
+        --region "$AWS_REGION"
+        --template-file aws/pausable-template.yaml
+        --stack-name "$RUNTIME_STACK_NAME"
+        --role-arn "$CLOUDFORMATION_EXECUTION_ROLE_ARN"
+        --capabilities CAPABILITY_NAMED_IAM
+        --no-confirm-changeset
+        --no-fail-on-empty-changeset
+        --parameter-overrides
+        EnvironmentName="$RUNTIME_ENVIRONMENT_NAME"
+        ExpiresAt="$RUNTIME_EXPIRES_AT"
+        DatabaseMasterPassword="$DATABASE_MASTER_PASSWORD"

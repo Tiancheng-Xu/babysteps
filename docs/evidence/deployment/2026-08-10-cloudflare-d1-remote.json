@@ -1,0 +1,34 @@
+{
+  "status": "complete",
+  "updatedAt": "2026-08-10T22:40:00-04:00",
+  "accountId": "69e86338f61260d9959a8603f431304f",
+  "database": {
+    "name": "babysteps-production",
+    "id": "82d96e36-2adc-44f7-93b2-aeb19c075d09",
+    "location": "ENAM",
+    "servedByColoDuringVerification": "EWR",
+    "sizeAfterBytes": 118784
+  },
+  "migration": {
+    "name": "0001_initial.sql",
+    "status": "applied",
+    "commandsExecuted": 13
+  },
+  "tablesVerified": [
+    "audit_logs",
+    "auth_challenges",
+    "comments",
+    "d1_migrations",
+    "profiles",
+    "published_tasks",
+    "sessions",
+    "task_drafts"
+  ],
+  "applicationWorker": {
+    "name": "babysteps-worker",
+    "status": "not-deployed",
+    "reason": "TaskMarketplaceV2 Sepolia address is still pending; publishing a Worker bound to the zero address would create a misleading production API."
+  },
+  "billingBoundary": "D1 scales compute to zero and this delivery database stays inside usage-based/free-plan limits unless real traffic grows. Empty database storage is minimal; usage still must be monitored.",
+  "security": "No token, cookie, password, RPC secret or private key is included. Database and account identifiers are public deployment metadata."
+}

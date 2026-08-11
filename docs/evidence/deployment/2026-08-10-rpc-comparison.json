@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-08-11T02:00:39.502Z",
+  "chain": "ethereum-sepolia",
+  "chainId": 11155111,
+  "account": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+  "transactionHash": "0xba0d13402507da21b4c680dbe1dd3413c7fd0eb2c97b93a30c8f86a0f0622cfd",
+  "sources": [
+    {
+      "provider": "public",
+      "status": "success",
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com",
+      "latencyMs": 462
+    },
+    {
+      "provider": "infura",
+      "status": "not-configured"
+    },
+    {
+      "provider": "alchemy",
+      "status": "not-configured"
+    }
+  ],
+  "observations": [
+    {
+      "provider": "public",
+      "latencyMs": 462,
+      "chainId": "11155111",
+      "latestBlock": 11463150,
+      "balanceWei": "1227034259331258242",
+      "transaction": {
+        "hash": "0xba0d13402507da21b4c680dbe1dd3413c7fd0eb2c97b93a30c8f86a0f0622cfd",
+        "blockNumber": 11453620,
+        "from": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+        "to": "0x2d1107610ebabbfa7cd9569eb42ef315eb6f25be",
+        "valueWei": "0"
+      },
+      "receipt": {
+        "status": 1,
+        "blockNumber": 11453620,
+        "gasUsed": "188031",
+        "logs": [
+          {
+            "address": "0x108a55217011983b93c3a95ad8d3b3343bd5471b",
+            "topics": [
+              "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+              "0x0000000000000000000000004d9df519abcbe51c0098649bcd0e17ac1548fa88",
+              "0x000000000000000000000000955e48183a3e698d0d1230ff4d2837d6f053afba"
+            ],
+            "data": "0x0000000000000000000000000000000000000000000000003782dace9d900000"
+          },
+          {
+            "address": "0x2d1107610ebabbfa7cd9569eb42ef315eb6f25be",
+            "topics": [
+              "0x26cca315a5ef1f748190badd52c481b436e8448685eaef526bbf64f7101d50a2",
+              "0x0000000000000000000000000000000000000000000000000000000000000001",
+              "0x0000000000000000000000000000000000000000000000000000000000000001",
+              "0x0000000000000000000000004d9df519abcbe51c0098649bcd0e17ac1548fa88"
+            ],
+            "data": "0x0000000000000000000000000000000000000000000000003782dace9d900000000000000000000000000000000000000000000000000000000000006a78b594"
+          }
+        ]
+      }
+    }
+  ],
+  "comparison": {
+    "consistent": true,
+    "mismatches": []
+  },
+  "complete": false
+}

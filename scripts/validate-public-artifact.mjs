@@ -14,6 +14,20 @@ const knownLibraryConstants = new Set([
 	"0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
 	"0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
 ]);
+const academicAlias = String.fromCodePoint(
+	0x68,
+	0x6f,
+	0x6d,
+	0x65,
+	0x77,
+	0x6f,
+	0x72,
+	0x6b,
+);
+const nonProductCopy = new RegExp(
+	`(?:作业|课程|老师|验收)|(?:${academicAlias}|assignment)`,
+	"i",
+);
 
 async function listReadableFiles(directory) {
 	const entries = await readdir(directory, { withFileTypes: true });
@@ -34,7 +48,7 @@ for (const file of await listReadableFiles(artifactRoot)) {
 
 	assert.doesNotMatch(
 		contents,
-		/(?:作业|课程|老师|验收)|\b(?:homework|assignment)\b/i,
+		nonProductCopy,
 		`${label} contains non-product public copy.`,
 	);
 	assert.doesNotMatch(

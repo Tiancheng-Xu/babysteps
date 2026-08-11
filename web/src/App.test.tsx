@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => ({
 	usePointTransfer: vi.fn(),
 	useProviderTaskCreation: vi.fn(),
 	useSwitchChain: vi.fn(),
+	useUniswapSwap: vi.fn(),
 	transfer: vi.fn(),
 }));
 
@@ -59,6 +60,10 @@ vi.mock("./features/provider/useProviderTaskCreation", () => ({
 
 vi.mock("./features/growth/usePointTransfer", () => ({
 	usePointTransfer: mocks.usePointTransfer,
+}));
+
+vi.mock("./features/exchange/useUniswapSwap", () => ({
+	useUniswapSwap: mocks.useUniswapSwap,
 }));
 
 vi.mock("wagmi", async (importOriginal) => {
@@ -198,6 +203,23 @@ describe("BabySteps App", () => {
 		});
 		mocks.useNotebook.mockImplementation(() => notebookState);
 		mocks.usePointTransfer.mockImplementation(() => transferState);
+		mocks.useUniswapSwap.mockReturnValue({
+			asset: "USDC",
+			setAsset: vi.fn(),
+			amount: "1",
+			setAmount: vi.fn(),
+			configured: true,
+			walletState: "ready",
+			quotedBaby: undefined,
+			phase: "idle",
+			message: undefined,
+			transactionHash: undefined,
+			quote: vi.fn(),
+			execute: vi.fn(),
+			canQuote: true,
+			canExecute: false,
+			switchToSepolia: vi.fn(),
+		});
 	});
 
 	it("shows safety boundaries and caps a completed first journey", () => {
@@ -302,6 +324,17 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByRole("heading", { name: "机构与育婴师控制台" }),
 		).toBeTruthy();
+
+		fireEvent.click(within(navigation).getByRole("button", { name: "兑换" }));
+		expect(screen.getByRole("heading", { name: "BabyCoin 兑换" })).toBeTruthy();
+		expect(screen.getByText("不部署 MockUSDC")).toBeTruthy();
+
+		fireEvent.click(
+			within(navigation).getByRole("button", { name: "个人中心" }),
+		);
+		expect(screen.getByRole("heading", { name: "个人中心" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Privy 待配置" })).toBeTruthy();
+		expect(screen.getByText(/Google、邮箱、外部钱包三种入口/u)).toBeTruthy();
 
 		fireEvent.click(
 			within(navigation).getByRole("button", { name: "工作证据" }),

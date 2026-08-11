@@ -1,5 +1,58 @@
 import { type Address, isAddress, parseAbi } from "viem";
 
+export const uniswapV3Sepolia = {
+	factory: "0x0227628f3F023bb0B980b67D528571c95c6DaC1c",
+	quoterV2: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+	swapRouter02: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+	nonfungiblePositionManager: "0x1238536071E1c677A632429e3655c799b22cDA52",
+	usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+	weth: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+	fee: 3_000,
+} as const satisfies {
+	factory: Address;
+	quoterV2: Address;
+	swapRouter02: Address;
+	nonfungiblePositionManager: Address;
+	usdc: Address;
+	weth: Address;
+	fee: 3_000;
+};
+
+export type PublicAppConfig = {
+	privyAppId?: string;
+	apiUrl?: string;
+};
+
+export function parsePublicAppConfig(input: PublicAppConfig): PublicAppConfig {
+	const privyAppId = input.privyAppId?.trim() || undefined;
+	if (
+		privyAppId &&
+		/(?:secret|private[_-]?key|api[_-]?key)/iu.test(privyAppId)
+	) {
+		throw new Error("Privy app ID must be a public application identifier.");
+	}
+
+	let apiUrl: string | undefined;
+	if (input.apiUrl?.trim()) {
+		const parsed = new URL(input.apiUrl.trim());
+		const isLocalhost = parsed.hostname === "localhost";
+		if (
+			parsed.protocol !== "https:" &&
+			!(isLocalhost && parsed.protocol === "http:")
+		) {
+			throw new Error("BabySteps API URL must use HTTPS outside localhost.");
+		}
+		apiUrl = parsed.toString().replace(/\/$/u, "");
+	}
+
+	return { privyAppId, apiUrl };
+}
+
+export const publicAppConfig = parsePublicAppConfig({
+	privyAppId: import.meta.env.VITE_PRIVY_APP_ID,
+	apiUrl: import.meta.env.VITE_BABYSTEPS_API_URL,
+});
+
 export function parseOptionalContractAddress(
 	value: string | undefined,
 	label: string,
@@ -40,6 +93,29 @@ export const babyCoinAbi = parseAbi([
 	"function approve(address spender, uint256 amount) returns (bool)",
 	"function lifetimeEarned(address account) view returns (uint256)",
 	"function growthStageOf(address account) view returns (uint8)",
+]);
+
+export const exchangeErc20Abi = parseAbi([
+	"function balanceOf(address account) view returns (uint256)",
+	"function allowance(address owner, address spender) view returns (uint256)",
+	"function approve(address spender, uint256 amount) returns (bool)",
+]);
+
+export const weth9Abi = parseAbi([
+	"function balanceOf(address account) view returns (uint256)",
+	"function deposit() payable",
+]);
+
+export const uniswapV3FactoryAbi = parseAbi([
+	"function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)",
+]);
+
+export const uniswapQuoterV2Abi = parseAbi([
+	"function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+]);
+
+export const uniswapSwapRouter02Abi = parseAbi([
+	"function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
 ]);
 
 export const growthActivitiesAbi = parseAbi([

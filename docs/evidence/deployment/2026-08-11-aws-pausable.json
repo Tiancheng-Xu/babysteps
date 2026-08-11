@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "project": "BabySteps / StarBuddy",
+  "capturedAt": "2026-08-11T06:10:43Z",
+  "region": "us-east-1",
+  "sourceCommit": "940f2a490a373e92cdbb2d7b2ca0320de2bd6739",
+  "status": "deployed-and-stopped",
+  "bootstrap": {
+    "stackName": "babysteps-aws-readiness-bootstrap",
+    "stackStatus": "UPDATE_COMPLETE",
+    "githubOidcProviderVerified": true,
+    "sourceBucket": {
+      "publicAccessBlocked": true,
+      "encryption": "AES256",
+      "lifecycleExpirationDays": 7
+    },
+    "codeBuild": {
+      "projectName": "babysteps-readiness",
+      "computeType": "BUILD_GENERAL1_SMALL",
+      "concurrentBuildLimit": 1,
+      "successfulBuildId": "babysteps-readiness:fdaf9cbf-7411-454a-9ad6-834bccbb4e84",
+      "buildStatus": "SUCCEEDED"
+    }
+  },
+  "runtime": {
+    "stackName": "babysteps-homework-readiness",
+    "stackStatus": "CREATE_COMPLETE",
+    "vpcId": "vpc-0d3dbeb2bb5f7ff83",
+    "privateSubnetIds": [
+      "subnet-08fd263054256feb9",
+      "subnet-0c23dc7e23fb9e9b5"
+    ],
+    "routeTableId": "rtb-0545ffa2babae4a0c",
+    "databaseSecurityGroupId": "sg-0aea5e600a4fc949c",
+    "database": {
+      "identifier": "babysteps-homework-readiness-postgres",
+      "status": "stopped",
+      "engine": "postgres",
+      "engineVersion": "18.3",
+      "instanceClass": "db.t4g.micro",
+      "allocatedStorageGiB": 20,
+      "storageType": "gp3",
+      "storageEncrypted": true,
+      "publiclyAccessible": false,
+      "multiAZ": false,
+      "backupRetentionDays": 0,
+      "monitoringIntervalSeconds": 0,
+      "performanceInsightsEnabled": false
+    },
+    "readinessFunction": {
+      "name": "babysteps-homework-readiness-readiness-probe",
+      "statusCode": 200,
+      "responseStatus": "ready",
+      "stage": "pausable"
+    },
+    "autoStop": {
+      "functionName": "babysteps-homework-readiness-stop-database",
+      "scheduleExpression": "rate(5 minutes)",
+      "ruleState": "ENABLED",
+      "verificationResponse": "stopped",
+      "stopPermissionScopedToDatabase": true
+    }
+  },
+  "networkVerification": {
+    "internetGatewayCount": 0,
+    "natGatewayCount": 0,
+    "publicIpOnLaunch": false,
+    "routeDestinations": [
+      "10.43.0.0/16 local"
+    ],
+    "databaseIngressRuleCount": 0,
+    "databaseEgressLimitation": "EC2 retained the default outbound security-group rule, but the isolated VPC has no IGW, NAT, endpoints, peering, or non-local route."
+  },
+  "deferred": [
+    "NAT Gateway",
+    "Elastic IP / public IPv4",
+    "API Gateway production entry",
+    "KMS secp256k1 signer",
+    "Secrets Manager",
+    "production completion relayer"
+  ],
+  "incidents": [
+    {
+      "buildId": "babysteps-readiness:695e4929-90c1-47f5-b120-7b55989b7aab",
+      "symptom": "SAM transform changeset denied",
+      "rootCause": "CloudFormation execution role did not include the AWS Serverless transform ARN",
+      "resolution": "Added cloudformation:CreateChangeSet scoped to the official transform ARN"
+    },
+    {
+      "buildId": "babysteps-readiness:675c519d-f8c3-4e34-914c-508165c1b15e",
+      "symptom": "SAM-generated Lambda role creation and rollback failed",
+      "rootCause": "Generated role names were truncated and did not match the intended IAM resource prefix",
+      "resolution": "Defined deterministic named Lambda roles with inline least-privilege policies"
+    },
+    {
+      "buildIds": [
+        "babysteps-readiness:7d23587d-50f5-4b2b-9a86-19e8d851c687",
+        "babysteps-readiness:e90df898-5540-4970-a864-81cdb44a7c37"
+      ],
+      "symptom": "Readiness API creation required additional API Gateway tagging permissions",
+      "rootCause": "A nonessential HTTP probe expanded the deployment privilege and failure surface",
+      "resolution": "Removed API Gateway and verified readiness by direct Lambda invocation"
+    }
+  ],
+  "costAndCleanup": {
+    "currentComputeState": "RDS stopped; Lambda and EventBridge have no idle compute charge",
+    "remainingCost": "RDS storage, retained S3 objects until lifecycle expiry, and request/build usage may still incur charges",
+    "automaticProtection": "EventBridge re-stops RDS every five minutes, including after AWS seven-day automatic restart",
+    "cleanupOwner": "Project owner after review",
+    "protectedSharedResources": [
+      "GitHub OIDC provider",
+      "bootstrap artifact bucket"
+    ]
+  }
+}

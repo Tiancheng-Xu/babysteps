@@ -1,0 +1,23 @@
+{
+  "status": "prepared-not-pinned",
+  "generatedAt": "2026-08-11T02:34:59.602Z",
+  "codec": "raw",
+  "files": {
+    "image": {
+      "cid": "bafkreidexwnxt62s5tbz72suyikizn4yedeqsnlg4izilw77xks2vdfria",
+      "uri": "ipfs://bafkreidexwnxt62s5tbz72suyikizn4yedeqsnlg4izilw77xks2vdfria",
+      "source": "docs/architecture/starbuddy-web3-architecture-v2.png"
+    },
+    "task": {
+      "cid": "bafkreiciotjcmmzlhxhs4u3oojbtxlrsefja37x5jrwq3l4h7w45j3yvi4",
+      "uri": "ipfs://bafkreiciotjcmmzlhxhs4u3oojbtxlrsefja37x5jrwq3l4h7w45j3yvi4",
+      "source": "web/public/metadata/ipfs/starbuddy-task.json"
+    },
+    "certificate": {
+      "cid": "bafkreif7culycmrc4r5n62u45xfdbriqxlcfrfdhvxbl5szirwyb5p4qhu",
+      "uri": "ipfs://bafkreif7culycmrc4r5n62u45xfdbriqxlcfrfdhvxbl5szirwyb5p4qhu",
+      "source": "web/public/metadata/ipfs/starbuddy-certificate.json"
+    }
+  },
+  "verification": "CIDs are deterministic for the exact bytes. Availability remains pending until all three files are pinned and fetched through an independent gateway."
+}

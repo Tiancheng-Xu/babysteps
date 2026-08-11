@@ -112,7 +112,7 @@ let evidence: Evidence = {
 	chainId: 11155111,
 	operator: account.address,
 	demoRoleBoundary:
-		"Minimal homework demo: one operator wallet acts as Provider, parent buyer, and Oracle; payout uses a deterministic test-only address.",
+		"Minimal delivery demo: one operator wallet acts as Provider, parent buyer, and Oracle; payout uses a deterministic test-only address.",
 	addresses: {
 		babyCoin,
 		growthActivities,

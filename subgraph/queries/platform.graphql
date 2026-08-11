@@ -1,0 +1,22 @@
+query HomeworkEvidence($buyer: Bytes!) {
+  tasks(orderBy: createdAt, orderDirection: desc) {
+    id
+    provider
+    payee
+    activityType
+    metadataUri
+    status
+    price
+    opensAt
+    closesAt
+    paused
+  }
+  purchases(where: { buyer: $buyer }, orderBy: purchasedAt, orderDirection: desc) {
+    id
+    task { id metadataUri }
+    price
+    completed
+    evidenceHash
+    certificate { id tokenId recipient }
+  }
+}

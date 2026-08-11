@@ -1,0 +1,79 @@
+name: BabySteps AWS Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_services:
+        description: Start only the approved pausable readiness stack
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @babysteps/aws test
+      - run: pnpm --filter @babysteps/aws typecheck
+      - run: pnpm validate:aws-readiness
+
+  deploy-readiness:
+    if: github.ref == 'refs/heads/main' && inputs.start_services == true
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: aws-readiness
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_READINESS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Package immutable Git source
+        run: git archive --format=zip --output source.zip HEAD
+      - name: Upload source package
+        env:
+          ARTIFACT_BUCKET: ${{ vars.AWS_READINESS_SOURCE_BUCKET }}
+          SOURCE_KEY: source/${{ github.sha }}.zip
+        run: aws s3 cp source.zip "s3://${ARTIFACT_BUCKET}/${SOURCE_KEY}" --sse AES256
+      - name: Start the gated CodeBuild run
+        id: build
+        env:
+          ARTIFACT_BUCKET: ${{ vars.AWS_READINESS_SOURCE_BUCKET }}
+          CODEBUILD_PROJECT: ${{ vars.AWS_READINESS_CODEBUILD_PROJECT }}
+          SOURCE_KEY: source/${{ github.sha }}.zip
+        run: |
+          build_id="$(aws codebuild start-build \
+            --project-name "$CODEBUILD_PROJECT" \
+            --source-type-override S3 \
+            --source-location-override "$ARTIFACT_BUCKET/$SOURCE_KEY" \
+            --environment-variables-override name=ALLOW_AWS_PAUSABLE_DEPLOYMENT,value=true,type=PLAINTEXT \
+            --query 'build.id' --output text)"
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
+      - name: Wait for CodeBuild result
+        env:
+          BUILD_ID: ${{ steps.build.outputs.build_id }}
+        run: |
+          while true; do
+            status="$(aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text)"
+            case "$status" in
+              SUCCEEDED) exit 0 ;;
+              FAILED|FAULT|STOPPED|TIMED_OUT) exit 1 ;;
+              *) sleep 15 ;;
+            esac
+          done

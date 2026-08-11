@@ -1,6 +1,9 @@
 packages:
+  - aws
   - contracts
+  - subgraph
   - web
+  - worker
 catalog:
   typescript: ^6.0.3
   "@types/node": ^22.20.1
@@ -9,4 +12,12 @@ catalog:
   "@types/react": ^19.2.17
   "@types/react-dom": ^19.2.3
 allowBuilds:
+  '@reown/appkit': false
+  bufferutil: false
   esbuild: true
+  keccak: false
+  utf-8-validate: false
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@cloudflare/workers-types@5.20260810.1'
+  - viem@2.55.13

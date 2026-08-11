@@ -11,12 +11,18 @@
 		"deploy:web3:local": "hardhat ignition deploy ignition/modules/BabyStepsWeb3Local.ts",
 		"deploy:web3:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3.ts --network sepolia --parameters ignition/parameters/babysteps-web3.sepolia.json",
 		"deploy:web3:verify:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3.ts --network sepolia --parameters ignition/parameters/babysteps-web3.sepolia.json --verify",
+		"deploy:web3:v2:local": "hardhat ignition deploy ignition/modules/BabyStepsWeb3V2Local.ts",
+		"deploy:web3:v2:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3V2.ts --network sepolia --parameters ignition/parameters/babysteps-web3-v2.sepolia.json",
+		"deploy:web3:v2:verify:sepolia": "hardhat ignition deploy ignition/modules/BabyStepsWeb3V2.ts --network sepolia --parameters ignition/parameters/babysteps-web3-v2.sepolia.json --verify",
+		"finalize:web3:v2:sepolia": "hardhat run scripts/finalizeSepoliaV2.ts --network sepoliaPublic",
 		"inspect:sepolia": "hardhat run scripts/inspectSepolia.ts --network sepolia",
 		"prepare:vrf:sepolia": "hardhat run scripts/prepareSepoliaVrf.ts --network sepoliaPublic",
 		"configure:vrf:sepolia": "hardhat run scripts/addSepoliaVrfConsumer.ts --network sepolia",
 		"deploy:web3:closed-loop:sepolia": "bash scripts/deploySepoliaClosedLoop.sh",
 		"finalize:web3:sepolia": "bash scripts/finalizeSepoliaSetup.sh",
 		"business:closed-loop:sepolia": "hardhat run scripts/runSepoliaBusinessClosedLoop.ts --network sepoliaPublic",
+		"read:rpcs:sepolia": "tsx scripts/readSepoliaAcrossProviders.ts",
+		"uniswap:v3:sepolia": "hardhat run scripts/provisionSepoliaUniswapV3.ts --network sepoliaPublic",
 		"deploy:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia",
 		"deploy:verify:sepolia": "hardhat ignition deploy ignition/modules/OnchainNotebook.ts --network sepolia --verify"
 	},
@@ -26,10 +32,12 @@
 		"@nomicfoundation/hardhat-toolbox-viem": "5.0.7",
 		"@types/node": "catalog:",
 		"hardhat": "3.12.0",
+		"tsx": "4.20.6",
 		"typescript": "catalog:",
 		"viem": "2.55.10"
 	},
 	"dependencies": {
-		"@openzeppelin/contracts": "5.6.1"
+		"@openzeppelin/contracts": "5.6.1",
+		"ethers": "6.17.0"
 	}
 }

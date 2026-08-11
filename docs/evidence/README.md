@@ -4,7 +4,7 @@
 
 ## 学习路径
 
-1. 从 [`../architecture/starbuddy-web3-architecture.png`](../architecture/starbuddy-web3-architecture.png) 理解链上、链下和第三方服务边界。
+1. 从 [`../architecture/starbuddy-web3-architecture-v2.png`](../architecture/starbuddy-web3-architecture-v2.png) 理解产品链下、AWS 私网、Sepolia 与交付安全边界。
 2. 从 [`testing/2026-08-09-validation.md`](testing/2026-08-09-validation.md) 理解测试门禁如何保护代币、随机任务、购买和证书规则。
 3. 从 [`deployment/2026-08-09-sepolia.md`](deployment/2026-08-09-sepolia.md) 查看 Sepolia 合约、角色、VRF Subscription 与恢复过程的完整证明。
 4. 从 [`ui/README.md`](ui/README.md) 对照 Stitch 设计与实际实现，确认桌面和移动端都没有横向页面溢出。

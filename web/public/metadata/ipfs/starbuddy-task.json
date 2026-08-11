@@ -1,0 +1,25 @@
+{
+  "name": "StarBuddy 亲子共读成长任务",
+  "description": "BabySteps Sepolia 成长任务：由学习机构或育婴师提交，Owner 审核后通过 Chainlink VRF 随机确定 BABY 价格和开放时长。",
+  "image": "ipfs://bafkreidexwnxt62s5tbz72suyikizn4yedeqsnlg4izilw77xks2vdfria",
+  "external_url": "https://babysteps.baby2b.online/",
+  "attributes": [
+    {
+      "trait_type": "Activity",
+      "value": "Read"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Ethereum Sepolia"
+    },
+    {
+      "trait_type": "Review",
+      "value": "Owner approved"
+    }
+  ],
+  "properties": {
+    "schema": "babysteps.task.v1",
+    "childPersonalData": "excluded",
+    "videoAndComments": "stored offchain in D1"
+  }
+}

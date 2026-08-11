@@ -1,0 +1,413 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: BabySteps cost-gated AWS readiness stage without NAT, public IPv4, KMS, or Secrets Manager
+
+Metadata:
+  cfn-lint:
+    config:
+      # NoEcho is intentional: Secrets Manager would add a monthly charge to this temporary project stack.
+      ignore_checks:
+        - W1011
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: homework-readiness
+    AllowedPattern: "^[a-z0-9-]+$"
+  ExpiresAt:
+    Type: String
+  DatabaseName:
+    Type: String
+    Default: babysteps
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]+$"
+  DatabaseMasterUsername:
+    Type: String
+    Default: babyapp
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]+$"
+  DatabaseMasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    MaxLength: 128
+
+Globals:
+  Function:
+    Timeout: 15
+    MemorySize: 128
+    Tags:
+      Project: babysteps
+      Environment:
+        Ref: EnvironmentName
+      ManagedBy: cloudformation
+      ExpiresAt:
+        Ref: ExpiresAt
+
+Resources:
+  BabystepsVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.43.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: 10.43.10.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: 10.43.11.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      SubnetId:
+        Ref: PrivateSubnetA
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      SubnetId:
+        Ref: PrivateSubnetB
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Isolated PostgreSQL security group; no ingress until the relayer stage is approved
+      SecurityGroupEgress: []
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Two isolated AZs for BabySteps PostgreSQL readiness
+      SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier:
+        Fn::Sub: "${AWS::StackName}-postgres"
+      AllocatedStorage: 20
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 0
+      CopyTagsToSnapshot: true
+      DBInstanceClass: db.t4g.micro
+      DBName:
+        Ref: DatabaseName
+      DBSubnetGroupName:
+        Ref: DatabaseSubnetGroup
+      DeletionProtection: false
+      Engine: postgres
+      MasterUsername:
+        Ref: DatabaseMasterUsername
+      MasterUserPassword:
+        Ref: DatabaseMasterPassword
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageEncrypted: true
+      StorageType: gp3
+      VPCSecurityGroups:
+        - Fn::GetAtt:
+            - DatabaseSecurityGroup
+            - GroupId
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+        - Key: CostState
+          Value: auto-stop
+
+  StopDatabaseFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-stop-db"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StopOnlyThisDatabase
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-stop-database:*"
+              - Effect: Allow
+                Action: rds:DescribeDBInstances
+                Resource: "*"
+              - Effect: Allow
+                Action: rds:StopDBInstance
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:${Database}"
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  StopDatabaseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "${AWS::StackName}-stop-database"
+      Runtime: python3.13
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - StopDatabaseFunctionRole
+          - Arn
+      InlineCode: |
+        import os
+        import boto3
+
+        rds = boto3.client("rds")
+
+        def handler(event, context):
+            identifier = os.environ["DATABASE_IDENTIFIER"]
+            response = rds.describe_db_instances(DBInstanceIdentifier=identifier)
+            status = response["DBInstances"][0]["DBInstanceStatus"]
+            if status == "available":
+                rds.stop_db_instance(DBInstanceIdentifier=identifier)
+                return {"status": "stop-requested", "database": identifier}
+            return {"status": status, "database": identifier}
+      Environment:
+        Variables:
+          DATABASE_IDENTIFIER:
+            Ref: Database
+
+  StopDatabaseSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Re-stop the project RDS instance after creation or AWS seven-day restart
+      ScheduleExpression: rate(5 minutes)
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - StopDatabaseFunction
+              - Arn
+          Id: StopBabyStepsDatabase
+
+  StopDatabaseInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: StopDatabaseFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - StopDatabaseSchedule
+          - Arn
+
+  ReadinessProbeFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-readiness-probe"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteReadinessLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-readiness-probe:*"
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  ReadinessProbeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "${AWS::StackName}-readiness-probe"
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - ReadinessProbeFunctionRole
+          - Arn
+      InlineCode: |
+        exports.handler = async () => ({
+          statusCode: 200,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            status: "ready",
+            stage: "pausable",
+            persistentRelayerServices: "deferred"
+          })
+        });
+
+  StopDatabaseLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${StopDatabaseFunction}"
+      RetentionInDays: 3
+
+  ReadinessProbeLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${ReadinessProbeFunction}"
+      RetentionInDays: 3
+
+Outputs:
+  VpcId:
+    Value:
+      Ref: BabystepsVpc
+  DatabaseIdentifier:
+    Value:
+      Ref: Database
+  DatabaseEndpoint:
+    Value:
+      Fn::GetAtt:
+        - Database
+        - Endpoint.Address
+  ReadinessFunctionName:
+    Value:
+      Ref: ReadinessProbeFunction
+  DeferredResources:
+    Value: NAT Gateway, public IPv4/EIP, KMS key, Secrets Manager secrets, and the production relayer

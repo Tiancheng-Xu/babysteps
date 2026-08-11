@@ -1,0 +1,30 @@
+{
+  "name": "StarBuddy 亲子共读成长证书",
+  "description": "完成 BabySteps 成长任务后铸造的 Sepolia 灵魂绑定证书；不可批准、转让或销毁。",
+  "image": "ipfs://bafkreidexwnxt62s5tbz72suyikizn4yedeqsnlg4izilw77xks2vdfria",
+  "external_url": "https://babysteps.baby2b.online/",
+  "attributes": [
+    {
+      "trait_type": "Activity",
+      "value": "Read"
+    },
+    {
+      "trait_type": "Companion",
+      "value": "StarBuddy"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Ethereum Sepolia"
+    },
+    {
+      "trait_type": "Transferability",
+      "value": "Locked"
+    }
+  ],
+  "properties": {
+    "schema": "babysteps.certificate.v1",
+    "standard": "ERC-721 + ERC-5192",
+    "idempotencyKey": "purchaseId",
+    "childPersonalData": "excluded"
+  }
+}

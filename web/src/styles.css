@@ -1378,7 +1378,9 @@ textarea[aria-invalid="true"] {
 }
 
 .provider-layout,
-.evidence-grid {
+.evidence-grid,
+.identity-layout,
+.exchange-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
 	gap: 22px;
@@ -1393,6 +1395,81 @@ textarea[aria-invalid="true"] {
 	border-radius: 26px;
 	background: rgba(255, 253, 247, 0.88);
 	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+}
+
+.identity-card {
+	display: grid;
+	gap: 16px;
+	padding: 28px;
+	border: 2px solid var(--ink);
+	border-radius: 26px;
+	background: rgba(255, 253, 247, 0.9);
+	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+}
+
+.identity-card label {
+	font-weight: 800;
+}
+
+.identity-card input {
+	min-height: 52px;
+	padding: 11px 14px;
+	border: 2px solid var(--ink);
+	border-radius: 15px;
+	background: var(--paper-strong);
+	color: var(--ink);
+}
+
+.identity-card select {
+	min-height: 52px;
+	padding: 11px 14px;
+	border: 2px solid var(--ink);
+	border-radius: 15px;
+	background: var(--paper-strong);
+	color: var(--ink);
+}
+
+.exchange-quote {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px;
+	border: 2px dashed var(--ink);
+	border-radius: 16px;
+	background: var(--sage-soft);
+}
+
+.identity-status-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.identity-status-grid div {
+	display: grid;
+	gap: 4px;
+	padding: 14px;
+	border: 2px solid rgba(23, 59, 77, 0.14);
+	border-radius: 16px;
+	background: var(--purple-soft);
+}
+
+.identity-status-grid span,
+.identity-note {
+	color: var(--ink-soft);
+	font-size: 0.92rem;
+}
+
+.identity-message {
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: var(--sage-soft);
+	font-weight: 700;
+}
+
+.identity-message--error {
+	background: #fde0d5;
+	color: #7b2f20;
 }
 
 .provider-form-card {
@@ -1526,7 +1603,9 @@ textarea[aria-invalid="true"] {
 	.course-evidence__shell,
 	.product-page__hero,
 	.provider-layout,
-	.evidence-grid {
+	.evidence-grid,
+	.identity-layout,
+	.exchange-layout {
 		grid-template-columns: 1fr;
 	}
 
@@ -1607,9 +1686,14 @@ textarea[aria-invalid="true"] {
 	.provider-form-card,
 	.provider-lifecycle,
 	.architecture-figure,
-	.contract-evidence {
+	.contract-evidence,
+	.identity-card {
 		padding: 20px;
 		border-radius: 22px;
+	}
+
+	.identity-status-grid {
+		grid-template-columns: 1fr;
 	}
 
 	.hero-panel,

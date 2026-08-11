@@ -1,0 +1,652 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: BabySteps readiness runtime in us-east-1
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: homework-readiness
+    AllowedPattern: "^[a-z0-9-]+$"
+  ExpiresAt:
+    Type: String
+    Description: UTC expiry timestamp used by evidence and cleanup gates
+  DatabaseName:
+    Type: String
+    Default: babysteps
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]+$"
+  SepoliaRpcUrl:
+    Type: String
+    Default: https://ethereum-sepolia-rpc.publicnode.com
+    NoEcho: true
+  MarketplaceAddress:
+    Type: String
+    AllowedPattern: "^0x[0-9a-fA-F]{40}$"
+  CertificateBaseUri:
+    Type: String
+    Description: Immutable IPFS directory containing sanitized certificate metadata
+    AllowedPattern: "^ipfs://.+[^/]$"
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    MemorySize: 256
+    Timeout: 30
+    Tags:
+      Project: babysteps
+      Environment:
+        Ref: EnvironmentName
+      ManagedBy: cloudformation
+      ExpiresAt:
+        Ref: ExpiresAt
+
+Resources:
+  BabystepsVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.42.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: BabystepsVpc
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: 10.42.0.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: 10.42.1.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: 10.42.10.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: 10.42.11.0/24
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: PublicRouteTable
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      SubnetId:
+        Ref: PublicSubnetA
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      SubnetId:
+        Ref: PublicSubnetB
+
+  NatEip:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - NatEip
+          - AllocationId
+      ConnectivityType: public
+      SubnetId:
+        Ref: PublicSubnetA
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  PrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NatGateway
+      RouteTableId:
+        Ref: PrivateRouteTable
+
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      SubnetId:
+        Ref: PrivateSubnetA
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      SubnetId:
+        Ref: PrivateSubnetB
+
+  RelayerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Restricted egress for the BabySteps relayer
+      SecurityGroupEgress: []
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL ingress only from the relayer
+      SecurityGroupEgress: []
+      VpcId:
+        Ref: BabystepsVpc
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  DatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: DatabaseSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId:
+        Ref: RelayerSecurityGroup
+
+  RelayerDatabaseEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: RelayerSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId:
+        Ref: DatabaseSecurityGroup
+
+  RelayerHttpsEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: RelayerSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: 0.0.0.0/0
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for BabySteps readiness PostgreSQL
+      SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Generated credentials for BabySteps readiness PostgreSQL
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"babyapp"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  WebhookSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Generated HMAC secret for Worker to Relayer requests
+      GenerateSecretString:
+        SecretStringTemplate: "{}"
+        GenerateStringKey: secret
+        PasswordLength: 64
+        ExcludePunctuation: true
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      AllocatedStorage: 20
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 1
+      DBInstanceClass: db.t4g.micro
+      DBName:
+        Ref: DatabaseName
+      DBSubnetGroupName:
+        Ref: DatabaseSubnetGroup
+      DeletionProtection: false
+      Engine: postgres
+      MasterUsername:
+        Fn::Sub: "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}"
+      MasterUserPassword:
+        Fn::Sub: "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}"
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageEncrypted: true
+      StorageType: gp3
+      VPCSecurityGroups:
+        - Fn::GetAtt:
+            - DatabaseSecurityGroup
+            - GroupId
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  RelayerKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Description: Non-exportable BabySteps Sepolia completion signer
+      Enabled: true
+      KeySpec: ECC_SECG_P256K1
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DelegateAdministrationToAccountIam
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  RelayerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-relayer-execution"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      Policies:
+        - PolicyName: BabystepsRelayerRuntime
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadRuntimeSecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - Ref: DatabaseSecret
+                  - Ref: WebhookSecret
+              - Sid: SignCompletionTransactions
+                Effect: Allow
+                Action:
+                  - kms:GetPublicKey
+                  - kms:Sign
+                Resource:
+                  Fn::GetAtt:
+                    - RelayerKey
+                    - Arn
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+  CompletionApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: readiness
+      Tags:
+        Project: babysteps
+        Environment:
+          Ref: EnvironmentName
+        ManagedBy: cloudformation
+        ExpiresAt:
+          Ref: ExpiresAt
+
+  RelayerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/handler.handler
+      Role:
+        Fn::GetAtt:
+          - RelayerExecutionRole
+          - Arn
+      Environment:
+        Variables:
+          DATABASE_HOST:
+            Fn::GetAtt:
+              - Database
+              - Endpoint.Address
+          DATABASE_NAME:
+            Ref: DatabaseName
+          DATABASE_PORT:
+            Fn::GetAtt:
+              - Database
+              - Endpoint.Port
+          DATABASE_SECRET_ARN:
+            Ref: DatabaseSecret
+          CERTIFICATE_BASE_URI:
+            Ref: CertificateBaseUri
+          KMS_KEY_ID:
+            Fn::GetAtt:
+              - RelayerKey
+              - Arn
+          MARKETPLACE_ADDRESS:
+            Ref: MarketplaceAddress
+          SEPOLIA_RPC_URL:
+            Ref: SepoliaRpcUrl
+          WEBHOOK_SECRET_ARN:
+            Ref: WebhookSecret
+      Events:
+        Completion:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: CompletionApi
+            Method: POST
+            Path: /v1/completions
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::GetAtt:
+              - RelayerSecurityGroup
+              - GroupId
+        SubnetIds:
+          - Ref: PrivateSubnetA
+          - Ref: PrivateSubnetB
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handler.ts
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+
+  RelayerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${RelayerFunction}"
+      RetentionInDays: 7
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
+Outputs:
+  CompletionApiEndpoint:
+    Description: Readiness-only HMAC-authenticated completion endpoint
+    Value:
+      Fn::Sub: "https://${CompletionApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/readiness"
+  RelayerKeyArn:
+    Description: Non-secret KMS key identifier; sanitize before public Evidence
+    Value:
+      Fn::GetAtt:
+        - RelayerKey
+        - Arn

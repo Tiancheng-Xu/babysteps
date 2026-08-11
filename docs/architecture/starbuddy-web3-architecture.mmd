@@ -1,0 +1,240 @@
+# StarBuddy BabySteps Web3 architecture
+
+架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。参考 作业参考清单、公开同学项目 `Chi111/web3-university` 以及学习资料中的 Worker/Lambda 和 AWS 部署架构图；吸收链上/链下分层、证据门禁和私网部署思想，不复制 MockUSDC、明文 Worker 私钥或与作业无关的服务。
+
+状态含义：
+
+- `现有 Sepolia`：已有公开地址、交易或独立读取证据
+- `本地已验证`：代码、测试与本地部署通过，但没有外部环境证据
+- `远程基础设施已建`：远程资源和独立读取证据存在，但依赖它的应用可能仍受发布门禁限制
+- `AWS 云端已验证 / stopped`：真实 Stack、资源读取、Lambda 调用和 RDS 自动停库证据均存在
+- `待部署`：部署图或适配代码存在，外部写操作尚未执行
+- `计划`：尚未实现
+
+## 系统上下文
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
+flowchart LR
+    parent0["家长<br/>购买、评论、完成任务"]
+    provider0["机构或育婴师<br/>提交成长任务与完成证据"]
+    owner0["Owner<br/>角色管理、审核、暂停"]
+    babySteps["BabySteps / StarBuddy<br/>React + Worker + Web3"]
+    public0["访客<br/>只读任务与公开评论"]
+
+    parent0 --> babySteps
+    provider0 --> babySteps
+    owner0 --> babySteps
+    public0 --> babySteps
+
+    babySteps --> ethereum0["Ethereum Sepolia<br/>可信业务事实"]
+    babySteps --> cloudflare0["Cloudflare Pages / Worker / D1<br/>D1 远程已建，Worker 待 V2"]
+    babySteps --> aws0["AWS 可暂停阶段<br/>VPC / 私有 RDS / Readiness + 自动停库 Lambda<br/>云端已验证，RDS stopped"]
+    babySteps --> index0["The Graph + ethers 三 RPC<br/>本地实现；公共 RPC 已验证"]
+```
+
+## 运行时请求与数据流
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
+flowchart LR
+    parent["家长<br/>现有：外部钱包<br/>Privy 代码已实现，配置待验证"] --> web["BabySteps React<br/>现有并扩展"]
+    provider["机构或育婴师<br/>现有 V2 审核代码，待部署"] --> web
+    owner["Owner<br/>现有管理员"] --> web
+
+    web --> worker["Worker API<br/>本地已验证；V2 地址门禁阻止发布"]
+    worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>远程基础设施已建，migration 已应用")]
+    web --> router["Uniswap v3 Router / Quoter<br/>代码已实现；两池与真实 swap 待验证"]
+    web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
+    web --> marketV2["Marketplace V2<br/>现有审核、购买与幂等完成代码<br/>待验证部署"]
+    marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
+    marketV2 --> coin
+    marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
+    marketV2 --> sbt["ERC-5192 SBT<br/>现有代码，待验证部署"]
+    sbt --> ipfs[("IPFS metadata<br/>CID 已确定，pin 待验证")]
+    worker -.->|"生产 Relayer 延后"| lambda["Readiness / 自动停库 Lambda<br/>43 项 AWS 包测试 + 云端调用通过"]
+    lambda --> rds[("私有 RDS PostgreSQL<br/>5 分钟自动停库<br/>CREATE_COMPLETE / stopped")]
+    kms["AWS KMS secp256k1 Relayer<br/>代码已验证；持续计费阶段延后"] -.-> marketV2
+    marketV2 --> graph["The Graph<br/>build + 4 tests；Studio 待部署"]
+    marketV2 --> rpc["ethers 公共 RPC 已验证<br/>Infura / Alchemy 待配置"]
+```
+
+## 链上与链下事实所有权
+
+```mermaid
+flowchart TB
+    draft["D1 draftId<br/>标题、说明、封面、视频、完成规则<br/>本地已验证"]
+    canonical["规范化 metadata JSON<br/>keccak256 哈希<br/>本地已验证"]
+    event["TaskRequested event<br/>taskId + metadataHash<br/>本地已验证合约"]
+    key["稳定业务键<br/>chainId:marketplace:taskId<br/>本地已验证"]
+    task["D1 published_task<br/>保存 key、draftId、txHash、哈希<br/>本地已验证"]
+    read["详情聚合器<br/>链上状态 + D1 富内容<br/>本地已验证"]
+
+    draft --> canonical
+    canonical -->|"Provider requestTask"| event
+    event -->|"Worker 校验交易回执和 getTask"| key
+    draft --> task
+    key --> task
+    event --> read
+    task --> read
+
+    comments[("D1 comments<br/>公开读、购买后写、软隐藏<br/>本地已验证")] --> read
+    audit[("D1 audit_log<br/>nonce、绑定、资料、隐藏<br/>本地已验证")] -.-> task
+```
+
+链上拥有 Provider、payee、状态、随机价格/时间、购买、完成和证书事实；D1 拥有富文本、视频 URL、用户名、评论、nonce、会话与审计。任何链上/D1 哈希不一致都返回明确冲突，不自动覆盖。
+
+## 组件、职责、存储与外部服务
+
+```mermaid
+flowchart TB
+    subgraph browser["浏览器信任边界"]
+        ui["React UI<br/>交易状态与只读展示"]
+        wallet["Privy / Smart Wallet / 外部钱包<br/>代码已实现，App ID 待配置"]
+    end
+    subgraph cloudflare["Cloudflare 边界"]
+        pages["Pages<br/>现有 Git 集成"]
+        worker2["Worker<br/>本地已验证鉴权、聚合与 API<br/>V2 地址门禁阻止外部部署"]
+        d12[("D1<br/>远程 DB + migration 已验证<br/>应用流量待 Worker 部署")]
+    end
+    subgraph ethereum["Ethereum Sepolia 边界"]
+        baby["BabyCoin<br/>现有：0x108a…5471b"]
+        oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
+        newMarket["Marketplace V2<br/>现有审核、购买、完成代码<br/>待验证部署"]
+        cert["ERC-5192<br/>现有代码，待验证部署"]
+        uni["Uniswap v3<br/>官方合约已核验；BABY pools 待注资"]
+        chainlink["Chainlink VRF<br/>现有闭环证据"]
+    end
+    subgraph aws["AWS 当前允许边界（云端已验证，RDS 已 stopped）"]
+        probe["Readiness Lambda<br/>直接 invoke 200 / ready"]
+        subnets["VPC / 2 AZ / 2 私有子网<br/>无 IGW / NAT / 公网 IP"]
+        stop["EventBridge 每 5 分钟<br/>StopDatabase Lambda"]
+        db[("RDS PostgreSQL 18.3<br/>Single-AZ / 20 GB gp3 / 无 ingress<br/>private / encrypted / stopped")]
+    end
+    subgraph deferred["AWS 持续计费边界（延后，当前流水线无权限）"]
+        relayer["生产 Completion Relayer"]
+        nat["NAT + EIP / 公网 IPv4"]
+        secrets["Secrets Manager"]
+        key["KMS ECC_SECG_P256K1"]
+    end
+
+    pages --> ui
+    wallet --> ui
+    ui --> worker2 --> d12
+    ui --> oldMarket
+    ui --> newMarket
+    ui --> uni
+    newMarket --> baby
+    newMarket --> cert
+    newMarket --> chainlink
+    worker2 -.-> relayer
+    subnets --> db
+    stop --> db
+    relayer -.-> db
+    relayer --> secrets
+    relayer --> key
+    relayer -.-> nat -.-> newMarket
+    key -.-> newMarket
+```
+
+## 登录、写入与购买校验时序
+
+Worker/D1 本地已验证以下时序；Privy 邮箱/Google/Smart Wallet 入口代码已实现，但 App ID 和真实登录仍待外部配置。当前自动化测试使用运行时生成的测试钱包签名。
+
+```mermaid
+sequenceDiagram
+    participant U as 家长钱包 / Privy
+    participant UI as React
+    participant W as Worker
+    participant D as D1
+    participant M as Marketplace V2
+
+    U->>UI: 邮箱嵌入式钱包或外部钱包
+    UI->>W: 请求 challenge(wallet, action)
+    W->>D: 写入加密随机 nonce + 过期时间
+    W-->>UI: EIP-4361 风格待签消息
+    UI->>U: personal_sign
+    UI->>W: message + signature
+    W->>D: 原子消费 nonce
+    W->>W: 校验 domain、chainId、wallet、action、expiry
+    W-->>UI: HttpOnly 短期会话
+
+    UI->>W: 发布评论(taskKey, content)
+    W->>M: purchaseIdForBuyer(taskId, wallet)
+    M-->>W: purchaseId 或 0
+    alt 已购买且会话有效
+        W->>D: 写评论与审计
+        W-->>UI: 201 Created
+    else 未购买、nonce 重放或会话过期
+        W-->>UI: 401/403 + 稳定错误码
+    end
+```
+
+## 部署与 CI/CD
+
+```mermaid
+flowchart LR
+    feature["Feature branch"] --> local["本地门禁<br/>全仓测试、类型、构建、敏感信息"]
+    feature --> preview["Cloudflare Pages branch preview<br/>Git 集成；URL/产物验收"]
+    preview --> previewLife["PR 关闭后的清理/保留周期<br/>尚未自动化，待验证"]
+    local --> main["main（合并仍需人工决定）"]
+    main --> manual["workflow_dispatch<br/>start_services=true"]
+    manual --> env["GitHub Environment<br/>aws-readiness 人工审批"]
+    env --> oidc["GitHub OIDC<br/>短期 AWS 身份<br/>无 Access Key"]
+    oidc --> s3["加密 S3 source/{commit}.zip<br/>7 天生命周期"]
+    s3 --> codebuild["CodeBuild Linux/Small<br/>并发上限 1"]
+    codebuild --> checks["43 AWS tests + typecheck<br/>bootstrap/pausable SAM lint + 权限负向测试"]
+    checks -->|"ALLOW_AWS_PAUSABLE_DEPLOYMENT=true"| awsDeploy["SAM / CloudFormation<br/>VPC、私有 RDS、Readiness / 自动停库 Lambda"]
+    checks -. "无权限且 buildspec 拒绝" .-> persistent["NAT / EIP / KMS / Secrets / 生产 Relayer<br/>持续计费，等待再次确认"]
+    awsDeploy --> evidence["Lambda 200 / 私网路由 / RDS stopped<br/>脱敏 Evidence"]
+    evidence --> cleanupGate["费用复核与 ExpiresAt<br/>触发清理检查"]
+    cleanupGate --> reversible["RDS 自动停止<br/>VPC/Lambda/Rule 保留；存储仍计费"]
+    cleanupGate --> deleteApproval["最终删除 Stack<br/>复盘后确认精确目标"]
+    main --> pagesDeploy["Cloudflare Pages Git 部署<br/>现有"]
+    main --> workerDeploy["D1 migration 已完成<br/>Worker 等 V2 地址"]
+    main --> graphDeploy["Subgraph build/test 已完成<br/>Studio 待部署"]
+    pagesDeploy --> httpCheck["HTTP、TLS、深链、非空产物<br/>现有门禁"]
+    workerDeploy --> apiCheck["远程 D1 已核验<br/>API 待 Worker 发布"]
+    awsDeploy --> awsCheck["IAM 最小权限、Lambda 200、RDS 自动停库<br/>云端已验证"]
+```
+
+## 权限与安全边界
+
+```mermaid
+flowchart LR
+    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限与结算代码现有<br/>部署待验证"]
+    provider2["Provider<br/>提交任务与完成证据"] --> market
+    provider2 --> api["Worker API<br/>challenge-sign-verify 本地已验证<br/>外部待部署"]
+    parent2["Parent<br/>Swap、Approve、Buy"] --> market
+    relayer2["KMS Relayer<br/>本地签名与幂等已验证；持续计费阶段延后<br/>未来仅 COMPLETION_RELAYER_ROLE"] -.-> market
+    coordinator["VRF Coordinator<br/>仅随机回调"] --> market
+    market --> sbt2["SBT<br/>Marketplace 持 MINTER_ROLE"]
+
+    owner2 -. "不能代替家长支付" .-> parent2
+    provider2 -. "不能审核自己的任务" .-> owner2
+    relayer2 -. "不能授予角色或暂停" .-> owner2
+```
+
+安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 和会话令牌只保存 SHA-256 哈希；评论写入前重新读取链上 `purchaseIdForBuyer`。AWS 可暂停 Stack 已真实验证没有 IGW/NAT/公网 IP，RDS 无 ingress 且为 stopped；EC2 仍保留默认 SG egress，但路由表只有 local，因此当前没有实际公网出口，未来新增连接前必须收紧。密码由 CodeBuild 运行时生成并通过 CloudFormation `NoEcho` 参数传递；自动停库 Lambda 只能描述并停止目标 DB。GitHub OIDC 与角色已建，main Actions 触发仍待验证；执行角色无 NAT/EIP/KMS/Secrets/API Gateway 创建权限。完整 Worker→Lambda HMAC、KMS EIP-1559 signer 与 RDS 幂等代码仍保留为后续参考，但当前流水线不能部署。
+
+## 失败恢复与 Evidence
+
+```mermaid
+flowchart LR
+    action["关键操作<br/>迁移、绑定、部署、交易"] --> checkpoint["写 checkpoint<br/>idempotencyKey / txHash / deploymentId"]
+    checkpoint --> verify["独立读取验证<br/>D1、RPC、HTTP、TLS、GraphQL"]
+    verify -->|"一致"| evidence2["脱敏 Evidence<br/>代码行、测试、哈希、截图"]
+    verify -->|"暂时失败"| retry["有界重试<br/>不重复扣款或铸造"]
+    verify -->|"配置/权限错误"| stop["停止门禁<br/>标记 blocked，不继续生产"]
+    retry --> verify
+    evidence2 --> map["作业实现映射<br/>更新真实状态"]
+    map --> cost["费用与资源清单<br/>当前：RDS storage / CodeBuild 请求<br/>延后：NAT / EIP / KMS / Secrets"]
+    cost --> cleanup["触发 aws-delivery-cleanup<br/>可逆停用优先"]
+    cleanup -->|"最终删除前"| confirm["复盘后确认 stack、region、资源列表"]
+```
+
+## 当前图像证据
+
+`docs/architecture/starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 保留 StarBuddy 四阶段主题和产品业务视图；本 Mermaid 是包含当前部署状态、AWS 可暂停阶段、CI/CD、安全与清理边界的工程真相源。PNG 中未展示的 AWS 细节不得代替本 Mermaid 的验收状态。
+
+Phase 1 合约记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；Worker/D1 记录在 `docs/evidence/testing/2026-08-10-worker-d1.md` 与远程 D1 Evidence；Privy、Uniswap、The Graph、三 RPC、IPFS 各有独立 2026-08-10 Evidence；AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。

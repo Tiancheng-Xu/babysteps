@@ -33,4 +33,12 @@ contract MockVrfCoordinator is IVRFCoordinatorV2Plus {
             randomWords
         );
     }
+
+    function fulfillConsumer(
+        address consumer,
+        uint256 requestId,
+        uint256[] calldata randomWords
+    ) external {
+        IVrfConsumer(consumer).rawFulfillRandomWords(requestId, randomWords);
+    }
 }

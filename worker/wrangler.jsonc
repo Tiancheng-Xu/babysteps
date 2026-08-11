@@ -1,0 +1,29 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "babysteps-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-08-08",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"vars": {
+		"APP_DOMAIN": "babysteps.baby2b.online",
+		"APP_URI": "https://babysteps.baby2b.online",
+		"CHAIN_ID": "11155111",
+		"OWNER_WALLET": "0x0000000000000000000000000000000000000000",
+		"MARKETPLACE_V2_ADDRESS": "0x0000000000000000000000000000000000000000",
+		"SEPOLIA_RPC_URL": "https://ethereum-sepolia-rpc.publicnode.com"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "babysteps-production",
+			"database_id": "82d96e36-2adc-44f7-93b2-aeb19c075d09",
+			"migrations_dir": "migrations"
+		}
+	]
+}
