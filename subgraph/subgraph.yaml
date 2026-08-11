@@ -1,5 +1,5 @@
 specVersion: 1.3.0
-description: BabySteps V2 homework event index (local manifest; address/startBlock replaced at deployment)
+description: BabySteps V2 delivery event index (local manifest; address/startBlock replaced at deployment)
 schema:
   file: ./schema.graphql
 dataSources:

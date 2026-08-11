@@ -49,7 +49,7 @@ BabySteps 保留以下差异：
 
 ### 参考架构复核与取舍
 
-2026-08-10 再次对照 `HOMEWORKS.md`、公开同学项目 `Chi111/web3-university`，以及学习资料中的 Worker/Lambda 与 AWS 部署架构图。`Adophlidu/yd-web3-course` 当前无法通过公开 GitHub API 读取，因此只保留作业参考库已经记录的高层描述，不把不可核验细节写成本项目依据。
+2026-08-10 再次对照 作业参考清单、公开同学项目 `Chi111/web3-university`，以及学习资料中的 Worker/Lambda 与 AWS 部署架构图。`Adophlidu/yd-web3-course` 当前无法通过公开 GitHub API 读取，因此只保留作业参考库已经记录的高层描述，不把不可核验细节写成本项目依据。
 
 本项目吸收以下可验证做法：
 
@@ -127,7 +127,7 @@ AWS 开发环境使用 `us-east-1`，由一个名为 `babysteps-readiness` 的 S
 - 一个 `ECC_SECG_P256K1`、`SIGN_VERIFY` KMS Key；Lambda 只允许对该 Key 调用 `GetPublicKey` 与 `Sign`
 - CloudWatch Logs 保存脱敏日志并设置 7 天保留期；禁止记录签名原文、数据库密码、AWS 凭据和用户个人信息
 
-Stack 和其全部资源必须带 `Project=babysteps`、`Environment=homework-readiness`、`ManagedBy=cloudformation` 与 UTC `ExpiresAt` 标签。部署前先只读核对账号计划、调用身份和配额；如果账号计划限制、身份异常、NAT/RDS 配额不足或模板需要超出已批准规格，部署立即停止，不自动升级账号或请求提额。
+Stack 和其全部资源必须带 `Project=babysteps`、`Environment=delivery-readiness`、`ManagedBy=cloudformation` 与 UTC `ExpiresAt` 标签。部署前先只读核对账号计划、调用身份和配额；如果账号计划限制、身份异常、NAT/RDS 配额不足或模板需要超出已批准规格，部署立即停止，不自动升级账号或请求提额。
 
 Cloudflare Worker 仍是面向产品的链下 API。Worker 调用 AWS 完成入口时只发送 `purchaseId`、`evidenceHash`、幂等键和签名身份摘要。Lambda 在 RDS 的 `completion_jobs` 表中原子登记作业；`idempotency_key` 与 `purchase_id` 均唯一，记录状态、尝试次数、交易哈希和时间戳，不保存儿童信息。重复请求返回同一结果；首次请求才通过 KMS 签署并经 NAT 向 Sepolia 提交交易。
 
@@ -207,7 +207,7 @@ sequenceDiagram
 
 没有发生的部署、交易或截图不得填写占位值。无法验证的内容标为 `pending`，测试失败的内容标为 `blocked`，只有代码、测试和外部证据同时满足验收线时才标为 `complete`。
 
-`docs/homework/web3-homework-implementation-map.md` 持续维护“作业要求 → 实现功能 → 代码位置 → 验证证据 → 当前状态”。每个关键节点结束时同步更新该映射和架构图，不能等到最后补写。
+`docs/delivery/web3-delivery-implementation-map.md` 持续维护“作业要求 → 实现功能 → 代码位置 → 验证证据 → 当前状态”。每个关键节点结束时同步更新该映射和架构图，不能等到最后补写。
 
 ## 链上与链下 ID 绑定
 
@@ -399,7 +399,7 @@ ethers.js 读取脚本分别连接公共 RPC、Infura 和 Alchemy，并输出统
 
 ## 测试与证据
 
-每个作业点必须同时关联代码、测试和可核对证据。最终实现映射写入 `docs/homework/web3-homework-implementation-map.md`。
+每个作业点必须同时关联代码、测试和可核对证据。最终实现映射写入 `docs/delivery/web3-delivery-implementation-map.md`。
 
 测试分为以下层次：
 
@@ -470,7 +470,7 @@ Readiness Stack 只有在以下证据全部生成后才允许进入清理：
 4. CodeBuild、SAM、CloudFormation、应用日志和架构图已去敏归档
 5. 作业实现映射已更新，且清理 Manifest 已列出 Stack、NAT、EIP、RDS、Secret、KMS、日志与 IAM 资源
 
-未达到以上条件时，不因单个测试成功而提前销毁。达到条件后，先停止会重新部署资源的 GitHub Actions、CodeBuild Webhook 或计划任务，再按 `aws-homework-cleanup` 规则执行：用户已经授权发现和可逆暂停；CloudFormation Stack、RDS、KMS Key、Secret、日志及唯一恢复副本的永久删除，必须在展示最终 ARN/ID 清单后取得一次新的行动时确认。Readiness RDS 只含合成作业数据，默认不创建最终快照；改变快照选择仍需行动时确认。RDS 最多只能连续停止七天且仍收取存储费；NAT Gateway 不能暂停，只能删除。
+未达到以上条件时，不因单个测试成功而提前销毁。达到条件后，先停止会重新部署资源的 GitHub Actions、CodeBuild Webhook 或计划任务，再按 `aws-delivery-cleanup` 规则执行：用户已经授权发现和可逆暂停；CloudFormation Stack、RDS、KMS Key、Secret、日志及唯一恢复副本的永久删除，必须在展示最终 ARN/ID 清单后取得一次新的行动时确认。Readiness RDS 只含合成作业数据，默认不创建最终快照；改变快照选择仍需行动时确认。RDS 最多只能连续停止七天且仍收取存储费；NAT Gateway 不能暂停，只能删除。
 
 ## 发布顺序与停止门禁
 

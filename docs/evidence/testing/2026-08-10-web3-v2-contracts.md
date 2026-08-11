@@ -22,7 +22,7 @@
 | ERC-5192 证书 | 一次购买一张、永久 locked，阻止批准、转让和销毁 | `contracts/contracts/GrowthCertificateSBT.sol`、`contracts/contracts/interfaces/IERC5192.sol` | 6 个专项测试通过；Sepolia 地址待部署 |
 | 可复现部署 | 生产图挂接既有 BabyCoin；本地图部署 BabyCoin、Mock VRF、SBT、Marketplace | `contracts/ignition/modules/BabyStepsWeb3V2.ts`、`contracts/ignition/modules/BabyStepsWeb3V2Local.ts` | 本地 Ignition 实际部署成功 |
 
-完整映射见 `docs/homework/web3-homework-implementation-map.md`，架构及权限边界见 `docs/architecture/starbuddy-web3-architecture.mmd`。
+完整映射见 `docs/delivery/web3-delivery-implementation-map.md`，架构及权限边界见 `docs/architecture/starbuddy-web3-architecture.mmd`。
 
 ## 新鲜门禁输出
 
@@ -33,7 +33,7 @@ pnpm test
 pnpm typecheck
 pnpm check
 pnpm build
-pnpm validate:homework-evidence
+pnpm validate:delivery-evidence
 pnpm validate:public-copy
 git diff --check
 ```
@@ -51,7 +51,7 @@ git diff --check
 | Standalone validator | passed |
 | Public copy / secret scan | passed |
 | Pages workflow validator | passed |
-| Homework evidence contract | passed |
+| delivery evidence contract | passed |
 | Contracts build | 无需重新编译，exit 0 |
 | Web production build | 1,725 modules transformed，`dist/index.html` 及非空资源生成，exit 0 |
 | Git whitespace | `git diff --check`，exit 0 |
@@ -94,7 +94,7 @@ pnpm test
 pnpm typecheck
 pnpm check
 pnpm build
-pnpm validate:homework-evidence
+pnpm validate:delivery-evidence
 ```
 
 本地 Ignition 默认使用一次性 Hardhat 内存链，退出后地址和状态丢失，这是测试隔离设计，不是部署失败。

@@ -7,7 +7,7 @@ import {
 } from "./identityModel";
 
 describe("Privy identity model", () => {
-	it("keeps the homework login methods explicit", () => {
+	it("keeps the delivery login methods explicit", () => {
 		expect(requiredPrivyLoginMethods).toEqual(["google", "email", "wallet"]);
 	});
 

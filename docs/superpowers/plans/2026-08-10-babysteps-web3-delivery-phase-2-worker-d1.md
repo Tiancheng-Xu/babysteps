@@ -1,4 +1,4 @@
-# BabySteps Web3 Homework Phase 2 Worker/D1 Implementation Plan
+# BabySteps Web3 delivery Phase 2 Worker/D1 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:executing-plans` to implement this plan task by task, and `superpowers:test-driven-development` for every behavior change.
 
@@ -349,15 +349,15 @@ git commit -m "feat: gate comments by chain purchase"
 
 ---
 
-### Task 5: Update architecture, homework mapping, and Phase 2 evidence
+### Task 5: Update architecture, delivery mapping, and Phase 2 evidence
 
 **Files:**
 
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Create: `docs/evidence/testing/2026-08-10-worker-d1.md`
-- Modify: `scripts/validate-homework-evidence.mjs`
-- Modify: `scripts/validate-homework-evidence.test.mjs`
+- Modify: `scripts/validate-delivery-evidence.mjs`
+- Modify: `scripts/validate-delivery-evidence.test.mjs`
 
 **Step 1: Add a failing evidence assertion**
 
@@ -379,7 +379,7 @@ Expected: FAIL before the documentation is updated.
 
 The Phase 2 evidence must include exact commands and counts from the final run, changed code locations, the D1 tables, auth threat controls, reference architecture decisions, known limitations, and a statement that no Cloudflare/AWS/Sepolia write occurred.
 
-Update the homework map rows for requirement 1 and requirement 7. Mark Worker/D1 local behavior as `partial/local verified`, not deployed or complete. Keep Uniswap, Privy UI, Lambda/KMS, RPC comparison, and The Graph pending.
+Update the delivery map rows for requirement 1 and requirement 7. Mark Worker/D1 local behavior as `partial/local verified`, not deployed or complete. Keep Uniswap, Privy UI, Lambda/KMS, RPC comparison, and The Graph pending.
 
 **Step 3: Run the complete repository gate**
 
@@ -407,7 +407,7 @@ Expected:
 
 ```bash
 git add docs scripts
-git commit -m "docs: record worker d1 homework evidence"
+git commit -m "docs: record worker d1 delivery evidence"
 ```
 
 ## Phase 2 completion criteria

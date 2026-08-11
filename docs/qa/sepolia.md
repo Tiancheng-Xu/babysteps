@@ -19,7 +19,7 @@
 - 首次发布：`2026-08-04`，Cloudflare 日志确认识别 pnpm `11.17.0`、Node.js
   `22.16.0`，成功上传 8 个静态文件并部署到全球网络。
 - Chrome 可视检查：标题和一级标题均为 `BabySteps · 成长星球`；1920 px 视口下
-  页面宽度等于视口宽度，无横向溢出；未发现作业、课程、homework 或 assignment
+  页面宽度等于视口宽度，无横向溢出；未发现作业、课程、delivery 或 assignment
   等对外表述；页面自身无控制台错误。
 - 备用镜像：[`tiancheng-xu.github.io/babysteps`](https://tiancheng-xu.github.io/babysteps/)。
 - 品牌域名 `babysteps.baby2b.online` 暂未绑定。GoDaddy 收据显示已购买一年

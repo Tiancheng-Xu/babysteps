@@ -43,8 +43,8 @@ PR preview for the exact commit.
 - No AWS resource or Cloudflare production deployment is created by this change.
 - The current production deployment remains the rollback target until the new
   preview and production URLs pass HTTP verification.
-- Project branch names use product or feature language and must not contain
-  `homework`, `yideng`, or the standalone token `yd`. The current delivery branch
-  is renamed to `feature/starbuddy-web3-platform` before the next preview.
+- Project branch names use product or feature language and must not contain the
+  centrally configured academic aliases. The current delivery branch is
+  `feature/starbuddy-web3-platform` before the next preview.
 - Branch-name enforcement is a repository-policy concern. These ref-only terms
   must not be applied as a blanket source or documentation content filter.

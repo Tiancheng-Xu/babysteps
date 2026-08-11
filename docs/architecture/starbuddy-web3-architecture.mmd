@@ -1,6 +1,6 @@
 # StarBuddy BabySteps Web3 architecture
 
-架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。参考 `HOMEWORKS.md`、公开同学项目 `Chi111/web3-university` 以及学习资料中的 Worker/Lambda 和 AWS 部署架构图；吸收链上/链下分层、证据门禁和私网部署思想，不复制 MockUSDC、明文 Worker 私钥或与作业无关的服务。
+架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。参考 作业参考清单、公开同学项目 `Chi111/web3-university` 以及学习资料中的 Worker/Lambda 和 AWS 部署架构图；吸收链上/链下分层、证据门禁和私网部署思想，不复制 MockUSDC、明文 Worker 私钥或与作业无关的服务。
 
 状态含义：
 
@@ -229,7 +229,7 @@ flowchart LR
     retry --> verify
     evidence2 --> map["作业实现映射<br/>更新真实状态"]
     map --> cost["费用与资源清单<br/>当前：RDS storage / CodeBuild 请求<br/>延后：NAT / EIP / KMS / Secrets"]
-    cost --> cleanup["触发 aws-homework-cleanup<br/>可逆停用优先"]
+    cost --> cleanup["触发 aws-delivery-cleanup<br/>可逆停用优先"]
     cleanup -->|"最终删除前"| confirm["复盘后确认 stack、region、资源列表"]
 ```
 

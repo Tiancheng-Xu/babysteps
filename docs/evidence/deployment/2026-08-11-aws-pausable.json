@@ -98,7 +98,7 @@
         "babysteps-readiness:e90df898-5540-4970-a864-81cdb44a7c37"
       ],
       "symptom": "Readiness API creation required additional API Gateway tagging permissions",
-      "rootCause": "A non-homework HTTP probe expanded the deployment privilege and failure surface",
+      "rootCause": "A nonessential HTTP probe expanded the deployment privilege and failure surface",
       "resolution": "Removed API Gateway and verified readiness by direct Lambda invocation"
     }
   ],

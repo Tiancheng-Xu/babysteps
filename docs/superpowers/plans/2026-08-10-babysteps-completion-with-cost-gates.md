@@ -1,8 +1,8 @@
-# BabySteps Web3 Homework Completion With Cost Gates
+# BabySteps Web3 delivery Completion With Cost Gates
 
 > **Execution note:** Follow strict red-green-refactor for application behavior. External deployment evidence is recorded only after a real receipt, query, or cloud resource read succeeds.
 
-**Goal:** Complete every BabySteps-backed Web3 homework requirement except AWS resources that cannot be paused and continue charging while idle, then produce a reproducible evidence bundle and step-by-step review.
+**Goal:** Complete every BabySteps-backed Web3 delivery requirement except AWS resources that cannot be paused and continue charging while idle, then produce a reproducible evidence bundle and step-by-step review.
 
 **Architecture:** Keep the approved React + Cloudflare Worker/D1 + Ethereum Sepolia + The Graph design. Complete local adapters and tests first, then deploy the V2 contract graph and external development services. Split AWS into a low-cost readiness layer and a deferred continuous-cost layer; never deploy NAT Gateway, ALB, public IPv4, KMS key, or Secrets Manager secret in this run.
 
@@ -12,7 +12,7 @@
 
 ## Scope correction
 
-The current homework catalog is authoritative. Privy must expose Google, email, external-wallet, and embedded Smart Wallet entry points. Paymaster remains optional and is excluded. Cosmos remains a separate repository and is excluded from BabySteps.
+The current delivery catalog is authoritative. Privy must expose Google, email, external-wallet, and embedded Smart Wallet entry points. Paymaster remains optional and is excluded. Cosmos remains a separate repository and is excluded from BabySteps.
 
 ## Task 1: Completion contracts and configuration gates
 
@@ -83,7 +83,7 @@ The current homework catalog is authoritative. Privy must expose Google, email, 
 - Create: `subgraph/schema.graphql`
 - Create: `subgraph/src/task-marketplace.ts`
 - Create: `subgraph/abis/TaskMarketplaceV2.json`
-- Create: `subgraph/queries/homework.graphql`
+- Create: `subgraph/queries/delivery.graphql`
 - Create: `subgraph/tests/task-marketplace.test.ts`
 - Modify: `pnpm-workspace.yaml`
 - Modify: root scripts as needed
@@ -134,16 +134,16 @@ The current homework catalog is authoritative. Privy must expose Google, email, 
 3. Refactor the templates into stoppable/readiness and deferred/full-relayer layers without weakening the final architecture.
 4. Run the AWS shared-resource IaC gate, SAM/CloudFormation validation, and local tests.
 5. Deploy only the allowed layer, run one CodeBuild, verify Lambda/API and RDS schema/idempotency, then stop RDS immediately.
-6. Add an EventBridge/Lambda protection that re-stops the tagged homework RDS after AWS auto-restarts it; verify the rule without exposing credentials.
+6. Add an EventBridge/Lambda protection that re-stops the tagged delivery RDS after AWS auto-restarts it; verify the rule without exposing credentials.
 7. Record resource IDs, build ID, stop state, retained storage cost, and deferred resource list. Do not delete stacks or shared resources without action-time confirmation.
 
 ## Task 10: Evidence, architecture, and final gates
 
-1. Update `docs/homework/web3-homework-implementation-map.md` with requirement, feature, exact code location, evidence, environment, and status.
+1. Update `docs/delivery/web3-delivery-implementation-map.md` with requirement, feature, exact code location, evidence, environment, and status.
 2. Update Mermaid and StarBuddy architecture visual so every node is marked deployed, locally verified, deferred, or pending external authorization.
 3. Add incident notes for VRF funding, keystore password, deployment-success-but-empty-output, and AWS cost gates.
 4. Run full tests, typechecks, builds, link/Pages validators, public-copy scan, evidence validator, responsive checks, and public HTTP checks that do not trigger a production release.
-5. Commit coherent phases on `feature/babysteps-homework-readers`; do not merge, push, or deploy production until explicitly requested.
+5. Commit coherent phases on `feature/babysteps-delivery-readers`; do not merge, push, or deploy production until explicitly requested.
 
 ## Completion boundary
 

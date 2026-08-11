@@ -38,7 +38,7 @@ function normalizeStatus(value) {
 	return value.replaceAll("`", "").trim().toLowerCase();
 }
 
-export function validateHomeworkEvidence(
+export function validateDeliveryEvidence(
 	mapText,
 	architectureText,
 	workerEvidenceText,
@@ -101,7 +101,7 @@ export function validateHomeworkEvidence(
 
 async function main() {
 	const mapPath =
-		process.argv[2] ?? "docs/homework/web3-homework-implementation-map.md";
+		process.argv[2] ?? "docs/delivery/web3-delivery-implementation-map.md";
 	const architecturePath =
 		process.argv[3] ?? "docs/architecture/starbuddy-web3-architecture.mmd";
 	const workerEvidencePath =
@@ -111,7 +111,7 @@ async function main() {
 		readFile(architecturePath, "utf8"),
 		readFile(workerEvidencePath, "utf8"),
 	]);
-	const errors = validateHomeworkEvidence(
+	const errors = validateDeliveryEvidence(
 		mapText,
 		architectureText,
 		workerEvidenceText,
@@ -121,7 +121,7 @@ async function main() {
 		process.exitCode = 1;
 		return;
 	}
-	console.log("homework evidence contract: ok");
+	console.log("delivery evidence contract: ok");
 }
 
 const executedPath = process.argv[1]

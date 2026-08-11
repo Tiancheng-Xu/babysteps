@@ -4,7 +4,7 @@
   "network": "Ethereum Sepolia",
   "chainId": 11155111,
   "operator": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
-  "demoRoleBoundary": "Minimal homework demo: one operator wallet acts as Provider, parent buyer, and Oracle; payout uses a deterministic test-only address.",
+  "demoRoleBoundary": "Minimal delivery demo: one operator wallet acts as Provider, parent buyer, and Oracle; payout uses a deterministic test-only address.",
   "addresses": {
     "babyCoin": "0x108a55217011983b93C3A95aD8D3B3343Bd5471b",
     "growthActivities": "0x69935c3683eBbf34c898B8DC7404E546a7E1939a",

@@ -14,7 +14,7 @@
 - Do not create, start, update, or delete any AWS resource during local implementation.
 - Runtime Region is `us-east-1`; stack name is `babysteps-readiness`.
 - Runtime uses one NAT Gateway, Single-AZ `db.t4g.micro`, 20 GB gp3, one `ECC_SECG_P256K1` KMS key, and 7-day logs.
-- Every managed resource carries `Project=babysteps`, `Environment=homework-readiness`, `ManagedBy=cloudformation`, and `ExpiresAt`.
+- Every managed resource carries `Project=babysteps`, `Environment=delivery-readiness`, `ManagedBy=cloudformation`, and `ExpiresAt`.
 - RDS is private and only the Relayer security group can reach port `5432`.
 - No private key, database password, RPC key, webhook secret, AWS credential, account ID, or private endpoint enters Git, logs, screenshots, or Evidence.
 - AWS paid deployment remains blocked until a later explicit authorization.
@@ -34,7 +34,7 @@
 - Create: `aws/template.yaml`
 
 **Interfaces:**
-- Consumes: the approved AWS resource contract in `docs/superpowers/specs/2026-08-10-babysteps-web3-homework-completion-design.md`.
+- Consumes: the approved AWS resource contract in `docs/superpowers/specs/2026-08-10-babysteps-web3-delivery-completion-design.md`.
 - Produces: `loadTemplate(): Record<string, unknown>` test helper and a SAM template containing the exact runtime resources and outputs used by later tasks.
 
 - [ ] **Step 1: Add the package skeleton and a failing template test**
@@ -229,7 +229,7 @@
 **Files:**
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
 - Modify: `docs/architecture.md`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Create: `docs/evidence/testing/2026-08-10-aws-readiness-local.md`
 
 **Interfaces:**
@@ -242,7 +242,7 @@
 
 - [ ] **Step 2: Run full verification**
 
-  Run: `pnpm check && pnpm test && pnpm typecheck && pnpm build && pnpm validate:public-copy && pnpm validate:homework-evidence && pnpm validate:aws-readiness`
+  Run: `pnpm check && pnpm test && pnpm typecheck && pnpm build && pnpm validate:public-copy && pnpm validate:delivery-evidence && pnpm validate:aws-readiness`
 
 - [ ] **Step 3: Record exact evidence**
 

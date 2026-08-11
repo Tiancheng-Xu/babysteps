@@ -5,7 +5,7 @@ Description: BabySteps cost-gated AWS readiness stage without NAT, public IPv4, 
 Metadata:
   cfn-lint:
     config:
-      # NoEcho is intentional: Secrets Manager would add a monthly charge to this temporary homework stack.
+      # NoEcho is intentional: Secrets Manager would add a monthly charge to this temporary project stack.
       ignore_checks:
         - W1011
 
@@ -297,7 +297,7 @@ Resources:
   StopDatabaseSchedule:
     Type: AWS::Events::Rule
     Properties:
-      Description: Re-stop the homework RDS instance after creation or AWS seven-day restart
+      Description: Re-stop the project RDS instance after creation or AWS seven-day restart
       ScheduleExpression: rate(5 minutes)
       State: ENABLED
       Targets:

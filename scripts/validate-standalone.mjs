@@ -17,7 +17,7 @@ assert.match(contractsPackage, /@babysteps\/contracts/);
 assert.match(webPackage, /@babysteps\/web/);
 assert.doesNotMatch(
 	`${rootPackage}\n${contractsPackage}\n${webPackage}`,
-	/@course-homework/,
+	/@course-delivery/,
 );
 assert.match(viteConfig, /VITE_BASE_PATH/);
 assert.match(viteConfig, /\?\? "\.\/"/);

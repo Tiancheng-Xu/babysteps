@@ -73,7 +73,7 @@ The provider marks a purchase completed in the Cloudflare Worker/D1 service. A c
 - **Privy + challenge-sign-verify:** adult login and wallet ownership proof; nonce is single-use and expires.
 - **Cloudflare Worker + D1:** minimum task metadata, video URL, comment, profile, completion, and audit APIs.
 - **The Graph:** indexes provider, task, randomness, purchase, completion, and certificate events.
-- **Infura + Alchemy:** independent ethers.js reads used for redundancy and homework evidence.
+- **Infura + Alchemy:** independent ethers.js reads used for redundancy and delivery evidence.
 - **Uniswap v3 Sepolia:** `BABY/USDC` and `BABY/WETH` test pools. The application links to the official interface instead of implementing a custom router.
 
 ## UI source of truth

@@ -62,7 +62,7 @@ The build regenerated the ABI from the compiled `TaskMarketplaceV2` artifact, ge
 
 - V2 Marketplace Sepolia address and deployment start block
 - Subgraph Studio slug, deployment ID and sync status
-- a real GraphQL response for the homework query
+- a real GraphQL response for the delivery query
 - comparison of the Subgraph result with public RPC, Infura and Alchemy
 
 No deploy key, API key or wallet secret is stored in this evidence.

@@ -1,10 +1,10 @@
-# BabySteps Web3 Homework Phase 1 Contract V2 Implementation Plan
+# BabySteps Web3 delivery Phase 1 Contract V2 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build and locally verify the V2 review, purchase, idempotent completion, and ERC-5192 contract boundary while preserving the existing Sepolia deployment as historical evidence.
 
-**Architecture:** Reuse the deployed BabyCoin address, deploy a new `TaskMarketplaceV2` and `GrowthCertificateSBT`, and keep Chainlink VRF v2.5 as the only randomness source. Add a validator-backed homework map and status-aware architecture source so every later phase must distinguish existing, planned, and externally verified work.
+**Architecture:** Reuse the deployed BabyCoin address, deploy a new `TaskMarketplaceV2` and `GrowthCertificateSBT`, and keep Chainlink VRF v2.5 as the only randomness source. Add a validator-backed delivery map and status-aware architecture source so every later phase must distinguish existing, planned, and externally verified work.
 
 **Tech Stack:** Solidity 0.8.28, Hardhat 3.12, Viem 2.55, OpenZeppelin Contracts 5.6.1, Chainlink VRF v2.5 compatible interfaces, Node test runner, pnpm 11, Mermaid.
 
@@ -20,7 +20,7 @@
 - Implement formal ERC-5192 support and reject every approval, transfer, and burn path after mint.
 - Never commit private keys, seed phrases, RPC credentials, API keys, tokens, full email addresses, or private local paths in public evidence.
 - Explain every task before starting and report files, lines, tests, commit, deployment state, and evidence after completion.
-- Update `docs/homework/web3-homework-implementation-map.md` and `docs/architecture/starbuddy-web3-architecture.mmd` at each completed task.
+- Update `docs/delivery/web3-delivery-implementation-map.md` and `docs/architecture/starbuddy-web3-architecture.mmd` at each completed task.
 
 ---
 
@@ -38,9 +38,9 @@ This phase adds focused files instead of rewriting the existing V1 contracts.
 - `contracts/ignition/modules/BabyStepsWeb3V2Local.ts`: deterministic local graph with mock VRF and local BabyCoin
 - `contracts/test/babysteps-web3-v2-module.test.ts`: module structure and script contract tests
 - `contracts/ignition/parameters/babysteps-web3-v2.sepolia.example.json`: public V2 parameter schema without secrets
-- `scripts/validate-homework-evidence.mjs`: implementation-map and architecture status validator
-- `scripts/validate-homework-evidence.test.mjs`: validator regression tests
-- `docs/homework/web3-homework-implementation-map.md`: assignment-to-code-to-evidence matrix
+- `scripts/validate-delivery-evidence.mjs`: implementation-map and architecture status validator
+- `scripts/validate-delivery-evidence.test.mjs`: validator regression tests
+- `docs/delivery/web3-delivery-implementation-map.md`: assignment-to-code-to-evidence matrix
 - `docs/architecture/starbuddy-web3-architecture.mmd`: status-aware architecture source
 
 ## Official references locked for this phase
@@ -49,44 +49,44 @@ This phase adds focused files instead of rewriting the existing V1 contracts.
 - ERC-5192 interface: <https://eips.ethereum.org/EIPS/eip-5192>
 - OpenZeppelin ERC-721 extension points: <https://docs.openzeppelin.com/contracts/5.x/api/token/erc721>
 
-### Task 1: Enforce the homework map and architecture status contract
+### Task 1: Enforce the delivery map and architecture status contract
 
 **Files:**
-- Create: `scripts/validate-homework-evidence.test.mjs`
-- Create: `scripts/validate-homework-evidence.mjs`
-- Create: `docs/homework/web3-homework-implementation-map.md`
+- Create: `scripts/validate-delivery-evidence.test.mjs`
+- Create: `scripts/validate-delivery-evidence.mjs`
+- Create: `docs/delivery/web3-delivery-implementation-map.md`
 - Create: `docs/architecture/starbuddy-web3-architecture.mmd`
 - Modify: `package.json`
 
 **Interfaces:**
-- Produces CLI: `node scripts/validate-homework-evidence.mjs`
-- Produces package script: `pnpm validate:homework-evidence`
+- Produces CLI: `node scripts/validate-delivery-evidence.mjs`
+- Produces package script: `pnpm validate:delivery-evidence`
 - Produces allowed statuses: `complete`, `partial`, `pending`, `blocked`
 - Produces required architecture markers: `现有`, `计划`, `待验证`
 
 - [ ] **Step 1: Write validator tests against temporary fixtures**
 
-Create a Node test that writes fixtures under `mkdtemp(join(tmpdir(), "babysteps-homework-"))`. Import `validateHomeworkEvidence` and assert a valid map passes while a missing evidence column, an invalid status, and an architecture file without status markers each fail.
+Create a Node test that writes fixtures under `mkdtemp(join(tmpdir(), "babysteps-delivery-"))`. Import `validateDeliveryEvidence` and assert a valid map passes while a missing evidence column, an invalid status, and an architecture file without status markers each fail.
 
 ```js
 const validRows = [
   ["链上与链下列表", "taskId 映射", "pending"],
   ["Owner 与 Provider", "审核状态机", "partial"],
 ];
-assert.deepEqual(validateHomeworkEvidence(validMap, validArchitecture), []);
-assert.match(validateHomeworkEvidence(mapWithoutEvidence, validArchitecture)[0], /验证证据/);
-assert.match(validateHomeworkEvidence(mapWithDone, validArchitecture)[0], /invalid status: done/);
+assert.deepEqual(validateDeliveryEvidence(validMap, validArchitecture), []);
+assert.match(validateDeliveryEvidence(mapWithoutEvidence, validArchitecture)[0], /验证证据/);
+assert.match(validateDeliveryEvidence(mapWithDone, validArchitecture)[0], /invalid status: done/);
 ```
 
 - [ ] **Step 2: Run the validator test and verify the missing-module failure**
 
-Run: `node --test scripts/validate-homework-evidence.test.mjs`
+Run: `node --test scripts/validate-delivery-evidence.test.mjs`
 
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `validate-homework-evidence.mjs`.
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `validate-delivery-evidence.mjs`.
 
 - [ ] **Step 3: Implement the validator**
 
-Export `validateHomeworkEvidence(mapText, architectureText): string[]`. Require these exact table headers:
+Export `validateDeliveryEvidence(mapText, architectureText): string[]`. Require these exact table headers:
 
 ```js
 const requiredHeaders = [
@@ -99,33 +99,33 @@ const requiredHeaders = [
 const allowedStatuses = new Set(["complete", "partial", "pending", "blocked"]);
 ```
 
-The CLI reads the two repository files, prints one error per line, and exits with code 1 on validation errors. It prints `homework evidence contract: ok` on success.
+The CLI reads the two repository files, prints one error per line, and exits with code 1 on validation errors. It prints `delivery evidence contract: ok` on success.
 
 - [ ] **Step 4: Create the initial truthful map and architecture source**
 
-The map lists every Web3 homework item. Mark existing BabyCoin and the proven V1 Approve/Buy mechanics `complete`; mark review, Uniswap, Privy, ERC-5192, KMS, IPFS, The Graph, and three-provider ethers.js comparison `pending`; mark Chainlink and certificate issuance `partial` because V1 evidence exists but V2 is not implemented.
+The map lists every Web3 delivery item. Mark existing BabyCoin and the proven V1 Approve/Buy mechanics `complete`; mark review, Uniswap, Privy, ERC-5192, KMS, IPFS, The Graph, and three-provider ethers.js comparison `pending`; mark Chainlink and certificate issuance `partial` because V1 evidence exists but V2 is not implemented.
 
 The Mermaid source includes runtime, storage, external services, CI/CD, and permission boundaries. Label every node `现有`, `计划`, or `待验证`. Link the current architecture PNG as historical evidence without claiming it reflects V2.
 
 - [ ] **Step 5: Add the package script and make the test pass**
 
-Add `validate:homework-evidence` to root scripts and call it from `check` after the existing validators.
+Add `validate:delivery-evidence` to root scripts and call it from `check` after the existing validators.
 
 Run:
 
 ```bash
-node --test scripts/validate-homework-evidence.test.mjs
-pnpm validate:homework-evidence
+node --test scripts/validate-delivery-evidence.test.mjs
+pnpm validate:delivery-evidence
 pnpm test:validators
 ```
 
-Expected: all tests pass and the CLI prints `homework evidence contract: ok`.
+Expected: all tests pass and the CLI prints `delivery evidence contract: ok`.
 
 - [ ] **Step 6: Commit the evidence contract**
 
 ```bash
-git add package.json scripts/validate-homework-evidence.mjs scripts/validate-homework-evidence.test.mjs docs/homework/web3-homework-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
-git commit -m "docs: enforce web3 homework evidence mapping"
+git add package.json scripts/validate-delivery-evidence.mjs scripts/validate-delivery-evidence.test.mjs docs/delivery/web3-delivery-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
+git commit -m "docs: enforce web3 delivery evidence mapping"
 ```
 
 ### Task 2: Implement the ERC-5192 growth certificate
@@ -135,7 +135,7 @@ git commit -m "docs: enforce web3 homework evidence mapping"
 - Create: `contracts/contracts/GrowthCertificateSBT.sol`
 - Create: `contracts/contracts/test/GrowthCertificateSBTHarness.sol`
 - Create: `contracts/test/GrowthCertificateSBT.ts`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
 
 **Interfaces:**
@@ -211,7 +211,7 @@ Expected: V2 and historical V1 certificate tests pass.
 Set ERC-5192 to `partial`: local code and tests exist, but IPFS and Sepolia deployment remain unverified. Add the SBT node to the architecture with label `现有代码，待部署`.
 
 ```bash
-git add contracts/contracts/interfaces/IERC5192.sol contracts/contracts/GrowthCertificateSBT.sol contracts/contracts/test/GrowthCertificateSBTHarness.sol contracts/test/GrowthCertificateSBT.ts docs/homework/web3-homework-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
+git add contracts/contracts/interfaces/IERC5192.sol contracts/contracts/GrowthCertificateSBT.sol contracts/contracts/test/GrowthCertificateSBTHarness.sol contracts/test/GrowthCertificateSBT.ts docs/delivery/web3-delivery-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
 git commit -m "feat: add locked growth certificate"
 ```
 
@@ -220,7 +220,7 @@ git commit -m "feat: add locked growth certificate"
 **Files:**
 - Create: `contracts/contracts/TaskMarketplaceV2.sol`
 - Create: `contracts/test/TaskMarketplaceV2.ts`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
 
 **Interfaces:**
@@ -306,7 +306,7 @@ Expected: V2 and V1 marketplace tests pass.
 Set Owner/Provider review and Chainlink V2 lifecycle to `partial`: local tests pass, Sepolia evidence is not yet available.
 
 ```bash
-git add contracts/contracts/TaskMarketplaceV2.sol contracts/test/TaskMarketplaceV2.ts docs/homework/web3-homework-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
+git add contracts/contracts/TaskMarketplaceV2.sol contracts/test/TaskMarketplaceV2.ts docs/delivery/web3-delivery-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
 git commit -m "feat: add owner-reviewed task marketplace"
 ```
 
@@ -315,7 +315,7 @@ git commit -m "feat: add owner-reviewed task marketplace"
 **Files:**
 - Modify: `contracts/contracts/TaskMarketplaceV2.sol`
 - Modify: `contracts/test/TaskMarketplaceV2.ts`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
 
 **Interfaces:**
@@ -383,7 +383,7 @@ Expected: all contract tests, type checks, and Biome checks pass.
 Keep Approve/Buy `complete` because V1 has Sepolia evidence and V2 passes local regression. Set automatic SBT issuance to `partial` until V2 is deployed and IPFS resolves.
 
 ```bash
-git add contracts/contracts/TaskMarketplaceV2.sol contracts/test/TaskMarketplaceV2.ts docs/homework/web3-homework-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
+git add contracts/contracts/TaskMarketplaceV2.sol contracts/test/TaskMarketplaceV2.ts docs/delivery/web3-delivery-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd
 git commit -m "feat: add idempotent marketplace settlement"
 ```
 
@@ -396,7 +396,7 @@ git commit -m "feat: add idempotent marketplace settlement"
 - Create: `contracts/ignition/parameters/babysteps-web3-v2.sepolia.example.json`
 - Modify: `contracts/package.json`
 - Modify: `web/.env.example`
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 
 **Interfaces:**
 - Produces Ignition results: `babyCoin`, `growthCertificateSBT`, and `taskMarketplaceV2`
@@ -455,14 +455,14 @@ Expected: in-memory local deployment succeeds and the module test passes. Do not
 - [ ] **Step 6: Commit deployment support**
 
 ```bash
-git add contracts/ignition/modules/BabyStepsWeb3V2.ts contracts/ignition/modules/BabyStepsWeb3V2Local.ts contracts/test/babysteps-web3-v2-module.test.ts contracts/ignition/parameters/babysteps-web3-v2.sepolia.example.json contracts/package.json web/.env.example docs/homework/web3-homework-implementation-map.md
+git add contracts/ignition/modules/BabyStepsWeb3V2.ts contracts/ignition/modules/BabyStepsWeb3V2Local.ts contracts/test/babysteps-web3-v2-module.test.ts contracts/ignition/parameters/babysteps-web3-v2.sepolia.example.json contracts/package.json web/.env.example docs/delivery/web3-delivery-implementation-map.md
 git commit -m "build: add web3 v2 deployment graphs"
 ```
 
 ### Task 6: Close the phase 1 verification gate
 
 **Files:**
-- Modify: `docs/homework/web3-homework-implementation-map.md`
+- Modify: `docs/delivery/web3-delivery-implementation-map.md`
 - Modify: `docs/architecture/starbuddy-web3-architecture.mmd`
 - Create: `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`
 
@@ -479,7 +479,7 @@ pnpm test
 pnpm typecheck
 pnpm check
 pnpm build
-pnpm validate:homework-evidence
+pnpm validate:delivery-evidence
 git diff --check
 ```
 
@@ -505,14 +505,14 @@ Run:
 
 ```bash
 pnpm validate:public-copy
-pnpm validate:homework-evidence
+pnpm validate:delivery-evidence
 git diff --check
 ```
 
 Expected: all commands exit 0 and no credential pattern or private path appears.
 
 ```bash
-git add docs/homework/web3-homework-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd docs/evidence/testing/2026-08-10-web3-v2-contracts.md
+git add docs/delivery/web3-delivery-implementation-map.md docs/architecture/starbuddy-web3-architecture.mmd docs/evidence/testing/2026-08-10-web3-v2-contracts.md
 git commit -m "docs: record web3 v2 contract evidence"
 ```
 

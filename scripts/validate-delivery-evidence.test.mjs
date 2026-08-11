@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { validateHomeworkEvidence } from "./validate-homework-evidence.mjs";
+import { validateDeliveryEvidence } from "./validate-delivery-evidence.mjs";
 
 const validArchitecture = `
 # BabySteps Web3 architecture
@@ -23,7 +23,7 @@ Boundary: local only; no remote D1 or Worker deployment
 
 function mapWith(headers, rows) {
 	return `
-# Web3 homework implementation map
+# Web3 delivery implementation map
 
 | ${headers.join(" | ")} |
 | ${headers.map(() => "---").join(" | ")} |
@@ -58,7 +58,7 @@ test("accepts a complete evidence mapping contract", () => {
 	]);
 
 	assert.deepEqual(
-		validateHomeworkEvidence(validMap, validArchitecture, validWorkerEvidence),
+		validateDeliveryEvidence(validMap, validArchitecture, validWorkerEvidence),
 		[],
 	);
 });
@@ -70,7 +70,7 @@ test("rejects a map without the evidence column", () => {
 	);
 
 	assert.match(
-		validateHomeworkEvidence(invalidMap, validArchitecture, validWorkerEvidence)[0],
+		validateDeliveryEvidence(invalidMap, validArchitecture, validWorkerEvidence)[0],
 		/验证证据/,
 	);
 });
@@ -81,7 +81,7 @@ test("rejects an unsupported status", () => {
 	]);
 
 	assert.match(
-		validateHomeworkEvidence(
+		validateDeliveryEvidence(
 			invalidMap,
 			validArchitecture,
 			validWorkerEvidence,
@@ -102,7 +102,7 @@ test("rejects architecture without truthful status markers", () => {
 	]);
 
 	assert.match(
-		validateHomeworkEvidence(
+		validateDeliveryEvidence(
 			validMap,
 			"# Architecture\n## 运行时请求与数据流\nReact to Sepolia",
 			validWorkerEvidence,
@@ -123,7 +123,7 @@ test("rejects missing Worker and D1 Phase 2 proof", () => {
 	]);
 
 	assert.match(
-		validateHomeworkEvidence(validMap, validArchitecture, "").join("\n"),
+		validateDeliveryEvidence(validMap, validArchitecture, "").join("\n"),
 		/Phase 2 evidence/,
 	);
 });
