@@ -32,6 +32,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.6
         version: 2.5.6
+      multiformats:
+        specifier: 14.0.5
+        version: 14.0.5
 
   aws:
     dependencies:

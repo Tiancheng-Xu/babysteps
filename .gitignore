@@ -17,4 +17,5 @@ contracts/cache/
 contracts/artifacts/
 contracts/ignition/deployments/
 contracts/ignition/parameters/babysteps-web3.sepolia.json
+contracts/ignition/parameters/babysteps-web3-v2.sepolia.json
 web/.env.local

@@ -104,6 +104,7 @@ describe("BabySteps Web3 V2 Ignition modules", () => {
 			"deploy:web3:v2:local",
 			"deploy:web3:v2:sepolia",
 			"deploy:web3:v2:verify:sepolia",
+			"finalize:web3:v2:sepolia",
 		]) {
 			assert.ok(packageJson.scripts[script]);
 		}
