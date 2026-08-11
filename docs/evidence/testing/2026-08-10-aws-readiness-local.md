@@ -4,26 +4,26 @@
 
 BabySteps 已把 AWS 作业拆成两个互不混淆的阶段：
 
-1. **当前允许部署的可暂停阶段**：隔离 VPC、两可用区私有子网、私有 Single-AZ RDS、自动停库 Lambda、5 分钟 EventBridge 保护、按请求计费的 HTTP API/Lambda，以及手动触发的 OIDC/S3/CodeBuild。
+1. **当前允许部署的可暂停阶段**：隔离 VPC、两可用区私有子网、私有 Single-AZ RDS、自动停库 Lambda、5 分钟 EventBridge 保护、直接调用的 Readiness Lambda，以及手动触发的 OIDC/S3/CodeBuild。
 2. **明确延后的持续计费阶段**：NAT Gateway、EIP/公有 IPv4、客户管理 KMS、Secrets Manager 和生产 Relayer。当前 CodeBuild 权限与 buildspec 均不能创建这些资源。
 
-本地代码、权限合同、测试和 SAM lint 已通过。**AWS 控制台连接超时且本机 CLI 没有 AWS 凭据，因此本次没有调用 AWS API，也没有创建、更新、启动、停止或删除云资源。** 云端 Stack ID、ARN、HTTP 地址、RDS 状态和 CodeBuild ID 均为 pending。
+本文件记录部署前本地门禁；2026-08-11 云端闭环已经完成，真实 Stack、CodeBuild、网络、IAM、Lambda 与 RDS 停库证据见 [`../deployment/2026-08-11-aws-pausable.md`](../deployment/2026-08-11-aws-pausable.md)。
 
 ## 实现与证明矩阵
 
 | 能力 | 实现位置 | 本地证明 | 状态 |
 | --- | --- | --- | --- |
-| 无公网出口的 VPC / 2 AZ 私有子网 | `aws/pausable-template.yaml` | `aws/test/pausable-template.test.ts`；SAM lint | local verified / cloud pending |
-| 私有 RDS PostgreSQL | `aws/pausable-template.yaml` | `db.t4g.micro`、20 GB gp3、Single-AZ、无公网、无备份、无 ingress 合同测试 | local verified / cloud pending |
-| 创建后及 7 天自动重启后的停库保护 | `StopDatabaseFunction`、`StopDatabaseSchedule` | `rate(5 minutes)`、仅目标 DB 的 `StopDBInstance` 权限测试 | local verified / cloud pending |
-| 按请求计费的健康探针 | `ReadinessApi`、`ReadinessProbeFunction` | 模板资源合同与 SAM lint | local verified / cloud pending |
-| OIDC、S3、CodeBuild 手动部署 | `aws/bootstrap.yaml`、`aws/buildspec.yml`、`.github/workflows/aws-readiness.yml` | `aws/test/bootstrap.test.ts`、`scripts/validate-aws-readiness.test.mjs` | local verified / bootstrap pending |
+| 无公网出口的 VPC / 2 AZ 私有子网 | `aws/pausable-template.yaml` | `aws/test/pausable-template.test.ts`；SAM lint | local + cloud verified |
+| 私有 RDS PostgreSQL | `aws/pausable-template.yaml` | `db.t4g.micro`、20 GB gp3、Single-AZ、无公网、无备份、无 ingress 合同测试 | local + cloud verified / stopped |
+| 创建后及 7 天自动重启后的停库保护 | `StopDatabaseFunction`、`StopDatabaseSchedule` | `rate(5 minutes)`、仅目标 DB 的 `StopDBInstance` 权限测试 | local + cloud verified |
+| 私有健康探针 | `ReadinessProbeFunction` | 模板资源合同、SAM lint、直接 invoke 返回 200 | local + cloud verified |
+| OIDC、S3、CodeBuild 手动部署 | `aws/bootstrap.yaml`、`aws/buildspec.yml`、`.github/workflows/aws-readiness.yml` | `aws/test/bootstrap.test.ts`、`scripts/validate-aws-readiness.test.mjs` | bootstrap + direct CodeBuild verified；GitHub workflow pending |
 | 持续计费资源拒绝门禁 | `scripts/validate-aws-readiness.mjs` | NAT/EIP/KMS/Secrets/full-template 负向测试 | local verified |
 | 完整 Relayer 参考实现 | `aws/template.yaml`、`aws/src/**` | HMAC、PostgreSQL 幂等、KMS signer、handler 单元测试 | local verified / deployment deferred |
 
 ## 已执行门禁
 
-- `pnpm --filter @babysteps/aws test`：12 个测试文件，41 项测试通过。
+- `pnpm --filter @babysteps/aws test`：12 个测试文件，43 项测试通过。
 - `pnpm test:validators`：12 项 validator 测试通过。
 - `pnpm validate:aws-readiness`：`AWS readiness pipeline contract: ok`。
 - `sam validate --lint --region us-east-1 --template-file aws/bootstrap.yaml`：通过。
@@ -44,10 +44,10 @@ BabySteps 已把 AWS 作业拆成两个互不混淆的阶段：
 
 以下内容需要用户再次确认持续费用后才可启动：NAT Gateway、EIP/公有 IPv4、客户管理 KMS、Secrets Manager、私网生产 Relayer，以及完整模板 `aws/template.yaml`。当前 GitHub Action 不能部署该模板。
 
-## 云端待验证
+## 云端验证结果
 
-1. AWS 登录恢复后创建 bootstrap 与 pausable runtime Stack。
-2. 独立读取 VPC、子网、路由表和安全组，确认无公网路径。
-3. 验证 `/readiness/health` 返回 200。
-4. 等 RDS 到 `available` 后确认自动变为 `stopped`，记录 Stack ID、资源 ARN、日志和时间线。
-5. 保存脱敏 Evidence 后执行到期清理；若选择保留，继续承担 RDS 存储费。
+1. Bootstrap `UPDATE_COMPLETE`；Runtime `CREATE_COMPLETE`。
+2. 两子网禁止自动公网 IP；路由表只有 local；IGW 与 NAT 查询均为空。
+3. Readiness Lambda 直接调用返回 200；公开 API 因非作业硬需求被移除。
+4. RDS 已由自动停库路径变为 `stopped`；EventBridge Rule 为 `ENABLED`。
+5. GitHub OIDC 资源已创建，但 main 上的 Actions 端到端触发仍待分支合并/推送后验证。

@@ -60,15 +60,16 @@ describe("AWS CI bootstrap template", () => {
 
 	it("retains the shared OIDC provider and scopes RDS bootstrap permissions", async () => {
 		const { source, value } = await template();
+		const dollar = "$";
 		expect(value.Resources?.GitHubOidcProvider).toMatchObject({
 			Type: "AWS::IAM::OIDCProvider",
 			DeletionPolicy: "Retain",
 			UpdateReplacePolicy: "Retain",
 		});
-		expect(source).toContain("iam:AWSServiceName\": rds.amazonaws.com");
+		expect(source).toContain('iam:AWSServiceName": rds.amazonaws.com');
 		expect(source).toContain("ec2:RevokeSecurityGroupEgress");
 		expect(source).toContain(
-			"arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31",
+			`arn:${dollar}{AWS::Partition}:cloudformation:${dollar}{AWS::Region}:aws:transform/Serverless-2016-10-31`,
 		);
 		expect(source).not.toContain("apigateway:");
 		expect(source).not.toContain("ec2:CreateNatGateway");

@@ -7,7 +7,7 @@
 - `现有 Sepolia`：已有公开地址、交易或独立读取证据
 - `本地已验证`：代码、测试与本地部署通过，但没有外部环境证据
 - `远程基础设施已建`：远程资源和独立读取证据存在，但依赖它的应用可能仍受发布门禁限制
-- `本地 IaC 已验证，云端待启动`：模板、权限门禁、测试和构建通过，AWS 资源尚未创建
+- `AWS 云端已验证 / stopped`：真实 Stack、资源读取、Lambda 调用和 RDS 自动停库证据均存在
 - `待部署`：部署图或适配代码存在，外部写操作尚未执行
 - `计划`：尚未实现
 
@@ -29,7 +29,7 @@ flowchart LR
 
     babySteps --> ethereum0["Ethereum Sepolia<br/>可信业务事实"]
     babySteps --> cloudflare0["Cloudflare Pages / Worker / D1<br/>D1 远程已建，Worker 待 V2"]
-    babySteps --> aws0["AWS 可暂停阶段<br/>VPC / 私有 RDS / 自动停库 / API<br/>本地 IaC 已验证，云端待启动"]
+    babySteps --> aws0["AWS 可暂停阶段<br/>VPC / 私有 RDS / Readiness + 自动停库 Lambda<br/>云端已验证，RDS stopped"]
     babySteps --> index0["The Graph + ethers 三 RPC<br/>本地实现；公共 RPC 已验证"]
 ```
 
@@ -52,9 +52,8 @@ flowchart LR
     marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
     marketV2 --> sbt["ERC-5192 SBT<br/>现有代码，待验证部署"]
     sbt --> ipfs[("IPFS metadata<br/>CID 已确定，pin 待验证")]
-    worker -.->|"生产 Relayer 延后"| apiGateway["API Gateway HTTP API<br/>可暂停 readiness 版本本地已验证"]
-    apiGateway --> lambda["Readiness / 自动停库 Lambda<br/>41 项 AWS 包测试通过"]
-    lambda --> rds[("私有 RDS PostgreSQL<br/>5 分钟自动停库<br/>本地 IaC 已验证")]
+    worker -.->|"生产 Relayer 延后"| lambda["Readiness / 自动停库 Lambda<br/>43 项 AWS 包测试 + 云端调用通过"]
+    lambda --> rds[("私有 RDS PostgreSQL<br/>5 分钟自动停库<br/>CREATE_COMPLETE / stopped")]
     kms["AWS KMS secp256k1 Relayer<br/>代码已验证；持续计费阶段延后"] -.-> marketV2
     marketV2 --> graph["The Graph<br/>build + 4 tests；Studio 待部署"]
     marketV2 --> rpc["ethers 公共 RPC 已验证<br/>Infura / Alchemy 待配置"]
@@ -106,11 +105,11 @@ flowchart TB
         uni["Uniswap v3<br/>官方合约已核验；BABY pools 待注资"]
         chainlink["Chainlink VRF<br/>现有闭环证据"]
     end
-    subgraph aws["AWS 当前允许边界（可暂停模板，本地 IaC 已验证）"]
-        apigw["HTTP API<br/>按请求计费 readiness"]
+    subgraph aws["AWS 当前允许边界（云端已验证，RDS 已 stopped）"]
+        probe["Readiness Lambda<br/>直接 invoke 200 / ready"]
         subnets["VPC / 2 AZ / 2 私有子网<br/>无 IGW / NAT / 公网 IP"]
         stop["EventBridge 每 5 分钟<br/>StopDatabase Lambda"]
-        db[("RDS PostgreSQL<br/>Single-AZ / 20 GB gp3 / 无 ingress<br/>available 后自动 stopped")]
+        db[("RDS PostgreSQL 18.3<br/>Single-AZ / 20 GB gp3 / 无 ingress<br/>private / encrypted / stopped")]
     end
     subgraph deferred["AWS 持续计费边界（延后，当前流水线无权限）"]
         relayer["生产 Completion Relayer"]
@@ -129,7 +128,6 @@ flowchart TB
     newMarket --> cert
     newMarket --> chainlink
     worker2 -.-> relayer
-    apigw --> stop
     subnets --> db
     stop --> db
     relayer -.-> db
@@ -177,25 +175,27 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     feature["Feature branch"] --> local["本地门禁<br/>全仓测试、类型、构建、敏感信息"]
+    feature --> preview["Cloudflare Pages branch preview<br/>Git 集成；URL/产物验收"]
+    preview --> previewLife["PR 关闭后的清理/保留周期<br/>尚未自动化，待验证"]
     local --> main["main（合并仍需人工决定）"]
     main --> manual["workflow_dispatch<br/>start_services=true"]
     manual --> env["GitHub Environment<br/>aws-readiness 人工审批"]
     env --> oidc["GitHub OIDC<br/>短期 AWS 身份<br/>无 Access Key"]
     oidc --> s3["加密 S3 source/{commit}.zip<br/>7 天生命周期"]
     s3 --> codebuild["CodeBuild Linux/Small<br/>并发上限 1"]
-    codebuild --> checks["41 AWS tests + typecheck<br/>bootstrap/pausable SAM lint + 权限负向测试"]
-    checks -->|"ALLOW_AWS_PAUSABLE_DEPLOYMENT=true"| awsDeploy["SAM / CloudFormation<br/>VPC、私有 RDS、自动停库、HTTP API"]
+    codebuild --> checks["43 AWS tests + typecheck<br/>bootstrap/pausable SAM lint + 权限负向测试"]
+    checks -->|"ALLOW_AWS_PAUSABLE_DEPLOYMENT=true"| awsDeploy["SAM / CloudFormation<br/>VPC、私有 RDS、Readiness / 自动停库 Lambda"]
     checks -. "无权限且 buildspec 拒绝" .-> persistent["NAT / EIP / KMS / Secrets / 生产 Relayer<br/>持续计费，等待再次确认"]
-    awsDeploy --> evidence["HTTP 200 / 私网路由 / RDS stopped<br/>脱敏 Evidence"]
+    awsDeploy --> evidence["Lambda 200 / 私网路由 / RDS stopped<br/>脱敏 Evidence"]
     evidence --> cleanupGate["费用复核与 ExpiresAt<br/>触发清理检查"]
-    cleanupGate --> reversible["RDS 自动停止<br/>VPC/API 保留不产生常驻计算费"]
+    cleanupGate --> reversible["RDS 自动停止<br/>VPC/Lambda/Rule 保留；存储仍计费"]
     cleanupGate --> deleteApproval["最终删除 Stack<br/>复盘后确认精确目标"]
     main --> pagesDeploy["Cloudflare Pages Git 部署<br/>现有"]
     main --> workerDeploy["D1 migration 已完成<br/>Worker 等 V2 地址"]
     main --> graphDeploy["Subgraph build/test 已完成<br/>Studio 待部署"]
     pagesDeploy --> httpCheck["HTTP、TLS、深链、非空产物<br/>现有门禁"]
     workerDeploy --> apiCheck["远程 D1 已核验<br/>API 待 Worker 发布"]
-    awsDeploy --> awsCheck["IAM 最小权限、HTTP、RDS 自动停库<br/>云端待启动"]
+    awsDeploy --> awsCheck["IAM 最小权限、Lambda 200、RDS 自动停库<br/>云端已验证"]
 ```
 
 ## 权限与安全边界
@@ -215,7 +215,7 @@ flowchart LR
     relayer2 -. "不能授予角色或暂停" .-> owner2
 ```
 
-安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 和会话令牌只保存 SHA-256 哈希；评论写入前重新读取链上 `purchaseIdForBuyer`。当前 AWS 可暂停模板没有公网路径，RDS 无 ingress，密码由 CodeBuild 运行时生成并通过 CloudFormation `NoEcho` 参数传递；自动停库 Lambda 只能描述并停止目标 DB。GitHub 只通过受 Environment 约束的 OIDC 获取短期身份，执行角色无 NAT/EIP/KMS/Secrets 创建权限。完整 Worker→Lambda HMAC、KMS EIP-1559 signer 与 RDS 幂等代码仍保留为后续参考，但当前流水线不能部署。
+安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 和会话令牌只保存 SHA-256 哈希；评论写入前重新读取链上 `purchaseIdForBuyer`。AWS 可暂停 Stack 已真实验证没有 IGW/NAT/公网 IP，RDS 无 ingress 且为 stopped；EC2 仍保留默认 SG egress，但路由表只有 local，因此当前没有实际公网出口，未来新增连接前必须收紧。密码由 CodeBuild 运行时生成并通过 CloudFormation `NoEcho` 参数传递；自动停库 Lambda 只能描述并停止目标 DB。GitHub OIDC 与角色已建，main Actions 触发仍待验证；执行角色无 NAT/EIP/KMS/Secrets/API Gateway 创建权限。完整 Worker→Lambda HMAC、KMS EIP-1559 signer 与 RDS 幂等代码仍保留为后续参考，但当前流水线不能部署。
 
 ## 失败恢复与 Evidence
 
@@ -237,4 +237,4 @@ flowchart LR
 
 `docs/architecture/starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 保留 StarBuddy 四阶段主题和产品业务视图；本 Mermaid 是包含当前部署状态、AWS 可暂停阶段、CI/CD、安全与清理边界的工程真相源。PNG 中未展示的 AWS 细节不得代替本 Mermaid 的验收状态。
 
-Phase 1 合约记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；Worker/D1 记录在 `docs/evidence/testing/2026-08-10-worker-d1.md` 与远程 D1 Evidence；Privy、Uniswap、The Graph、三 RPC、IPFS 各有独立 2026-08-10 Evidence；AWS 本地实现记录在 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，并明确写明零云端变更。
+Phase 1 合约记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；Worker/D1 记录在 `docs/evidence/testing/2026-08-10-worker-d1.md` 与远程 D1 Evidence；Privy、Uniswap、The Graph、三 RPC、IPFS 各有独立 2026-08-10 Evidence；AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。

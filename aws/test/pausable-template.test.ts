@@ -31,7 +31,9 @@ describe("AWS pausable readiness stage", () => {
 			"AWS::Serverless::Function",
 		);
 		expect(resources.ReadinessApi).toBeUndefined();
-		expect(resources.ReadinessProbeFunction?.Properties?.Events).toBeUndefined();
+		expect(
+			resources.ReadinessProbeFunction?.Properties?.Events,
+		).toBeUndefined();
 		expect(source).toContain("ReadinessFunctionName:");
 		expect(source).not.toContain("AWS::Serverless::HttpApi");
 		expect(source).not.toMatch(/NatGateway|AWS::EC2::EIP/u);
@@ -71,11 +73,11 @@ describe("AWS pausable readiness stage", () => {
 		expect(template.Resources?.StopDatabaseFunction?.Properties?.Role).toEqual({
 			"Fn::GetAtt": ["StopDatabaseFunctionRole", "Arn"],
 		});
-		expect(template.Resources?.ReadinessProbeFunction?.Properties?.Role).toEqual(
-			{
-				"Fn::GetAtt": ["ReadinessProbeFunctionRole", "Arn"],
-			},
-		);
+		expect(
+			template.Resources?.ReadinessProbeFunction?.Properties?.Role,
+		).toEqual({
+			"Fn::GetAtt": ["ReadinessProbeFunctionRole", "Arn"],
+		});
 		expect(source).not.toContain("AWSLambdaBasicExecutionRole");
 	});
 });

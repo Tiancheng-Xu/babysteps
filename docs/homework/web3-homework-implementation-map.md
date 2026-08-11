@@ -14,7 +14,7 @@
 | 7. 个人中心使用 Privy 登录，可修改用户名并签名 | Privy Google/邮箱/外部钱包；Smart Wallet 懒创建；challenge-sign-verify；12 小时 HttpOnly 会话；D1 用户名；无私钥或 paymaster | `web/src/config/providers.tsx:27`<br>`web/src/features/identity/PrivyIdentityPanel.tsx:1`<br>`worker/src/routes/auth.ts:41`<br>`worker/src/routes/profile.ts:46` | 身份模型、API、Worker 鉴权与资料测试通过；真实登录等待 `VITE_PRIVY_APP_ID` 与 Privy Dashboard 配置；见 `docs/evidence/testing/2026-08-10-privy-identity-local.md` | `partial` |
 | ethers.js 通过公共 RPC、Infura、Alchemy 对照读取链上数据 | 同一交易、回执、区块、余额和链 ID 的三源读取与一致性报告；缺失 provider 明确标 `not-configured` | `contracts/scripts/readSepoliaAcrossProviders.ts:12`<br>`contracts/scripts/lib/rpcComparison.ts:163` | 公共 Sepolia RPC 已真实读取并生成 `docs/evidence/deployment/2026-08-10-rpc-comparison.json`；Infura/Alchemy URL 尚未配置 | `partial` |
 | The Graph 通过日志索引并用 GraphQL 读回 | schema、V2 ABI、event handlers、Matchstick 测试和 homework query；索引角色、任务、审核、随机、购买与完成事件 | `subgraph/subgraph.yaml:5`<br>`subgraph/src/task-marketplace.ts:58`<br>`subgraph/queries/homework.graphql:1` | `graph build` 与 4 项 Matchstick 测试通过；Studio 部署 ID 与公开 GraphQL 查询待 V2 地址和 deploy key；见 `docs/evidence/testing/2026-08-10-subgraph-local.md` | `partial` |
-| AWS VPC/RDS/Lambda/API/CodeBuild 部署闭环，费用可控 | 当前允许：无公网出口 VPC、2 AZ 私有子网、私有 RDS、5 分钟自动停库、HTTP API/Lambda、OIDC/S3/CodeBuild；当前禁止：NAT/EIP/KMS/Secrets/生产 Relayer | `aws/pausable-template.yaml:32`<br>`aws/pausable-template.yaml:215`<br>`aws/pausable-template.yaml:260`<br>`aws/bootstrap.yaml:137`<br>`aws/buildspec.yml:14`<br>`scripts/validate-aws-readiness.mjs:5` | 41 项 AWS 测试、12 项 validator、bootstrap/pausable SAM lint 通过；AWS 登录/CLI 不可用，本次零云资源；见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md` | `partial` |
+| AWS VPC/RDS/Lambda/CodeBuild 部署闭环，费用可控 | 已部署：隔离 VPC、2 AZ 私有子网、私有 RDS、5 分钟自动停库、Readiness Lambda、OIDC/S3/CodeBuild；明确延后：API Gateway、NAT/EIP、KMS、Secrets、生产 Relayer | `aws/pausable-template.yaml:46`<br>`aws/pausable-template.yaml:181`<br>`aws/pausable-template.yaml:225`<br>`aws/pausable-template.yaml:297`<br>`aws/pausable-template.yaml:357`<br>`aws/bootstrap.yaml:30`<br>`aws/bootstrap.yaml:129`<br>`aws/bootstrap.yaml:277`<br>`aws/buildspec.yml:16`<br>`scripts/validate-aws-readiness.mjs:6` | 批准的可暂停阶段 complete、生产阶段 deferred；43 项 AWS 测试、validator、两份 SAM lint 通过；Runtime `CREATE_COMPLETE`，CodeBuild `SUCCEEDED`，RDS `stopped`，无 IGW/NAT；见 `docs/evidence/deployment/2026-08-11-aws-pausable.md` | `partial` |
 
 ## 当前真实外部状态
 
@@ -25,7 +25,9 @@
 - TaskMarketplace V1：`0x2D1107610eBaBbFa7CD9569eb42eF315eb6F25BE`
 - V1 完整业务闭环：`docs/evidence/deployment/2026-08-09-business-closed-loop.json`
 - Cloudflare D1：`babysteps-production`，远程 migration 已应用
-- V2 contracts、Worker、Privy、Uniswap pools、Subgraph、IPFS pin、AWS stacks：尚无可公开的外部完成证据
+- AWS Bootstrap：`babysteps-aws-readiness-bootstrap`，`UPDATE_COMPLETE`
+- AWS Runtime：`babysteps-homework-readiness`，`CREATE_COMPLETE`；RDS `stopped`
+- V2 contracts、Worker、Privy、Uniswap pools、Subgraph、IPFS pin：尚无可公开的外部完成证据
 
 ## 更新规则
 
