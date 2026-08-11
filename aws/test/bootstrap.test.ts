@@ -3,7 +3,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-type Resource = { Type?: string; Properties?: Record<string, unknown> };
+type Resource = {
+	Type?: string;
+	DeletionPolicy?: string;
+	UpdateReplacePolicy?: string;
+	Properties?: Record<string, unknown>;
+};
 
 async function template() {
 	const source = await readFile(
@@ -51,5 +56,17 @@ describe("AWS CI bootstrap template", () => {
 		expect(source).not.toMatch(/GITHUB_TOKEN|oauth/i);
 		expect(source).toContain("Key: Project");
 		expect(source).toContain("Value: babysteps");
+	});
+
+	it("retains the shared OIDC provider and scopes RDS bootstrap permissions", async () => {
+		const { source, value } = await template();
+		expect(value.Resources?.GitHubOidcProvider).toMatchObject({
+			Type: "AWS::IAM::OIDCProvider",
+			DeletionPolicy: "Retain",
+			UpdateReplacePolicy: "Retain",
+		});
+		expect(source).toContain("iam:AWSServiceName\": rds.amazonaws.com");
+		expect(source).toContain("ec2:RevokeSecurityGroupEgress");
+		expect(source).not.toContain("ec2:CreateNatGateway");
 	});
 });

@@ -30,6 +30,8 @@ Resources:
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
     Condition: CreateOidcProvider
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Url: https://token.actions.githubusercontent.com
       ClientIdList:
@@ -156,6 +158,7 @@ Resources:
                   - ec2:DisassociateRouteTable
                   - ec2:ModifySubnetAttribute
                   - ec2:ModifyVpcAttribute
+                  - ec2:RevokeSecurityGroupEgress
                   - rds:AddTagsToResource
                   - rds:CreateDBInstance
                   - rds:CreateDBSubnetGroup
@@ -175,6 +178,12 @@ Resources:
                   - iam:TagRole
                 Resource:
                   Fn::Sub: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${RuntimeStackName}-*"
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "iam:AWSServiceName": rds.amazonaws.com
               - Effect: Allow
                 Action: lambda:*
                 Resource:

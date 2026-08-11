@@ -1,0 +1,39 @@
+{
+  "exceptions": [
+    {
+      "logical_id": "GitHubOidcProvider",
+      "resource_type": "AWS::IAM::OIDCProvider",
+      "approval_reference": "User approved the pausable AWS CI stage on 2026-08-11",
+      "reason": "The verified account has no GitHub OIDC provider; one retained account-level provider enables short-lived CI credentials without long-lived access keys.",
+      "expires_at": "2026-08-13"
+    },
+    {
+      "logical_id": "BabystepsVpc",
+      "resource_type": "AWS::EC2::VPC",
+      "approval_reference": "User approved the isolated pausable AWS stage on 2026-08-11",
+      "reason": "The verified default VPC contains public default networking and is protected from project-stack cleanup; a no-hourly-fee isolated VPC gives the homework an independent lifecycle.",
+      "expires_at": "2026-08-13"
+    },
+    {
+      "logical_id": "PrivateSubnetA",
+      "resource_type": "AWS::EC2::Subnet",
+      "approval_reference": "User approved the isolated pausable AWS stage on 2026-08-11",
+      "reason": "The RDS subnet group requires two isolated availability zones and must remain independently removable with the homework stack.",
+      "expires_at": "2026-08-13"
+    },
+    {
+      "logical_id": "PrivateSubnetB",
+      "resource_type": "AWS::EC2::Subnet",
+      "approval_reference": "User approved the isolated pausable AWS stage on 2026-08-11",
+      "reason": "The RDS subnet group requires two isolated availability zones and must remain independently removable with the homework stack.",
+      "expires_at": "2026-08-13"
+    },
+    {
+      "logical_id": "Database",
+      "resource_type": "AWS::RDS::DBInstance",
+      "approval_reference": "User approved the isolated pausable AWS stage on 2026-08-11",
+      "reason": "The verified account has no reusable RDS instance; this Single-AZ homework database is auto-stopped and owned by the short-lived stack.",
+      "expires_at": "2026-08-13"
+    }
+  ]
+}
