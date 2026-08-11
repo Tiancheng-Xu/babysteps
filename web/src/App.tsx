@@ -14,6 +14,7 @@ import { NotebookPanel } from "./features/notebook/NotebookPanel";
 import { EvidencePage } from "./pages/EvidencePage";
 import { GrowthMarketplacePage } from "./pages/GrowthMarketplacePage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { ProviderConsolePage } from "./pages/ProviderConsolePage";
 
 function HomeView() {
@@ -43,6 +44,7 @@ export default function App() {
 			{currentView === "marketplace" ? <GrowthMarketplacePage /> : null}
 			{currentView === "parent" ? <ParentDashboardPage /> : null}
 			{currentView === "provider" ? <ProviderConsolePage /> : null}
+			{currentView === "profile" ? <ProfilePage /> : null}
 			{currentView === "evidence" ? <EvidencePage /> : null}
 		</main>
 	);

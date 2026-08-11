@@ -304,6 +304,13 @@ describe("BabySteps App", () => {
 		).toBeTruthy();
 
 		fireEvent.click(
+			within(navigation).getByRole("button", { name: "个人中心" }),
+		);
+		expect(screen.getByRole("heading", { name: "个人中心" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Privy 待配置" })).toBeTruthy();
+		expect(screen.getByText(/Google、邮箱、外部钱包三种入口/u)).toBeTruthy();
+
+		fireEvent.click(
 			within(navigation).getByRole("button", { name: "工作证据" }),
 		);
 		expect(screen.getByRole("heading", { name: "链上工作证据" })).toBeTruthy();
