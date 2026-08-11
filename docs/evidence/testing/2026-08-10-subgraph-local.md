@@ -33,6 +33,15 @@ All 4 tests passed
 
 The tests cover the task review/randomization lifecycle, purchase→completion→certificate linking, certificate idempotency, Provider role revocation, rejection, and pause state.
 
+### 2026-08-10 final rerun note
+
+The final full-repository rerun reached Matchstick's runner acquisition step, then both supported acquisition paths timed out before executing any assertion:
+
+- native runner: GitHub Release download timed out;
+- Docker runner: Docker Hub `ubuntu:22.04` manifest request timed out.
+
+`graph build` still completed successfully in that rerun. The earlier four-test pass above remains the latest executed assertion evidence; the final rerun is recorded as an external network limitation rather than a code pass or failure. No test was disabled or changed to hide the timeout.
+
 ## Build evidence
 
 Command:

@@ -5,7 +5,10 @@ import { parse } from "yaml";
 
 type Template = {
 	Parameters?: Record<string, Record<string, unknown>>;
-	Resources?: Record<string, { Type?: string; Properties?: Record<string, unknown> }>;
+	Resources?: Record<
+		string,
+		{ Type?: string; Properties?: Record<string, unknown> }
+	>;
 };
 
 async function load() {
@@ -24,7 +27,9 @@ describe("AWS pausable readiness stage", () => {
 		expect(resources.PrivateSubnetA?.Type).toBe("AWS::EC2::Subnet");
 		expect(resources.PrivateSubnetB?.Type).toBe("AWS::EC2::Subnet");
 		expect(resources.Database?.Type).toBe("AWS::RDS::DBInstance");
-		expect(resources.StopDatabaseFunction?.Type).toBe("AWS::Serverless::Function");
+		expect(resources.StopDatabaseFunction?.Type).toBe(
+			"AWS::Serverless::Function",
+		);
 		expect(resources.ReadinessApi?.Type).toBe("AWS::Serverless::HttpApi");
 		expect(source).not.toMatch(/NatGateway|AWS::EC2::EIP/u);
 		expect(source).not.toMatch(/AWS::KMS::Key|AWS::SecretsManager::Secret/u);
@@ -44,7 +49,9 @@ describe("AWS pausable readiness stage", () => {
 			ScheduleExpression: "rate(5 minutes)",
 			State: "ENABLED",
 		});
-		expect(template.Resources?.Database?.Properties?.MasterUserPassword).toEqual({
+		expect(
+			template.Resources?.Database?.Properties?.MasterUserPassword,
+		).toEqual({
 			Ref: "DatabaseMasterPassword",
 		});
 		expect(source).toContain("stop_db_instance");
