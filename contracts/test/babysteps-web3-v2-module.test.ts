@@ -164,10 +164,7 @@ describe("BabySteps Web3 V2 Ignition modules", () => {
 		);
 
 		const businessSource = await readFile(
-			new URL(
-				"../scripts/runSepoliaV2BusinessClosedLoop.ts",
-				import.meta.url,
-			),
+			new URL("../scripts/runSepoliaV2BusinessClosedLoop.ts", import.meta.url),
 			"utf8",
 		);
 		for (const requiredSource of [

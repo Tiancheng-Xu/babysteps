@@ -71,7 +71,7 @@ const task: MarketplaceTask = {
 };
 
 let allowance = 0n;
-let purchased = false;
+let purchased = 0n;
 
 function installMetaMask() {
 	Object.defineProperty(window, "ethereum", {
@@ -85,7 +85,7 @@ describe("useTaskPurchase", () => {
 		vi.clearAllMocks();
 		installMetaMask();
 		allowance = 0n;
-		purchased = false;
+		purchased = 0n;
 		mocks.approveReceipt.error = null;
 		mocks.approveReceipt.isError = false;
 		mocks.approveReceipt.isSuccess = false;

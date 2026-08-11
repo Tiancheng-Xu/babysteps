@@ -102,8 +102,7 @@ const deployed = JSON.parse(await readFile(DEPLOYMENT_PATH, "utf8")) as Record<
 const babyCoin = deployed["BabyStepsWeb3V2Module#BabyCoin"];
 const growthCertificateSBT =
 	deployed["BabyStepsWeb3V2Module#GrowthCertificateSBT"];
-const taskMarketplaceV2 =
-	deployed["BabyStepsWeb3V2Module#TaskMarketplaceV2"];
+const taskMarketplaceV2 = deployed["BabyStepsWeb3V2Module#TaskMarketplaceV2"];
 if (!babyCoin || !growthCertificateSBT || !taskMarketplaceV2) {
 	throw new Error("BabySteps V2 Sepolia deployment addresses are missing.");
 }
@@ -140,7 +139,9 @@ let evidence: Evidence = {
 };
 
 try {
-	const previous = JSON.parse(await readFile(EVIDENCE_PATH, "utf8")) as Evidence;
+	const previous = JSON.parse(
+		await readFile(EVIDENCE_PATH, "utf8"),
+	) as Evidence;
 	if (
 		getAddress(previous.operator) === getAddress(account.address) &&
 		getAddress(previous.addresses.taskMarketplaceV2) ===
@@ -447,33 +448,37 @@ const [task, purchase, providerBalanceAfter, remainingAllowance] =
 		}),
 	]);
 const certificateTokenId = purchase.certificateTokenId;
-const [certificateOwner, certificateTokenUri, certificateLocked, roleRemaining] =
-	await Promise.all([
-		publicClient.readContract({
-			address: growthCertificateSBT,
-			abi: certificateAbi,
-			functionName: "ownerOf",
-			args: [certificateTokenId],
-		}),
-		publicClient.readContract({
-			address: growthCertificateSBT,
-			abi: certificateAbi,
-			functionName: "tokenURI",
-			args: [certificateTokenId],
-		}),
-		publicClient.readContract({
-			address: growthCertificateSBT,
-			abi: certificateAbi,
-			functionName: "locked",
-			args: [certificateTokenId],
-		}),
-		publicClient.readContract({
-			address: taskMarketplaceV2,
-			abi: marketplaceAbi,
-			functionName: "hasRole",
-			args: [COMPLETION_RELAYER_ROLE, account.address],
-		}),
-	]);
+const [
+	certificateOwner,
+	certificateTokenUri,
+	certificateLocked,
+	roleRemaining,
+] = await Promise.all([
+	publicClient.readContract({
+		address: growthCertificateSBT,
+		abi: certificateAbi,
+		functionName: "ownerOf",
+		args: [certificateTokenId],
+	}),
+	publicClient.readContract({
+		address: growthCertificateSBT,
+		abi: certificateAbi,
+		functionName: "tokenURI",
+		args: [certificateTokenId],
+	}),
+	publicClient.readContract({
+		address: growthCertificateSBT,
+		abi: certificateAbi,
+		functionName: "locked",
+		args: [certificateTokenId],
+	}),
+	publicClient.readContract({
+		address: taskMarketplaceV2,
+		abi: marketplaceAbi,
+		functionName: "hasRole",
+		args: [COMPLETION_RELAYER_ROLE, account.address],
+	}),
+]);
 const providerBalanceBefore = BigInt(evidence.providerBalanceBeforeWei ?? "0");
 if (
 	!purchase.completed ||
@@ -509,4 +514,6 @@ evidence.verification = {
 	completionRelayerRoleRevoked: !roleRemaining,
 };
 await persistEvidence();
-console.log(JSON.stringify({ ...evidence, evidencePath: EVIDENCE_PATH }, null, 2));
+console.log(
+	JSON.stringify({ ...evidence, evidencePath: EVIDENCE_PATH }, null, 2),
+);

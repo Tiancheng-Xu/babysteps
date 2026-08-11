@@ -1,22 +1,26 @@
-import { type Address, formatUnits } from "viem";
+import { type Address, formatUnits, type Hash } from "viem";
 
 export type MarketplaceActivity = "meal" | "walk" | "read";
 export type MarketplaceTaskState =
+	| "pending-review"
 	| "pending-randomness"
 	| "active"
 	| "paused"
-	| "expired";
+	| "expired"
+	| "rejected";
 
 export type MarketplaceContractTask = {
 	provider: Address;
 	payee: Address;
 	activityType: number;
 	metadataUri: string;
+	metadataHash: Hash;
+	rejectionReasonHash: Hash;
 	requestId: bigint;
 	price: bigint;
 	opensAt: bigint;
 	closesAt: bigint;
-	active: boolean;
+	status: number;
 	paused: boolean;
 };
 
@@ -51,11 +55,13 @@ export function isMarketplaceContractTask(
 		typeof task.payee === "string" &&
 		typeof task.activityType === "number" &&
 		typeof task.metadataUri === "string" &&
+		typeof task.metadataHash === "string" &&
+		typeof task.rejectionReasonHash === "string" &&
 		typeof task.requestId === "bigint" &&
 		typeof task.price === "bigint" &&
 		typeof task.opensAt === "bigint" &&
 		typeof task.closesAt === "bigint" &&
-		typeof task.active === "boolean" &&
+		typeof task.status === "number" &&
 		typeof task.paused === "boolean"
 	);
 }
@@ -70,10 +76,15 @@ export function toMarketplaceTask(
 		throw new Error(`Unknown marketplace activity: ${task.activityType}`);
 	}
 
-	let state: MarketplaceTaskState = "active";
-	if (!task.active) state = "pending-randomness";
-	else if (task.paused) state = "paused";
+	let state: MarketplaceTaskState;
+	if (task.status === 1) state = "pending-review";
+	else if (task.status === 2) state = "pending-randomness";
+	else if (task.status === 4) state = "rejected";
+	else if (task.status !== 3) {
+		throw new Error(`Unknown marketplace task status: ${task.status}`);
+	} else if (task.paused) state = "paused";
 	else if (now >= task.closesAt) state = "expired";
+	else state = "active";
 
 	return {
 		id,

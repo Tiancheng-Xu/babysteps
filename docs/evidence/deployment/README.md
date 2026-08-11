@@ -16,9 +16,9 @@
 
 ## Sepolia 部署
 
-2026-08-09 已完成四合约部署、内部角色连线、演示 Provider/Oracle 授权，以及 Chainlink VRF v2.5 Consumer 配置。完整地址、交易与独立 RPC 复核结果见 [`2026-08-09-sepolia.md`](2026-08-09-sepolia.md)。
+2026-08-09 已完成 V1 四合约部署、角色连线和 Chainlink VRF v2.5 业务闭环。2026-08-11 已完成 V2 Marketplace 与 ERC-5192 SBT 部署，并在 Sepolia 真实执行 Provider 提交、Owner 审核、VRF 随机价格/时长、精确 approve、购买、完成、锁定证书，以及临时 Completion Relayer 权限撤销。机器可读证据见 [`2026-08-11-sepolia-v2-business.json`](2026-08-11-sepolia-v2-business.json)。
 
-源码验证仍待配置 Etherscan API key；真实任务请求、VRF fulfillment、支付和证书业务闭环保留为下一阶段验收。
+同日 Cloudflare Worker V2 已绑定远程 D1 与 `babysteps-api.baby2b.online`，通过 HTTP 200、TLS、允许/拒绝 Origin CORS 和远程 D1 只读验证；见 [`2026-08-11-cloudflare-worker-v2.json`](2026-08-11-cloudflare-worker-v2.json)。源码浏览器验证仍待 Etherscan API key。
 
 ## 后续业务闭环证据清单
 

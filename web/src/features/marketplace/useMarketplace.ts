@@ -4,8 +4,8 @@ import { useReadContract, useReadContracts } from "wagmi";
 import { sepolia } from "wagmi/chains";
 
 import {
-	taskMarketplaceAbi,
-	taskMarketplaceAddress,
+	taskMarketplaceV2Abi,
+	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import {
 	isMarketplaceContractTask,
@@ -29,13 +29,13 @@ function taskIdsFor(nextTaskId: bigint | undefined) {
 }
 
 export function useMarketplace(
-	marketplaceAddress: Address | undefined = taskMarketplaceAddress,
+	marketplaceAddress: Address | undefined = taskMarketplaceV2Address,
 	now: bigint = BigInt(Math.floor(Date.now() / 1_000)),
 ) {
 	const isConfigured = Boolean(marketplaceAddress);
 	const countRead = useReadContract({
 		address: marketplaceAddress,
-		abi: taskMarketplaceAbi,
+		abi: taskMarketplaceV2Abi,
 		functionName: "nextTaskId",
 		chainId: sepolia.id,
 		query: { enabled: isConfigured },
@@ -52,7 +52,7 @@ export function useMarketplace(
 		allowFailure: true,
 		contracts: taskIds.map((taskId) => ({
 			address: marketplaceAddress,
-			abi: taskMarketplaceAbi,
+			abi: taskMarketplaceV2Abi,
 			functionName: "getTask" as const,
 			args: [taskId] as const,
 			chainId: sepolia.id,

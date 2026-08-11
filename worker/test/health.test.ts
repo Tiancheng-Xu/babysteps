@@ -24,6 +24,39 @@ describe("Worker health and D1 schema", () => {
 		});
 	});
 
+	it("allows credentialed API requests only from the configured application", async () => {
+		const allowed = await app.request(
+			"/api/health",
+			{
+				method: "OPTIONS",
+				headers: {
+					Origin: "https://babysteps.baby2b.online",
+					"Access-Control-Request-Method": "GET",
+				},
+			},
+			env,
+		);
+		expect(allowed.headers.get("Access-Control-Allow-Origin")).toBe(
+			"https://babysteps.baby2b.online",
+		);
+		expect(allowed.headers.get("Access-Control-Allow-Credentials")).toBe(
+			"true",
+		);
+
+		const rejected = await app.request(
+			"/api/health",
+			{
+				method: "OPTIONS",
+				headers: {
+					Origin: "https://example.invalid",
+					"Access-Control-Request-Method": "GET",
+				},
+			},
+			env,
+		);
+		expect(rejected.headers.has("Access-Control-Allow-Origin")).toBe(false);
+	});
+
 	it("applies all initial tables and critical indexes", async () => {
 		const tables = await env.DB.prepare(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' AND name <> 'd1_migrations' ORDER BY name",

@@ -87,6 +87,16 @@ export const taskMarketplaceAddress = parseOptionalContractAddress(
 	"TaskMarketplace",
 );
 
+export const growthCertificateSbtAddress = parseOptionalContractAddress(
+	import.meta.env.VITE_GROWTH_CERTIFICATE_SBT_ADDRESS,
+	"GrowthCertificateSBT",
+);
+
+export const taskMarketplaceV2Address = parseOptionalContractAddress(
+	import.meta.env.VITE_TASK_MARKETPLACE_V2_ADDRESS,
+	"TaskMarketplaceV2",
+);
+
 export const babyCoinAbi = parseAbi([
 	"function balanceOf(address account) view returns (uint256)",
 	"function allowance(address owner, address spender) view returns (uint256)",
@@ -129,6 +139,13 @@ export const taskMarketplaceAbi = parseAbi([
 	"function getTask(uint256 taskId) view returns ((address provider, address payee, uint8 activityType, string metadataUri, uint256 requestId, uint256 price, uint64 opensAt, uint64 closesAt, bool active, bool paused) task)",
 	"function hasPurchased(uint256 taskId, address buyer) view returns (bool)",
 	"function createTask(address payee, uint8 activityType, string metadataUri) returns (uint256 taskId)",
+	"function buy(uint256 taskId) returns (uint256 purchaseId)",
+]);
+
+export const taskMarketplaceV2Abi = parseAbi([
+	"function nextTaskId() view returns (uint256)",
+	"function getTask(uint256 taskId) view returns ((address provider,address payee,uint8 activityType,string metadataUri,bytes32 metadataHash,bytes32 rejectionReasonHash,uint256 requestId,uint256 price,uint64 opensAt,uint64 closesAt,uint8 status,bool paused) task)",
+	"function purchaseIdForBuyer(uint256 taskId,address buyer) view returns (uint256 purchaseId)",
 	"function buy(uint256 taskId) returns (uint256 purchaseId)",
 ]);
 

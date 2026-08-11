@@ -10,12 +10,18 @@
 		"enabled": true,
 		"head_sampling_rate": 1
 	},
+	"routes": [
+		{
+			"pattern": "babysteps-api.baby2b.online",
+			"custom_domain": true
+		}
+	],
 	"vars": {
 		"APP_DOMAIN": "babysteps.baby2b.online",
 		"APP_URI": "https://babysteps.baby2b.online",
 		"CHAIN_ID": "11155111",
-		"OWNER_WALLET": "0x0000000000000000000000000000000000000000",
-		"MARKETPLACE_V2_ADDRESS": "0x0000000000000000000000000000000000000000",
+		"OWNER_WALLET": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+		"MARKETPLACE_V2_ADDRESS": "0x2EE9fAFE99e143e5a1376805753D026bDac715de",
 		"SEPOLIA_RPC_URL": "https://ethereum-sepolia-rpc.publicnode.com"
 	},
 	"d1_databases": [

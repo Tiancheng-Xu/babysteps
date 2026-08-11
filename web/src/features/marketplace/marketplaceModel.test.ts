@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { toMarketplaceTask } from "./marketplaceModel";
@@ -12,11 +12,13 @@ function task(overrides: Record<string, unknown> = {}) {
 		payee,
 		activityType: 1,
 		metadataUri: "ipfs://task-1",
+		metadataHash: `0x${"1".repeat(64)}` as Hash,
+		rejectionReasonHash: `0x${"0".repeat(64)}` as Hash,
 		requestId: 91n,
 		price: 3n * 10n ** 18n,
 		opensAt: 1_000n,
 		closesAt: 10_000n,
-		active: true,
+		status: 3,
 		paused: false,
 		...overrides,
 	};
@@ -42,7 +44,7 @@ describe("marketplace task model", () => {
 
 	it("distinguishes pending randomness, paused, and expired states", () => {
 		expect(
-			toMarketplaceTask(1n, task({ active: false, price: 0n }), 5_000n).state,
+			toMarketplaceTask(1n, task({ status: 2, price: 0n }), 5_000n).state,
 		).toBe("pending-randomness");
 		expect(toMarketplaceTask(2n, task({ paused: true }), 5_000n).state).toBe(
 			"paused",

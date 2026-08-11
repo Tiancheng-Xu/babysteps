@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
 	encodeSqrtRatioX96,
+	minimumAmountOut,
 	sortPairAmounts,
 } from "../scripts/lib/uniswapPoolMath.js";
 
@@ -26,5 +27,10 @@ describe("Uniswap v3 pool preparation math", () => {
 				amount1: 2n,
 			},
 		);
+	});
+
+	it("applies a bounded slippage floor to a test swap", () => {
+		assert.equal(minimumAmountOut(100n, 500), 95n);
+		assert.throws(() => minimumAmountOut(100n, 10_001), /basis points/u);
 	});
 });

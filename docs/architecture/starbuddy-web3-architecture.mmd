@@ -28,7 +28,7 @@ flowchart LR
     public0 --> babySteps
 
     babySteps --> ethereum0["Ethereum Sepolia<br/>可信业务事实"]
-    babySteps --> cloudflare0["Cloudflare Pages / Worker / D1<br/>D1 远程已建，Worker 待 V2"]
+    babySteps --> cloudflare0["Cloudflare Pages / Worker / D1<br/>Worker V2 + D1 + HTTPS 已验证"]
     babySteps --> aws0["AWS 可暂停阶段<br/>VPC / 私有 RDS / Readiness + 自动停库 Lambda<br/>云端已验证，RDS stopped"]
     babySteps --> index0["The Graph + ethers 三 RPC<br/>本地实现；公共 RPC 已验证"]
 ```
@@ -39,18 +39,18 @@ flowchart LR
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
 flowchart LR
     parent["家长<br/>现有：外部钱包<br/>Privy 代码已实现，配置待验证"] --> web["BabySteps React<br/>现有并扩展"]
-    provider["机构或育婴师<br/>现有 V2 审核代码，待部署"] --> web
+    provider["机构或育婴师<br/>V2 提交与审核已在 Sepolia 验证"] --> web
     owner["Owner<br/>现有管理员"] --> web
 
-    web --> worker["Worker API<br/>本地已验证；V2 地址门禁阻止发布"]
-    worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>远程基础设施已建，migration 已应用")]
+    web --> worker["Worker API<br/>V2 版本已发布；HTTP/TLS/CORS 已验证"]
+    worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>远程 DB + migrations 已验证")]
     web --> router["Uniswap v3 Router / Quoter<br/>代码已实现；两池与真实 swap 待验证"]
     web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
-    web --> marketV2["Marketplace V2<br/>现有审核、购买与幂等完成代码<br/>待验证部署"]
+    web --> marketV2["Marketplace V2<br/>Sepolia 审核、购买、完成闭环已验证"]
     marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
     marketV2 --> coin
-    marketV2 --> vrf["Chainlink VRF v2.5<br/>现有能力，V2 待验证"]
-    marketV2 --> sbt["ERC-5192 SBT<br/>现有代码，待验证部署"]
+    marketV2 --> vrf["Chainlink VRF v2.5<br/>V2 随机价格与时长已验证"]
+    marketV2 --> sbt["ERC-5192 SBT<br/>Sepolia #1 已铸造且 locked"]
     sbt --> ipfs[("IPFS metadata<br/>CID 已确定，pin 待验证")]
     worker -.->|"生产 Relayer 延后"| lambda["Readiness / 自动停库 Lambda<br/>43 项 AWS 包测试 + 云端调用通过"]
     lambda --> rds[("私有 RDS PostgreSQL<br/>5 分钟自动停库<br/>CREATE_COMPLETE / stopped")]
@@ -94,16 +94,16 @@ flowchart TB
     end
     subgraph cloudflare["Cloudflare 边界"]
         pages["Pages<br/>现有 Git 集成"]
-        worker2["Worker<br/>本地已验证鉴权、聚合与 API<br/>V2 地址门禁阻止外部部署"]
-        d12[("D1<br/>远程 DB + migration 已验证<br/>应用流量待 Worker 部署")]
+        worker2["Worker<br/>V2 外部部署 + 健康检查 + CORS 已验证"]
+        d12[("D1<br/>远程 DB + migration 已验证")]
     end
     subgraph ethereum["Ethereum Sepolia 边界"]
         baby["BabyCoin<br/>现有：0x108a…5471b"]
         oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
-        newMarket["Marketplace V2<br/>现有审核、购买、完成代码<br/>待验证部署"]
-        cert["ERC-5192<br/>现有代码，待验证部署"]
+        newMarket["Marketplace V2<br/>0x2EE9…15de<br/>Sepolia 完整闭环已验证"]
+        cert["ERC-5192<br/>0xF4ef…F654<br/>SBT #1 locked"]
         uni["Uniswap v3<br/>官方合约已核验；BABY pools 待注资"]
-        chainlink["Chainlink VRF<br/>现有闭环证据"]
+        chainlink["Chainlink VRF v2.5<br/>V1 + V2 真实履约证据"]
     end
     subgraph aws["AWS 当前允许边界（云端已验证，RDS 已 stopped）"]
         probe["Readiness Lambda<br/>直接 invoke 200 / ready"]
@@ -191,10 +191,10 @@ flowchart LR
     cleanupGate --> reversible["RDS 自动停止<br/>VPC/Lambda/Rule 保留；存储仍计费"]
     cleanupGate --> deleteApproval["最终删除 Stack<br/>复盘后确认精确目标"]
     main --> pagesDeploy["Cloudflare Pages Git 部署<br/>现有"]
-    main --> workerDeploy["D1 migration 已完成<br/>Worker 等 V2 地址"]
+    main --> workerDeploy["D1 migration + Worker V2 已完成<br/>自定义域名已绑定"]
     main --> graphDeploy["Subgraph build/test 已完成<br/>Studio 待部署"]
     pagesDeploy --> httpCheck["HTTP、TLS、深链、非空产物<br/>现有门禁"]
-    workerDeploy --> apiCheck["远程 D1 已核验<br/>API 待 Worker 发布"]
+    workerDeploy --> apiCheck["HTTP 200、TLS、允许/拒绝 Origin CORS<br/>远程 D1 只读核验"]
     awsDeploy --> awsCheck["IAM 最小权限、Lambda 200、RDS 自动停库<br/>云端已验证"]
 ```
 
@@ -202,9 +202,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限与结算代码现有<br/>部署待验证"]
+    owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限、随机、结算与 SBT 已在 Sepolia 验证"]
     provider2["Provider<br/>提交任务与完成证据"] --> market
-    provider2 --> api["Worker API<br/>challenge-sign-verify 本地已验证<br/>外部待部署"]
+    provider2 --> api["Worker API<br/>外部已部署；签名业务流仍待公开端到端验收"]
     parent2["Parent<br/>Swap、Approve、Buy"] --> market
     relayer2["KMS Relayer<br/>本地签名与幂等已验证；持续计费阶段延后<br/>未来仅 COMPLETION_RELAYER_ROLE"] -.-> market
     coordinator["VRF Coordinator<br/>仅随机回调"] --> market
@@ -237,4 +237,4 @@ flowchart LR
 
 `docs/architecture/starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 保留 StarBuddy 四阶段主题和产品业务视图；本 Mermaid 是包含当前部署状态、AWS 可暂停阶段、CI/CD、安全与清理边界的工程真相源。PNG 中未展示的 AWS 细节不得代替本 Mermaid 的验收状态。
 
-Phase 1 合约记录在 `docs/evidence/testing/2026-08-10-web3-v2-contracts.md`；Worker/D1 记录在 `docs/evidence/testing/2026-08-10-worker-d1.md` 与远程 D1 Evidence；Privy、Uniswap、The Graph、三 RPC、IPFS 各有独立 2026-08-10 Evidence；AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。
+V2 合约与完整 Sepolia 业务闭环记录在 `docs/evidence/deployment/2026-08-11-sepolia-v2-business.json`；Worker V2、自定义域名、D1、HTTP/TLS/CORS 记录在 `docs/evidence/deployment/2026-08-11-cloudflare-worker-v2.json`；Privy、Uniswap、The Graph、三 RPC、IPFS 的未完成边界仍见各自 Evidence；AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。

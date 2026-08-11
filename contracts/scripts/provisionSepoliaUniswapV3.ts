@@ -8,17 +8,23 @@ import {
 	getAddress,
 	http,
 	parseAbi,
+	parseEventLogs,
 	parseUnits,
 	zeroAddress,
 } from "viem";
 import { sepolia } from "viem/chains";
 
-import { encodeSqrtRatioX96, sortPairAmounts } from "./lib/uniswapPoolMath.js";
+import {
+	encodeSqrtRatioX96,
+	minimumAmountOut,
+	sortPairAmounts,
+} from "./lib/uniswapPoolMath.js";
 
 const FACTORY = getAddress("0x0227628f3F023bb0B980b67D528571c95c6DaC1c");
 const POSITION_MANAGER = getAddress(
 	"0x1238536071E1c677A632429e3655c799b22cDA52",
 );
+const SWAP_ROUTER_02 = getAddress("0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E");
 const OFFICIAL_USDC = getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238");
 const WETH9 = getAddress("0xfff9976782d46cc05630d1f6ebab18b2324d6b14");
 const FEE = 3_000;
@@ -28,7 +34,7 @@ const DEPLOYMENT_PATH = resolve(
 	"ignition/deployments/chain-11155111/deployed_addresses.json",
 );
 const EVIDENCE_PATH = resolve(
-	"../docs/evidence/deployment/2026-08-10-uniswap-v3-pools.json",
+	"../docs/evidence/deployment/2026-08-11-uniswap-v3-pools.json",
 );
 const BUSINESS_EVIDENCE_PATH = resolve(
 	"../docs/evidence/deployment/2026-08-09-business-closed-loop.json",
@@ -49,13 +55,25 @@ const positionManagerAbi = parseAbi([
 	"function createAndInitializePoolIfNecessary(address token0,address token1,uint24 fee,uint160 sqrtPriceX96) payable returns (address pool)",
 	"function mint((address token0,address token1,uint24 fee,int24 tickLower,int24 tickUpper,uint256 amount0Desired,uint256 amount1Desired,uint256 amount0Min,uint256 amount1Min,address recipient,uint256 deadline) params) payable returns (uint256 tokenId,uint128 liquidity,uint256 amount0,uint256 amount1)",
 ]);
+const swapRouterAbi = parseAbi([
+	"function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+]);
+const poolAbi = parseAbi(["function liquidity() view returns (uint128)"]);
+const transferEventAbi = parseAbi([
+	"event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)",
+]);
 const wethAbi = parseAbi(["function deposit() payable"]);
 
 type PairEvidence = {
 	name: "BABY/USDC" | "BABY/WETH";
 	status: "planned" | "complete";
 	pool: Address;
+	poolLiquidity?: string;
+	positionTokenId?: string;
 	amounts: Record<string, string>;
+	swapInput: string;
+	swapOutput?: string;
+	minimumSwapOutput: string;
 	transactions: Record<string, `0x${string}`>;
 };
 
@@ -128,13 +146,13 @@ async function readToken(address: Address) {
 	return { symbol, decimals, balance };
 }
 
-async function approveExact(token: Address, amount: bigint) {
+async function approveExact(token: Address, spender: Address, amount: bigint) {
 	const signer = requireWallet();
 	const allowance = await publicClient.readContract({
 		address: token,
 		abi: erc20Abi,
 		functionName: "allowance",
-		args: [operator, POSITION_MANAGER],
+		args: [operator, spender],
 	});
 	if (allowance >= amount) return undefined;
 	const hash = await signer.writeContract({
@@ -142,7 +160,7 @@ async function approveExact(token: Address, amount: bigint) {
 		address: token,
 		abi: erc20Abi,
 		functionName: "approve",
-		args: [POSITION_MANAGER, amount],
+		args: [spender, amount],
 	});
 	await publicClient.waitForTransactionReceipt({ hash });
 	return hash;
@@ -153,6 +171,8 @@ async function provisionPair(input: {
 	pairToken: Address;
 	babyAmount: string;
 	pairAmount: string;
+	swapInput: string;
+	expectedSwapOutput: string;
 }): Promise<PairEvidence> {
 	const [baby, pair] = await Promise.all([
 		readToken(babyCoin),
@@ -160,6 +180,12 @@ async function provisionPair(input: {
 	]);
 	const babyDesired = parseUnits(input.babyAmount, baby.decimals);
 	const pairDesired = parseUnits(input.pairAmount, pair.decimals);
+	const swapInput = parseUnits(input.swapInput, pair.decimals);
+	const expectedSwapOutput = parseUnits(
+		input.expectedSwapOutput,
+		baby.decimals,
+	);
+	const minimumSwapOutput = minimumAmountOut(expectedSwapOutput, 500);
 	const sorted = sortPairAmounts(
 		babyCoin,
 		input.pairToken,
@@ -185,11 +211,13 @@ async function provisionPair(input: {
 				[baby.symbol]: `${input.babyAmount} (balance ${formatUnits(baby.balance, baby.decimals)})`,
 				[pair.symbol]: `${input.pairAmount} (balance ${formatUnits(pair.balance, pair.decimals)})`,
 			},
+			swapInput: `${input.swapInput} ${pair.symbol}`,
+			minimumSwapOutput: `${formatUnits(minimumSwapOutput, baby.decimals)} ${baby.symbol}`,
 			transactions,
 		};
 	}
 
-	if (baby.balance < babyDesired || pair.balance < pairDesired) {
+	if (baby.balance < babyDesired || pair.balance < pairDesired + swapInput) {
 		throw new Error(
 			`${input.name} cannot be funded: operator lacks the configured token amounts.`,
 		);
@@ -220,10 +248,16 @@ async function provisionPair(input: {
 		);
 	}
 
-	const [approve0, approve1] = await Promise.all([
-		approveExact(sorted.token0, sorted.amount0),
-		approveExact(sorted.token1, sorted.amount1),
-	]);
+	const approve0 = await approveExact(
+		sorted.token0,
+		POSITION_MANAGER,
+		sorted.amount0,
+	);
+	const approve1 = await approveExact(
+		sorted.token1,
+		POSITION_MANAGER,
+		sorted.amount1,
+	);
 	if (approve0) transactions.approveToken0 = approve0;
 	if (approve1) transactions.approveToken1 = approve1;
 	const signer = requireWallet();
@@ -248,17 +282,89 @@ async function provisionPair(input: {
 			},
 		],
 	});
-	await publicClient.waitForTransactionReceipt({ hash: mintHash });
+	const mintReceipt = await publicClient.waitForTransactionReceipt({
+		hash: mintHash,
+	});
+	if (mintReceipt.status !== "success")
+		throw new Error("Liquidity mint reverted.");
 	transactions.mintLiquidity = mintHash;
+	const positionTransfer = parseEventLogs({
+		abi: transferEventAbi,
+		logs: mintReceipt.logs,
+		eventName: "Transfer",
+	}).find(
+		(log) =>
+			getAddress(log.address) === POSITION_MANAGER &&
+			getAddress(log.args.to) === operator,
+	);
+	const positionTokenId = positionTransfer?.args.tokenId;
+
+	const approveSwap = await approveExact(
+		input.pairToken,
+		SWAP_ROUTER_02,
+		swapInput,
+	);
+	if (approveSwap) transactions.approveSwapInput = approveSwap;
+	const babyBalanceBeforeSwap = await publicClient.readContract({
+		address: babyCoin,
+		abi: erc20Abi,
+		functionName: "balanceOf",
+		args: [operator],
+	});
+	const { request: swapRequest } = await publicClient.simulateContract({
+		account: signer.account,
+		address: SWAP_ROUTER_02,
+		abi: swapRouterAbi,
+		functionName: "exactInputSingle",
+		args: [
+			{
+				tokenIn: input.pairToken,
+				tokenOut: babyCoin,
+				fee: FEE,
+				recipient: operator,
+				amountIn: swapInput,
+				amountOutMinimum: minimumSwapOutput,
+				sqrtPriceLimitX96: 0n,
+			},
+		],
+	});
+	const swapHash = await signer.writeContract(swapRequest);
+	const swapReceipt = await publicClient.waitForTransactionReceipt({
+		hash: swapHash,
+	});
+	if (swapReceipt.status !== "success") throw new Error("Test swap reverted.");
+	transactions.swapPairTokenForBaby = swapHash;
+	const [babyBalanceAfterSwap, poolLiquidity] = await Promise.all([
+		publicClient.readContract({
+			address: babyCoin,
+			abi: erc20Abi,
+			functionName: "balanceOf",
+			args: [operator],
+		}),
+		publicClient.readContract({
+			address: pool,
+			abi: poolAbi,
+			functionName: "liquidity",
+		}),
+	]);
+	const swapOutput = babyBalanceAfterSwap - babyBalanceBeforeSwap;
+	if (swapOutput < minimumSwapOutput) {
+		throw new Error("Test swap output was below the configured minimum.");
+	}
 
 	return {
 		name: input.name,
 		status: "complete",
 		pool,
+		poolLiquidity: poolLiquidity.toString(),
+		positionTokenId: positionTokenId?.toString(),
 		amounts: {
 			[baby.symbol]: input.babyAmount,
 			[pair.symbol]: input.pairAmount,
 		},
+		swapInput: `${formatUnits(swapInput, pair.decimals)} ${pair.symbol}`,
+		swapOutput: `${formatUnits(swapOutput, baby.decimals)} ${baby.symbol}`,
+		minimumSwapOutput: `${formatUnits(minimumSwapOutput, baby.decimals)} ${baby.symbol}`,
 		transactions,
 	};
 }
@@ -269,20 +375,25 @@ await Promise.all([
 	assertContract(WETH9, "Sepolia WETH9"),
 	assertContract(FACTORY, "Uniswap v3 Factory"),
 	assertContract(POSITION_MANAGER, "Uniswap v3 Position Manager"),
+	assertContract(SWAP_ROUTER_02, "Uniswap v3 SwapRouter02"),
 ]);
 
 const pairInputs = [
 	{
 		name: "BABY/USDC" as const,
 		pairToken: OFFICIAL_USDC,
-		babyAmount: process.env.UNISWAP_BABY_USDC_AMOUNT?.trim() || "8",
-		pairAmount: process.env.UNISWAP_USDC_AMOUNT?.trim() || "8",
+		babyAmount: process.env.UNISWAP_BABY_USDC_AMOUNT?.trim() || "6",
+		pairAmount: process.env.UNISWAP_USDC_AMOUNT?.trim() || "6",
+		swapInput: process.env.UNISWAP_USDC_SWAP_AMOUNT?.trim() || "0.1",
+		expectedSwapOutput: "0.1",
 	},
 	{
 		name: "BABY/WETH" as const,
 		pairToken: WETH9,
-		babyAmount: process.env.UNISWAP_BABY_WETH_AMOUNT?.trim() || "8",
-		pairAmount: process.env.UNISWAP_WETH_AMOUNT?.trim() || "0.002",
+		babyAmount: process.env.UNISWAP_BABY_WETH_AMOUNT?.trim() || "6",
+		pairAmount: process.env.UNISWAP_WETH_AMOUNT?.trim() || "0.003",
+		swapInput: process.env.UNISWAP_WETH_SWAP_AMOUNT?.trim() || "0.00005",
+		expectedSwapOutput: "0.1",
 	},
 ];
 
@@ -297,8 +408,12 @@ if (execute) {
 		(total, input) => total + parseUnits(input.babyAmount, baby.decimals),
 		0n,
 	);
-	const requiredUsdc = parseUnits(pairInputs[0].pairAmount, usdc.decimals);
-	const requiredWeth = parseUnits(pairInputs[1].pairAmount, weth.decimals);
+	const requiredUsdc =
+		parseUnits(pairInputs[0].pairAmount, usdc.decimals) +
+		parseUnits(pairInputs[0].swapInput, usdc.decimals);
+	const requiredWeth =
+		parseUnits(pairInputs[1].pairAmount, weth.decimals) +
+		parseUnits(pairInputs[1].swapInput, weth.decimals);
 	if (baby.balance < totalBaby) {
 		throw new Error("Preflight failed: not enough BABY for both pools.");
 	}
@@ -343,6 +458,7 @@ const evidence = {
 		weth9: WETH9,
 		factory: FACTORY,
 		positionManager: POSITION_MANAGER,
+		swapRouter02: SWAP_ROUTER_02,
 	},
 	fee: FEE,
 	pairs,

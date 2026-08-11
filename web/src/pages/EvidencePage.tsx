@@ -1,10 +1,15 @@
 import architectureImage from "../../../docs/architecture/starbuddy-web3-architecture-v2.png";
 
 const CONTRACTS = [
-	["BabyCoin", "ERC-20 奖励与 lifetimeEarned 双账本"],
-	["GrowthActivities", "3/5/7 BABY、随机冷却、UTC+8 日上限"],
-	["TaskMarketplace", "Provider、VRF、购买与完成确认"],
-	["GrowthCertificate", "每笔已完成购买一张 ERC-721"],
+	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
+	[
+		"TaskMarketplaceV2",
+		"0x2EE9…15de · Provider 提交、Owner 审核、VRF、购买与完成",
+	],
+	[
+		"GrowthCertificateSBT",
+		"0xF4ef…F654 · 每笔完成购买一张不可转让 ERC-5192 证书",
+	],
 ] as const;
 
 export function EvidencePage() {
@@ -18,7 +23,7 @@ export function EvidencePage() {
 						用架构图、自动测试、部署记录和区块浏览器链接展示每一层如何协作。
 					</p>
 				</div>
-				<span className="evidence-status">本地验证完成 · Sepolia 待部署</span>
+				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
 
 			<div className="evidence-grid">
@@ -44,8 +49,26 @@ export function EvidencePage() {
 						))}
 					</ul>
 					<div className="verification-summary">
-						<strong>本地门禁</strong>
-						<span>合约、部署与前端自动测试持续通过</span>
+						<strong>链上闭环</strong>
+						<span>任务 #1 · 随机 2 BABY / 5 小时 · 购买 #1 · 锁定 SBT #1</span>
+					</div>
+					<div className="verification-summary">
+						<strong>链下 API</strong>
+						<a
+							href="https://babysteps-api.baby2b.online/api/health"
+							target="_blank"
+							rel="noreferrer"
+						>
+							验证 Worker 健康状态
+						</a>
+					</div>
+					<div className="verification-summary">
+						<strong>自动门禁</strong>
+						<span>合约 82 · 前端 157 · Worker 48 · Subgraph 4 项测试</span>
+					</div>
+					<div className="verification-summary">
+						<strong>仍待外部闭环</strong>
+						<span>Uniswap 两池/交换、Privy 登录、Graph Studio、三 RPC</span>
 					</div>
 				</section>
 			</div>
