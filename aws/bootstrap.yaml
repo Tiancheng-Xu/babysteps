@@ -202,7 +202,8 @@ Resources:
                   - apigateway:POST
                   - apigateway:PUT
                 Resource:
-                  Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis*"
+                  - Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis*"
+                  - Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*"
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
