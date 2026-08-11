@@ -9,7 +9,7 @@
 		"test": "pnpm test:validators && pnpm --filter @babysteps/aws test && pnpm --filter @babysteps/contracts test && pnpm --filter @babysteps/web test && pnpm --filter @babysteps/worker test && pnpm --filter @babysteps/subgraph test",
 		"test:validators": "node --test scripts/*.test.mjs",
 		"typecheck": "pnpm --filter @babysteps/aws typecheck && pnpm --filter @babysteps/contracts typecheck && pnpm --filter @babysteps/web typecheck && pnpm --filter @babysteps/worker typecheck",
-		"build": "pnpm --filter @babysteps/aws build && pnpm --filter @babysteps/contracts build && pnpm --filter @babysteps/web build && pnpm --filter @babysteps/worker build && pnpm --filter @babysteps/subgraph build",
+		"build": "node scripts/build.mjs",
 		"validate:standalone": "node scripts/validate-standalone.mjs",
 		"validate:public-copy": "node scripts/validate-public-copy.mjs",
 		"validate:project-naming": "node scripts/validate-project-naming.mjs",
