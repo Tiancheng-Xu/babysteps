@@ -222,11 +222,59 @@ Resources:
         - Key: CostState
           Value: auto-stop
 
+  StopDatabaseFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-stop-db"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StopOnlyThisDatabase
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-stop-database:*"
+              - Effect: Allow
+                Action: rds:DescribeDBInstances
+                Resource: "*"
+              - Effect: Allow
+                Action: rds:StopDBInstance
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:${Database}"
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
   StopDatabaseFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName:
+        Fn::Sub: "${AWS::StackName}-stop-database"
       Runtime: python3.13
       Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - StopDatabaseFunctionRole
+          - Arn
       InlineCode: |
         import os
         import boto3
@@ -245,17 +293,6 @@ Resources:
         Variables:
           DATABASE_IDENTIFIER:
             Ref: Database
-      Policies:
-        - Statement:
-            - Sid: ReadDatabaseState
-              Effect: Allow
-              Action: rds:DescribeDBInstances
-              Resource: "*"
-            - Sid: StopOnlyThisDatabase
-              Effect: Allow
-              Action: rds:StopDBInstance
-              Resource:
-                Fn::Sub: "arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:${Database}"
 
   StopDatabaseSchedule:
     Type: AWS::Events::Rule
@@ -294,11 +331,52 @@ Resources:
         ExpiresAt:
           Ref: ExpiresAt
 
+  ReadinessProbeFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${AWS::StackName}-readiness-probe"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteReadinessLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-readiness-probe:*"
+      Tags:
+        - Key: Project
+          Value: babysteps
+        - Key: Environment
+          Value:
+            Ref: EnvironmentName
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: ExpiresAt
+          Value:
+            Ref: ExpiresAt
+
   ReadinessProbeFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName:
+        Fn::Sub: "${AWS::StackName}-readiness-probe"
       Runtime: nodejs22.x
       Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - ReadinessProbeFunctionRole
+          - Arn
       InlineCode: |
         exports.handler = async () => ({
           statusCode: 200,

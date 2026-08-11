@@ -172,10 +172,12 @@ Resources:
                   - iam:CreateRole
                   - iam:DeleteRole
                   - iam:GetRole
+                  - iam:GetRolePolicy
                   - iam:PassRole
                   - iam:PutRolePolicy
                   - iam:DeleteRolePolicy
                   - iam:TagRole
+                  - iam:UntagRole
                 Resource:
                   Fn::Sub: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${RuntimeStackName}-*"
               - Effect: Allow

@@ -56,4 +56,23 @@ describe("AWS pausable readiness stage", () => {
 		});
 		expect(source).toContain("stop_db_instance");
 	});
+
+	it("uses deterministic least-privilege Lambda roles", async () => {
+		const { source, template } = await load();
+		expect(template.Resources?.StopDatabaseFunctionRole?.Type).toBe(
+			"AWS::IAM::Role",
+		);
+		expect(template.Resources?.ReadinessProbeFunctionRole?.Type).toBe(
+			"AWS::IAM::Role",
+		);
+		expect(template.Resources?.StopDatabaseFunction?.Properties?.Role).toEqual({
+			"Fn::GetAtt": ["StopDatabaseFunctionRole", "Arn"],
+		});
+		expect(template.Resources?.ReadinessProbeFunction?.Properties?.Role).toEqual(
+			{
+				"Fn::GetAtt": ["ReadinessProbeFunctionRole", "Arn"],
+			},
+		);
+		expect(source).not.toContain("AWSLambdaBasicExecutionRole");
+	});
 });
