@@ -3,7 +3,9 @@
 	"name": "babysteps-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-08-08",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1
@@ -19,8 +21,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "babysteps-local",
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_name": "babysteps-production",
+			"database_id": "82d96e36-2adc-44f7-93b2-aeb19c075d09",
 			"migrations_dir": "migrations"
 		}
 	]
