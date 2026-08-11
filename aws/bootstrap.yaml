@@ -185,6 +185,10 @@ Resources:
                   StringEquals:
                     "iam:AWSServiceName": rds.amazonaws.com
               - Effect: Allow
+                Action: cloudformation:CreateChangeSet
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31"
+              - Effect: Allow
                 Action: lambda:*
                 Resource:
                   Fn::Sub: "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${RuntimeStackName}-*"
