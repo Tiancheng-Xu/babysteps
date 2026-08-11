@@ -19,16 +19,6 @@ Parameters:
     Default: homework-readiness
   RuntimeExpiresAt:
     Type: String
-  RuntimeMarketplaceAddress:
-    Type: String
-    AllowedPattern: "^0x[0-9a-fA-F]{40}$"
-  RuntimeCertificateBaseUri:
-    Type: String
-    AllowedPattern: "^ipfs://.+[^/]$"
-  RuntimeSepoliaRpcUrl:
-    Type: String
-    Default: https://ethereum-sepolia-rpc.publicnode.com
-    NoEcho: true
 
 Conditions:
   CreateOidcProvider:
@@ -151,32 +141,21 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - ec2:AllocateAddress
                   - ec2:AssociateRouteTable
-                  - ec2:AttachInternetGateway
                   - ec2:AuthorizeSecurityGroupEgress
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:CreateInternetGateway
-                  - ec2:CreateNatGateway
-                  - ec2:CreateRoute
                   - ec2:CreateRouteTable
                   - ec2:CreateSecurityGroup
                   - ec2:CreateSubnet
                   - ec2:CreateTags
                   - ec2:CreateVpc
-                  - ec2:DeleteInternetGateway
-                  - ec2:DeleteNatGateway
-                  - ec2:DeleteRoute
                   - ec2:DeleteRouteTable
                   - ec2:DeleteSecurityGroup
                   - ec2:DeleteSubnet
                   - ec2:DeleteVpc
                   - ec2:Describe*
-                  - ec2:DetachInternetGateway
                   - ec2:DisassociateRouteTable
                   - ec2:ModifySubnetAttribute
                   - ec2:ModifyVpcAttribute
-                  - ec2:ReleaseAddress
                   - rds:AddTagsToResource
                   - rds:CreateDBInstance
                   - rds:CreateDBSubnetGroup
@@ -184,20 +163,6 @@ Resources:
                   - rds:DeleteDBSubnetGroup
                   - rds:Describe*
                   - rds:ListTagsForResource
-                  - kms:CreateKey
-                  - kms:DescribeKey
-                  - kms:DisableKey
-                  - kms:EnableKey
-                  - kms:GetKeyPolicy
-                  - kms:ListResourceTags
-                  - kms:PutKeyPolicy
-                  - kms:ScheduleKeyDeletion
-                  - kms:TagResource
-                  - secretsmanager:CreateSecret
-                  - secretsmanager:DeleteSecret
-                  - secretsmanager:DescribeSecret
-                  - secretsmanager:GetRandomPassword
-                  - secretsmanager:TagResource
                 Resource: "*"
               - Effect: Allow
                 Action:
@@ -233,6 +198,17 @@ Resources:
                   - logs:TagResource
                 Resource:
                   Fn::Sub: "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${RuntimeStackName}-*"
+              - Effect: Allow
+                Action:
+                  - events:DeleteRule
+                  - events:DescribeRule
+                  - events:ListTagsForResource
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:RemoveTargets
+                  - events:TagResource
+                Resource:
+                  Fn::Sub: "arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${RuntimeStackName}-*"
       Tags:
         - Key: Project
           Value: babysteps
@@ -313,7 +289,7 @@ Resources:
         Image: aws/codebuild/standard:7.0
         Type: LINUX_CONTAINER
         EnvironmentVariables:
-          - Name: ALLOW_AWS_PAID_DEPLOYMENT
+          - Name: ALLOW_AWS_PAUSABLE_DEPLOYMENT
             Type: PLAINTEXT
             Value: "false"
           - Name: ARTIFACT_BUCKET
@@ -338,18 +314,6 @@ Resources:
             Type: PLAINTEXT
             Value:
               Ref: RuntimeExpiresAt
-          - Name: RUNTIME_MARKETPLACE_ADDRESS
-            Type: PLAINTEXT
-            Value:
-              Ref: RuntimeMarketplaceAddress
-          - Name: RUNTIME_CERTIFICATE_BASE_URI
-            Type: PLAINTEXT
-            Value:
-              Ref: RuntimeCertificateBaseUri
-          - Name: RUNTIME_SEPOLIA_RPC_URL
-            Type: PLAINTEXT
-            Value:
-              Ref: RuntimeSepoliaRpcUrl
       Tags:
         - Key: Project
           Value: babysteps

@@ -1,60 +1,53 @@
-# AWS readiness local Evidence — 2026-08-10
+# AWS 可暂停阶段本地 Evidence — 2026-08-10
 
 ## 结论
 
-BabySteps 的 AWS readiness 路径已完成本地实现与验证：VPC/NAT/RDS/API/Lambda/KMS 运行时模板、GitHub OIDC/S3/CodeBuild bootstrap、HMAC 防重放、PostgreSQL 幂等作业、KMS EIP-1559 签名和 Lambda handler 均有真实代码与自动化测试。
+BabySteps 已把 AWS 作业拆成两个互不混淆的阶段：
 
-**本次没有调用 AWS API，没有创建、更新、启动、停止或删除任何 AWS 资源，也没有产生可归因于本次操作的 AWS 用量。** 云端地址、ARN、日志、截图、CodeBuild ID 和完成交易均标记为 pending，不以本地结果代替。
+1. **当前允许部署的可暂停阶段**：隔离 VPC、两可用区私有子网、私有 Single-AZ RDS、自动停库 Lambda、5 分钟 EventBridge 保护、按请求计费的 HTTP API/Lambda，以及手动触发的 OIDC/S3/CodeBuild。
+2. **明确延后的持续计费阶段**：NAT Gateway、EIP/公有 IPv4、客户管理 KMS、Secrets Manager 和生产 Relayer。当前 CodeBuild 权限与 buildspec 均不能创建这些资源。
+
+本地代码、权限合同、测试和 SAM lint 已通过。**AWS 控制台连接超时且本机 CLI 没有 AWS 凭据，因此本次没有调用 AWS API，也没有创建、更新、启动、停止或删除云资源。** 云端 Stack ID、ARN、HTTP 地址、RDS 状态和 CodeBuild ID 均为 pending。
 
 ## 实现与证明矩阵
 
 | 能力 | 实现位置 | 本地证明 | 状态 |
 | --- | --- | --- | --- |
-| VPC / 2 AZ / 单 NAT / 私有 RDS | `aws/template.yaml` | `aws/test/template.test.ts`；SAM lint | local verified / cloud pending |
-| HMAC、5 分钟窗口、nonce 防重放 | `aws/src/auth/webhook.ts` | `aws/test/webhook.test.ts` | local verified |
-| completion job 与 nonce hash | `aws/src/repositories/postgresCompletionJobs.ts` | `aws/test/completionJob.test.ts`、`aws/test/postgresContract.test.ts` | local verified |
-| 幂等 schema 初始化 | `aws/src/repositories/schema.ts`、`aws/migrations/0001_completion_jobs.sql` | `aws/test/schema.test.ts` | local verified |
-| 不可导出 KMS Ethereum signer | `aws/src/signing/kmsEthereumSigner.ts` | 固定公开 SPKI/DER 夹具；`aws/test/derSignature.test.ts`、`aws/test/kmsEthereumSigner.test.ts` | local verified / KMS pending |
-| Relayer 应用与 HTTP 边界 | `aws/src/application/confirmCompletion.ts`、`aws/src/handler.ts` | `aws/test/confirmCompletion.test.ts`、`aws/test/handler.test.ts` | local verified / API pending |
-| OIDC、S3、CodeBuild 与付费 gate | `aws/bootstrap.yaml`、`aws/buildspec.yml`、`.github/workflows/aws-readiness.yml` | `aws/test/bootstrap.test.ts`、`scripts/validate-aws-readiness.test.mjs` | local verified / bootstrap pending |
+| 无公网出口的 VPC / 2 AZ 私有子网 | `aws/pausable-template.yaml` | `aws/test/pausable-template.test.ts`；SAM lint | local verified / cloud pending |
+| 私有 RDS PostgreSQL | `aws/pausable-template.yaml` | `db.t4g.micro`、20 GB gp3、Single-AZ、无公网、无备份、无 ingress 合同测试 | local verified / cloud pending |
+| 创建后及 7 天自动重启后的停库保护 | `StopDatabaseFunction`、`StopDatabaseSchedule` | `rate(5 minutes)`、仅目标 DB 的 `StopDBInstance` 权限测试 | local verified / cloud pending |
+| 按请求计费的健康探针 | `ReadinessApi`、`ReadinessProbeFunction` | 模板资源合同与 SAM lint | local verified / cloud pending |
+| OIDC、S3、CodeBuild 手动部署 | `aws/bootstrap.yaml`、`aws/buildspec.yml`、`.github/workflows/aws-readiness.yml` | `aws/test/bootstrap.test.ts`、`scripts/validate-aws-readiness.test.mjs` | local verified / bootstrap pending |
+| 持续计费资源拒绝门禁 | `scripts/validate-aws-readiness.mjs` | NAT/EIP/KMS/Secrets/full-template 负向测试 | local verified |
+| 完整 Relayer 参考实现 | `aws/template.yaml`、`aws/src/**` | HMAC、PostgreSQL 幂等、KMS signer、handler 单元测试 | local verified / deployment deferred |
 
 ## 已执行门禁
 
-以下结果来自本地命令的成功退出状态：
-
-- `pnpm --filter @babysteps/aws test`：11 个测试文件，39 项测试通过。
-- `pnpm --filter @babysteps/aws typecheck`：通过。
-- `pnpm --filter @babysteps/aws check`：通过。
-- `sam validate --lint --region us-east-1 --template-file aws/bootstrap.yaml`：通过。
-- `sam validate --lint --region us-east-1 --template-file aws/template.yaml`：通过。
-- `pnpm --filter @babysteps/aws build`：通过；SAM/esbuild 生成非空 `handler.js`。构建目录被 `.gitignore` 排除，不作为源码或公开 Evidence 提交。
-- `pnpm test:validators`：9 项 validator 测试通过。
+- `pnpm --filter @babysteps/aws test`：12 个测试文件，41 项测试通过。
+- `pnpm test:validators`：12 项 validator 测试通过。
 - `pnpm validate:aws-readiness`：`AWS readiness pipeline contract: ok`。
+- `sam validate --lint --region us-east-1 --template-file aws/bootstrap.yaml`：通过。
+- `sam validate --lint --region us-east-1 --template-file aws/pausable-template.yaml`：通过。
+- `git diff --check`：通过。
 
-## 安全与费用约束
+## 费用与安全边界
 
-- GitHub workflow 不读取长期 AWS Access Key；OIDC `sub` 限定为 `repo:Tiancheng-Xu/babysteps:environment:aws-readiness`。
-- 工作流没有 `push`、`schedule` 或 webhook 触发；只能手动 dispatch。
-- CodeBuild `BUILD_GENERAL1_SMALL`、并发上限 1；S3 源码版本 7 天过期。
-- `ALLOW_AWS_PAID_DEPLOYMENT=true` 必须在 GitHub Environment 审批后的 job 中显式覆盖，buildspec 才会越过 `sam deploy` 前门禁。
-- RDS 禁止公网访问；数据库安全组只接受 Relayer 安全组的 5432；Lambda 只有 HTTPS/RDS 出站。
-- KMS 密钥为 `ECC_SECG_P256K1`/`SIGN_VERIFY`；Lambda 权限限定 `GetPublicKey` 与 `Sign`；代码使用 `MessageType=DIGEST`，不保存私钥。
-- NAT Gateway、公有 IPv4/EIP、RDS、Secrets Manager、KMS、CodeBuild 运行分钟和日志在云端启动后可能计费；未在本地 Evidence 中承诺免费。
+- 可暂停模板没有 Internet Gateway、NAT Gateway、EIP、公有 IPv4、KMS key 或 Secrets Manager secret。
+- RDS 创建后会由 5 分钟规则反复检查；仅在 `available` 时请求停止。AWS 最长停止 7 天后会自动重启，该规则会再次停库。
+- **RDS 停止后仍收存储费**；自动停库只停止计算费用，不等于零费用。Stack 仍带 `ExpiresAt` 标签，最终复盘后应执行清理流程。
+- 数据库密码由 CodeBuild 运行时随机生成，只以 CloudFormation `NoEcho` 参数传入；仓库、GitHub Secret 和 Evidence 都不保存密码。
+- GitHub workflow 仅 `workflow_dispatch`；OIDC `sub` 限定 `repo:Tiancheng-Xu/babysteps:environment:aws-readiness`，不使用长期 Access Key。
+- CodeBuild 仅 Small、并发 1；S3 源包 7 天过期。`ALLOW_AWS_PAUSABLE_DEPLOYMENT=true` 是唯一部署门禁。
+- `CloudFormationExecutionRole` 已移除创建 NAT、EIP、KMS 和 Secrets Manager 的权限；buildspec 只允许 `aws/pausable-template.yaml`。
 
-## 可追溯提交
+## 延后内容
 
-- `c789001` — AWS runtime SAM 基础模板。
-- `c30e869` — webhook HMAC 与 replay gate。
-- `26e1558` — PostgreSQL 幂等作业。
-- `a95ad0d` — KMS Ethereum signer。
-- `ae51470` — Lambda completion relayer。
-- `6bf91bd` — OIDC/S3/CodeBuild 付费部署门禁。
-- `bc7b348` — 幂等数据库 schema 初始化。
+以下内容需要用户再次确认持续费用后才可启动：NAT Gateway、EIP/公有 IPv4、客户管理 KMS、Secrets Manager、私网生产 Relayer，以及完整模板 `aws/template.yaml`。当前 GitHub Action 不能部署该模板。
 
 ## 云端待验证
 
-1. bootstrap Stack、OIDC provider 选择、S3 bucket、CodeBuild project 和 IAM 实际权限。
-2. runtime Stack 的 VPC、NAT/EIP、RDS、Secrets、API、Lambda、KMS 和日志。
-3. API→Lambda→RDS、Lambda→NAT→Sepolia、KMS 地址与 `COMPLETION_RELAYER_ROLE`。
-4. 一笔受控 V2 `confirmCompletion` 交易、回执、证书和独立 RPC 复核。
-5. 完整 Evidence 通过后生成精确费用与清理清单；可逆停用优先，永久删除前再次确认。
+1. AWS 登录恢复后创建 bootstrap 与 pausable runtime Stack。
+2. 独立读取 VPC、子网、路由表和安全组，确认无公网路径。
+3. 验证 `/readiness/health` 返回 200。
+4. 等 RDS 到 `available` 后确认自动变为 `stopped`，记录 Stack ID、资源 ARN、日志和时间线。
+5. 保存脱敏 Evidence 后执行到期清理；若选择保留，继续承担 RDS 存储费。

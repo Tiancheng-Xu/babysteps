@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       start_services:
-        description: Start the approved paid readiness stack
+        description: Start only the approved pausable readiness stack
         required: true
         default: false
         type: boolean
@@ -62,7 +62,7 @@ jobs:
             --project-name "$CODEBUILD_PROJECT" \
             --source-type-override S3 \
             --source-location-override "$ARTIFACT_BUCKET/$SOURCE_KEY" \
-            --environment-variables-override name=ALLOW_AWS_PAID_DEPLOYMENT,value=true,type=PLAINTEXT \
+            --environment-variables-override name=ALLOW_AWS_PAUSABLE_DEPLOYMENT,value=true,type=PLAINTEXT \
             --query 'build.id' --output text)"
           echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
       - name: Wait for CodeBuild result

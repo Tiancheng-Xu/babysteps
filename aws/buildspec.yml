@@ -12,20 +12,19 @@ phases:
     commands:
       - pnpm --filter @babysteps/aws test
       - pnpm --filter @babysteps/aws typecheck
-      - sam validate --region "$AWS_REGION" --template-file aws/bootstrap.yaml
-      - sam validate --region "$AWS_REGION" --template-file aws/template.yaml
+      - sam validate --lint --region "$AWS_REGION" --template-file aws/bootstrap.yaml
+      - sam validate --lint --region "$AWS_REGION" --template-file aws/pausable-template.yaml
       - pnpm validate:aws-readiness
   build:
     commands:
       - node scripts/validate-aws-readiness.mjs --deploy
       - pnpm --filter @babysteps/aws build
+      - export DATABASE_MASTER_PASSWORD="$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9!#%+=_' | head -c 32)"
       - >-
         sam deploy
         --region "$AWS_REGION"
-        --template-file aws/dist/template.yaml
+        --template-file aws/pausable-template.yaml
         --stack-name "$RUNTIME_STACK_NAME"
-        --s3-bucket "$ARTIFACT_BUCKET"
-        --s3-prefix packaged
         --role-arn "$CLOUDFORMATION_EXECUTION_ROLE_ARN"
         --capabilities CAPABILITY_NAMED_IAM
         --no-confirm-changeset
@@ -33,6 +32,4 @@ phases:
         --parameter-overrides
         EnvironmentName="$RUNTIME_ENVIRONMENT_NAME"
         ExpiresAt="$RUNTIME_EXPIRES_AT"
-        SepoliaRpcUrl="$RUNTIME_SEPOLIA_RPC_URL"
-        MarketplaceAddress="$RUNTIME_MARKETPLACE_ADDRESS"
-        CertificateBaseUri="$RUNTIME_CERTIFICATE_BASE_URI"
+        DatabaseMasterPassword="$DATABASE_MASTER_PASSWORD"
