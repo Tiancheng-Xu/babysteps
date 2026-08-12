@@ -1,0 +1,48 @@
+{
+  "status": "complete",
+  "verifiedAt": "2026-08-12",
+  "network": "Ethereum Sepolia",
+  "subgraph": {
+    "slug": "babysteps-sepolia",
+    "version": "v0.1.0",
+    "studioUrl": "https://thegraph.com/studio/subgraph/babysteps-sepolia/",
+    "queryUrl": "https://api.studio.thegraph.com/query/1757721/babysteps-sepolia/v0.1.0",
+    "ipfsBuildHash": "QmbUjVq5ya3MdcdAePt2SKvLcvczko8y2et43yjA9g1vfR",
+    "indexingStatus": "synced",
+    "indexingProgressPercent": 100,
+    "entityCount": 9
+  },
+  "dataSource": {
+    "contract": "0x2EE9fAFE99e143e5a1376805753D026bDac715de",
+    "startBlock": 11467677,
+    "manifest": "subgraph/subgraph.yaml"
+  },
+  "queryVerification": {
+    "transport": "GraphQL over HTTPS",
+    "tasks": 2,
+    "purchases": 2,
+    "certificates": 1,
+    "completedPurchaseIds": ["1"],
+    "certificateTokenIds": ["1"],
+    "verifiedFacts": [
+      "Task 1 and Task 2 were indexed from TaskMarketplaceV2 events",
+      "Purchase 1 is completed and links to certificate token 1",
+      "Purchase 2 is indexed as incomplete",
+      "Task metadata URI resolves under babysteps.baby2b.online"
+    ]
+  },
+  "buildVerification": {
+    "codegen": "passed",
+    "graphBuild": "passed",
+    "deployment": "passed"
+  },
+  "screenshots": [
+    "docs/evidence/screenshots/2026-08-12-web3-services/the-graph-sepolia-synced.png"
+  ],
+  "security": {
+    "deployKeyStoredInRepository": false,
+    "deployKeyPrintedInEvidence": false,
+    "cliCredentialFileMode": "0600",
+    "clipboardClearedAfterConfiguration": true
+  }
+}

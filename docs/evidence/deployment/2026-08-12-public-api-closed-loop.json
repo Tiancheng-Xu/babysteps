@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "updatedAt": "2026-08-12T07:58:39.971Z",
+  "wallet": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+  "apiUrl": "https://babysteps-api.baby2b.online",
+  "metadataHash": "0xd27981557757f4d2474e2e22155a22d4643ca42a1f269b6449301dafb403410e",
+  "transactions": {
+    "requestTask": "0xab8436773da3a9534b133067b5dd11d09c7f8888f285ca99c449c4c8fe7da013",
+    "approveTask": "0x8f61e1c426212a3a986fb8619b368fa8321b681b8d41ee9b18a8680cd07b571f",
+    "approve": "0x4b9c7a5dd6777158937542cfab4d03e4a4bc8f0839d1fa1f2473381e4d6151cd",
+    "buy": "0x260328ce40a132fb7ba23bdf9e22a6bec3d9d468e0d6bb0f2f732da61ab67c1c"
+  },
+  "draftId": "ee06cefe-cb56-4088-a665-17893e20ed63",
+  "taskId": "2",
+  "taskKey": "11155111:0x2ee9fafe99e143e5a1376805753d026bdac715de:2",
+  "username": "StarBuddy Parent",
+  "commentId": "6bd2f8e9-bf39-4c94-9340-7eced2aa04eb",
+  "verification": {
+    "wallet": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+    "taskKey": "11155111:0x2ee9fafe99e143e5a1376805753d026bdac715de:2",
+    "draftId": "ee06cefe-cb56-4088-a665-17893e20ed63",
+    "commentId": "6bd2f8e9-bf39-4c94-9340-7eced2aa04eb",
+    "username": "StarBuddy Parent",
+    "transactionHash": "0xab8436773da3a9534b133067b5dd11d09c7f8888f285ca99c449c4c8fe7da013",
+    "metadataHash": "0xd27981557757f4d2474e2e22155a22d4643ca42a1f269b6449301dafb403410e",
+    "chainStatus": "Active",
+    "priceBABY": "3",
+    "purchaseId": "2",
+    "publicTaskRead": true,
+    "publicCommentRead": true
+  }
+}

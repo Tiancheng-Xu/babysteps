@@ -54,21 +54,34 @@ export function EvidencePage() {
 					</div>
 					<div className="verification-summary">
 						<strong>链下 API</strong>
-						<a
-							href="https://babysteps-api.baby2b.online/api/health"
-							target="_blank"
-							rel="noreferrer"
-						>
-							验证 Worker 健康状态
-						</a>
+						<span>
+							任务 #2 · 公开 API + D1 绑定 · 购买 #2 · 用户名与评论读回
+						</span>
 					</div>
+					<div className="verification-summary">
+						<strong>Uniswap v3</strong>
+						<span>BABY/USDC + BABY/WETH 两池 · 两次真实 swap 已验证</span>
+					</div>
+					<a
+						href="https://babysteps-api.baby2b.online/api/health"
+						target="_blank"
+						rel="noreferrer"
+					>
+						验证 Worker 健康状态
+					</a>
 					<div className="verification-summary">
 						<strong>自动门禁</strong>
 						<span>合约 82 · 前端 157 · Worker 48 · Subgraph 4 项测试</span>
 					</div>
 					<div className="verification-summary">
+						<strong>外部读链与索引</strong>
+						<span>
+							The Graph 100% 同步 · Public / Infura / Alchemy 三源一致
+						</span>
+					</div>
+					<div className="verification-summary">
 						<strong>仍待外部闭环</strong>
-						<span>Uniswap 两池/交换、Privy 登录、Graph Studio、三 RPC</span>
+						<span>Privy 登录 UI 与可选 IPFS pin</span>
 					</div>
 				</section>
 			</div>

@@ -1,0 +1,58 @@
+{
+  "status": "complete",
+  "verifiedAt": "2026-08-12T06:05:00Z",
+  "network": "Ethereum Sepolia",
+  "chainId": 11155111,
+  "operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+  "transactionReceipts": {
+    "expected": 15,
+    "successful": 15,
+    "blockRange": [11471286, 11471302]
+  },
+  "bootstrap": {
+    "pool": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+    "pair": "WETH/official Sepolia USDC",
+    "fee": 500,
+    "inputWeth": "0.001",
+    "outputUsdc": "25.503722",
+    "minimumUsdc": "24.228535",
+    "swapTransaction": "0x63e05669f3a80b7b8fc3a11c154ddab07dbd603d2ad0c622fd189b3ea598d31e"
+  },
+  "pairs": [
+    {
+      "name": "BABY/USDC",
+      "pool": "0x50F698e2811651453F4366f30AfC594E6cE8A9cB",
+      "fee": 3000,
+      "liquidity": "5999999999999",
+      "positionTokenId": "230840",
+      "positionOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+      "swapInput": "0.1 USDC",
+      "swapOutput": "0.09807039690476554 BABY",
+      "minimumOutput": "0.095 BABY",
+      "swapTransaction": "0x4df3513638b0919d7f8aa86d5ee7616752d4128750f61bad0c174a6307a1a13f"
+    },
+    {
+      "name": "BABY/WETH",
+      "pool": "0x482045F913107A93D0AcE87c1373CDcbCB5FEd80",
+      "fee": 3000,
+      "liquidity": "134164078649987381",
+      "positionTokenId": "230841",
+      "positionOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+      "swapInput": "0.00005 WETH",
+      "swapOutput": "0.098070396904765808 BABY",
+      "minimumOutput": "0.095 BABY",
+      "swapTransaction": "0x6f20fece61de633c88178ffa450992b41af423ac053b23ebc79523766139b3bc"
+    }
+  ],
+  "allowanceVerification": {
+    "routerBaby": "0",
+    "routerUsdc": "0",
+    "routerWeth": "0",
+    "positionManagerUsdc": "0",
+    "positionManagerWeth": "0",
+    "positionManagerBaby": "35 wei",
+    "note": "The 35 wei BABY remainder is finite rounding dust from the two liquidity mints, not an unlimited approval and not a usable token amount."
+  },
+  "sourceEvidence": "docs/evidence/deployment/2026-08-11-uniswap-v3-pools.json",
+  "security": "Only official Sepolia USDC, WETH9 and official Uniswap v3 contracts were used. No MockUSDC, mainnet asset, private key, wallet password or RPC credential is recorded."
+}

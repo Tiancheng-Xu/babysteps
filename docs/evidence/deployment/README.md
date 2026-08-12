@@ -22,6 +22,10 @@
 
 Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，并在 deployment-specific URL 和 `babysteps.baby2b.online` 验证根页面、ERC-5192 metadata 与稳定证书图片；见 [`2026-08-11-cloudflare-pages-v2.json`](2026-08-11-cloudflare-pages-v2.json)。
 
+2026-08-12 使用官方 Sepolia WETH9、Circle 测试 USDC 与 Uniswap v3 完成 WETH→USDC bootstrap、BABY/USDC 和 BABY/WETH 两池、两个 LP NFT 与两次真实 swap。15 笔 receipt、LP 所有权、池流动性、最小到账和 allowance 独立读回见 [`2026-08-12-uniswap-v3-verification.json`](2026-08-12-uniswap-v3-verification.json)。
+
+同日使用公开 Worker API 与 Sepolia V2 完成 challenge-sign-verify、canonical D1 草稿、Provider 请求、Owner 审核、VRF 激活、精确 approve、购买、链下绑定、用户名保存与购买门控评论，并从公开 API 读回任务与评论。脱敏证据见 [`2026-08-12-public-api-closed-loop.json`](2026-08-12-public-api-closed-loop.json)；文件不包含 Cookie、签名、私钥或密码。
+
 ## 后续业务闭环证据清单
 
 部署时必须逐项保存以下证据：
@@ -44,3 +48,5 @@ Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，
 - Etherscan API key 尚未保存，因此源码验证步骤在 key 补齐前保持待办。
 
 每项证据应包含时间、网络、交易哈希或构建链接、结果和失败重试说明；不得保存私钥、助记词、API token 或完整敏感环境变量。
+- `2026-08-12-the-graph-sepolia.json`: The Graph Studio `v0.1.0` deployment, IPFS build hash, 100% sync state, and sanitized GraphQL result counts for the real Sepolia V2 contract.
+- `2026-08-12-rpc-comparison.json`: one real Sepolia transaction read independently from PublicNode, Infura, and Alchemy; all endpoints redacted and all normalized facts consistent.

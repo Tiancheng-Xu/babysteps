@@ -352,6 +352,14 @@ describe("BabySteps App", () => {
 				.getAttribute("href"),
 		).toBe("https://babysteps-api.baby2b.online/api/health");
 		expect(screen.getByText(/仍待外部闭环/u)).toBeTruthy();
+		expect(screen.getByText(/任务 #2.*公开 API.*购买 #2/u)).toBeTruthy();
+		expect(screen.getByText(/BABY\/USDC.*BABY\/WETH.*真实 swap/u)).toBeTruthy();
+		expect(
+			screen.getByText(/The Graph 100% 同步.*三源一致/u),
+		).toBeTruthy();
+		expect(
+			screen.getByText(/Privy 登录 UI 与可选 IPFS pin/u),
+		).toBeTruthy();
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {
