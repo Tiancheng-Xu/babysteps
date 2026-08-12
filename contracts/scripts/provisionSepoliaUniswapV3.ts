@@ -25,9 +25,11 @@ const POSITION_MANAGER = getAddress(
 	"0x1238536071E1c677A632429e3655c799b22cDA52",
 );
 const SWAP_ROUTER_02 = getAddress("0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E");
+const QUOTER_V2 = getAddress("0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3");
 const OFFICIAL_USDC = getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238");
 const WETH9 = getAddress("0xfff9976782d46cc05630d1f6ebab18b2324d6b14");
 const FEE = 3_000;
+const BOOTSTRAP_FEE = 500;
 const FULL_RANGE_LOWER = -887_220;
 const FULL_RANGE_UPPER = 887_220;
 const DEPLOYMENT_PATH = resolve(
@@ -58,6 +60,9 @@ const positionManagerAbi = parseAbi([
 const swapRouterAbi = parseAbi([
 	"function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
 ]);
+const quoterV2Abi = parseAbi([
+	"function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+]);
 const poolAbi = parseAbi(["function liquidity() view returns (uint128)"]);
 const transferEventAbi = parseAbi([
 	"event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)",
@@ -74,6 +79,18 @@ type PairEvidence = {
 	swapInput: string;
 	swapOutput?: string;
 	minimumSwapOutput: string;
+	transactions: Record<string, `0x${string}`>;
+};
+
+type BootstrapEvidence = {
+	status: "skipped" | "complete";
+	reason: string;
+	pool: Address;
+	fee: number;
+	amountInWeth: string;
+	quotedUsdc: string;
+	minimumUsdc: string;
+	amountOutUsdc: string;
 	transactions: Record<string, `0x${string}`>;
 };
 
@@ -164,6 +181,141 @@ async function approveExact(token: Address, spender: Address, amount: bigint) {
 	});
 	await publicClient.waitForTransactionReceipt({ hash });
 	return hash;
+}
+
+async function bootstrapWethForOfficialUsdc(
+	requiredUsdc: bigint,
+): Promise<BootstrapEvidence> {
+	const [usdc, weth, nativeBalance] = await Promise.all([
+		readToken(OFFICIAL_USDC),
+		readToken(WETH9),
+		publicClient.getBalance({ address: operator }),
+	]);
+	const pool = getAddress(
+		await publicClient.readContract({
+			address: FACTORY,
+			abi: factoryAbi,
+			functionName: "getPool",
+			args: [WETH9, OFFICIAL_USDC, BOOTSTRAP_FEE],
+		}),
+	);
+	if (usdc.balance >= requiredUsdc) {
+		return {
+			status: "skipped",
+			reason: "The operator already has enough official Sepolia USDC.",
+			pool,
+			fee: BOOTSTRAP_FEE,
+			amountInWeth: "0",
+			quotedUsdc: "0",
+			minimumUsdc: "0",
+			amountOutUsdc: "0",
+			transactions: {},
+		};
+	}
+	if (pool === zeroAddress) {
+		throw new Error("Official WETH/USDC bootstrap pool is unavailable.");
+	}
+	const poolLiquidity = await publicClient.readContract({
+		address: pool,
+		abi: poolAbi,
+		functionName: "liquidity",
+	});
+	if (poolLiquidity === 0n) {
+		throw new Error("Official WETH/USDC bootstrap pool has no liquidity.");
+	}
+
+	const amountIn = parseUnits(
+		process.env.UNISWAP_BOOTSTRAP_WETH_AMOUNT?.trim() || "0.001",
+		weth.decimals,
+	);
+	const quote = await publicClient.simulateContract({
+		account: operator,
+		address: QUOTER_V2,
+		abi: quoterV2Abi,
+		functionName: "quoteExactInputSingle",
+		args: [
+			{
+				tokenIn: WETH9,
+				tokenOut: OFFICIAL_USDC,
+				amountIn,
+				fee: BOOTSTRAP_FEE,
+				sqrtPriceLimitX96: 0n,
+			},
+		],
+	});
+	const quotedUsdc = quote.result[0];
+	const minimumUsdc = minimumAmountOut(quotedUsdc, 500);
+	if (usdc.balance + minimumUsdc < requiredUsdc) {
+		throw new Error(
+			"Official WETH/USDC quote is too small; increase UNISWAP_BOOTSTRAP_WETH_AMOUNT.",
+		);
+	}
+
+	const transactions: Record<string, `0x${string}`> = {};
+	if (weth.balance < amountIn) {
+		const deficit = amountIn - weth.balance;
+		if (nativeBalance <= deficit) {
+			throw new Error("Not enough test ETH to bootstrap official USDC.");
+		}
+		const signer = requireWallet();
+		const wrapHash = await signer.writeContract({
+			account: signer.account,
+			address: WETH9,
+			abi: wethAbi,
+			functionName: "deposit",
+			value: deficit,
+		});
+		await publicClient.waitForTransactionReceipt({ hash: wrapHash });
+		transactions.wrapBootstrapWeth = wrapHash;
+	}
+	const approveHash = await approveExact(WETH9, SWAP_ROUTER_02, amountIn);
+	if (approveHash) transactions.approveBootstrapWeth = approveHash;
+
+	const signer = requireWallet();
+	const { request } = await publicClient.simulateContract({
+		account: signer.account,
+		address: SWAP_ROUTER_02,
+		abi: swapRouterAbi,
+		functionName: "exactInputSingle",
+		args: [
+			{
+				tokenIn: WETH9,
+				tokenOut: OFFICIAL_USDC,
+				fee: BOOTSTRAP_FEE,
+				recipient: operator,
+				amountIn,
+				amountOutMinimum: minimumUsdc,
+				sqrtPriceLimitX96: 0n,
+			},
+		],
+	});
+	const swapHash = await signer.writeContract(request);
+	const receipt = await publicClient.waitForTransactionReceipt({
+		hash: swapHash,
+	});
+	if (receipt.status !== "success") {
+		throw new Error("Official WETH/USDC bootstrap swap reverted.");
+	}
+	transactions.swapWethForOfficialUsdc = swapHash;
+	const finalUsdc = await readToken(OFFICIAL_USDC);
+	if (finalUsdc.balance < requiredUsdc) {
+		throw new Error(
+			"Official USDC bootstrap did not reach the required balance.",
+		);
+	}
+
+	return {
+		status: "complete",
+		reason:
+			"Official Sepolia USDC acquired from the existing Uniswap v3 WETH/USDC pool.",
+		pool,
+		fee: BOOTSTRAP_FEE,
+		amountInWeth: formatUnits(amountIn, weth.decimals),
+		quotedUsdc: formatUnits(quotedUsdc, usdc.decimals),
+		minimumUsdc: formatUnits(minimumUsdc, usdc.decimals),
+		amountOutUsdc: formatUnits(finalUsdc.balance - usdc.balance, usdc.decimals),
+		transactions,
+	};
 }
 
 async function provisionPair(input: {
@@ -376,6 +528,7 @@ await Promise.all([
 	assertContract(FACTORY, "Uniswap v3 Factory"),
 	assertContract(POSITION_MANAGER, "Uniswap v3 Position Manager"),
 	assertContract(SWAP_ROUTER_02, "Uniswap v3 SwapRouter02"),
+	assertContract(QUOTER_V2, "Uniswap v3 QuoterV2"),
 ]);
 
 const pairInputs = [
@@ -397,12 +550,12 @@ const pairInputs = [
 	},
 ];
 
+let bootstrapOfficialUsdc: BootstrapEvidence | undefined;
 if (execute) {
-	const [baby, usdc, weth, nativeBalance] = await Promise.all([
+	const [baby, usdc, weth] = await Promise.all([
 		readToken(babyCoin),
 		readToken(OFFICIAL_USDC),
 		readToken(WETH9),
-		publicClient.getBalance({ address: operator }),
 	]);
 	const totalBaby = pairInputs.reduce(
 		(total, input) => total + parseUnits(input.babyAmount, baby.decimals),
@@ -417,13 +570,13 @@ if (execute) {
 	if (baby.balance < totalBaby) {
 		throw new Error("Preflight failed: not enough BABY for both pools.");
 	}
-	if (usdc.balance < requiredUsdc) {
-		throw new Error(
-			"Preflight failed: official Sepolia USDC is required before any pool transaction.",
-		);
-	}
-	if (weth.balance < requiredWeth) {
-		const deficit = requiredWeth - weth.balance;
+	bootstrapOfficialUsdc = await bootstrapWethForOfficialUsdc(requiredUsdc);
+	const [currentWeth, nativeBalance] = await Promise.all([
+		readToken(WETH9),
+		publicClient.getBalance({ address: operator }),
+	]);
+	if (currentWeth.balance < requiredWeth) {
+		const deficit = requiredWeth - currentWeth.balance;
 		if (nativeBalance <= deficit) {
 			throw new Error("Preflight failed: not enough test ETH to wrap WETH.");
 		}
@@ -459,8 +612,10 @@ const evidence = {
 		factory: FACTORY,
 		positionManager: POSITION_MANAGER,
 		swapRouter02: SWAP_ROUTER_02,
+		quoterV2: QUOTER_V2,
 	},
 	fee: FEE,
+	bootstrapOfficialUsdc,
 	pairs,
 	limitations:
 		"Test assets have no monetary value. Planned mode sends no transaction; UNISWAP_EXECUTE=1 is required to create or fund pools.",

@@ -83,8 +83,12 @@ export function validateDeliveryEvidence(
 			errors.push(`architecture is missing status marker: ${marker}`);
 		}
 	}
-	if (!architectureText.includes("Worker/D1 本地已验证")) {
-		errors.push("architecture must mark Worker/D1 本地已验证");
+	if (
+		!["Worker/D1 本地已验证", "Worker/D1 公开 API 已验证"].some(
+			(marker) => architectureText.includes(marker),
+		)
+	) {
+		errors.push("architecture must mark Worker/D1 本地或公开 API 已验证");
 	}
 	if (!workerEvidenceText) {
 		errors.push("Phase 2 evidence is missing");

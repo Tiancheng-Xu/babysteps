@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"abi": "node scripts/export-abi.mjs",
+		"abi": "pnpm --filter @babysteps/contracts exec hardhat compile && node scripts/export-abi.mjs",
 		"codegen": "pnpm abi && graph codegen",
 		"test": "pnpm codegen && graph test",
 		"build": "pnpm codegen && graph build"

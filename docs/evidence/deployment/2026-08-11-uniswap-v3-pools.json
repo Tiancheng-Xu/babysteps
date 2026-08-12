@@ -1,6 +1,6 @@
 {
-  "status": "planned",
-  "updatedAt": "2026-08-11T18:39:42.616Z",
+  "status": "complete",
+  "updatedAt": "2026-08-12T06:02:07.048Z",
   "network": "Ethereum Sepolia",
   "chainId": 11155111,
   "operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
@@ -10,33 +10,69 @@
     "weth9": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
     "factory": "0x0227628f3F023bb0B980b67D528571c95c6DaC1c",
     "positionManager": "0x1238536071E1c677A632429e3655c799b22cDA52",
-    "swapRouter02": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+    "swapRouter02": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+    "quoterV2": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3"
   },
   "fee": 3000,
+  "bootstrapOfficialUsdc": {
+    "status": "complete",
+    "reason": "Official Sepolia USDC acquired from the existing Uniswap v3 WETH/USDC pool.",
+    "pool": "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+    "fee": 500,
+    "amountInWeth": "0.001",
+    "quotedUsdc": "25.503722",
+    "minimumUsdc": "24.228535",
+    "amountOutUsdc": "25.503722",
+    "transactions": {
+      "wrapBootstrapWeth": "0x87e49163bc4387427cd0aa23185e4c7ea4355f67963459c1672d0ee994bf5cbd",
+      "approveBootstrapWeth": "0xde6f5d7631e71aeb045d3d52f08e9e0283baa7609b32867697a6419434c81ad7",
+      "swapWethForOfficialUsdc": "0x63e05669f3a80b7b8fc3a11c154ddab07dbd603d2ad0c622fd189b3ea598d31e"
+    }
+  },
   "pairs": [
     {
       "name": "BABY/USDC",
-      "status": "planned",
-      "pool": "0x0000000000000000000000000000000000000000",
+      "status": "complete",
+      "pool": "0x50F698e2811651453F4366f30AfC594E6cE8A9cB",
+      "poolLiquidity": "5999999999999",
+      "positionTokenId": "230840",
       "amounts": {
-        "BABY": "6 (balance 16)",
-        "USDC": "6 (balance 0)"
+        "BABY": "6",
+        "USDC": "6"
       },
       "swapInput": "0.1 USDC",
+      "swapOutput": "0.09807039690476554 BABY",
       "minimumSwapOutput": "0.095 BABY",
-      "transactions": {}
+      "transactions": {
+        "createAndInitialize": "0x15f1b51d9ccd5fb2429b5dea160d01d99d77ea769eeca7c26b9bbc57abc6775e",
+        "approveToken0": "0xecdcf3efa591627fddbb02cb85c2299815b395c1a03071d39d8ef594490036fb",
+        "approveToken1": "0x9e67c9966cbed21727e8c17098e8de64543a2233369010b5e939d55459368b07",
+        "mintLiquidity": "0x2125fe4ec64635cf24b7bb17716a5fdc5c803fd46515ac561efc97c04064f51e",
+        "approveSwapInput": "0x5e931eaec662cb95c76e8be16e2fa3a2e105f1505603299d6b0de3eae946fbf1",
+        "swapPairTokenForBaby": "0x4df3513638b0919d7f8aa86d5ee7616752d4128750f61bad0c174a6307a1a13f"
+      }
     },
     {
       "name": "BABY/WETH",
-      "status": "planned",
-      "pool": "0x0000000000000000000000000000000000000000",
+      "status": "complete",
+      "pool": "0x482045F913107A93D0AcE87c1373CDcbCB5FEd80",
+      "poolLiquidity": "134164078649987381",
+      "positionTokenId": "230841",
       "amounts": {
-        "BABY": "6 (balance 16)",
-        "WETH": "0.003 (balance 0)"
+        "BABY": "6",
+        "WETH": "0.003"
       },
       "swapInput": "0.00005 WETH",
+      "swapOutput": "0.098070396904765808 BABY",
       "minimumSwapOutput": "0.095 BABY",
-      "transactions": {}
+      "transactions": {
+        "createAndInitialize": "0x736d9a3e1567264e37248034c432b3e6e1a452a75759b225ed2d97c8e7d74150",
+        "approveToken0": "0x8fee4986ce99e3925b81097d6c1eea56a7110742c669344608a3f3fda6b06dcb",
+        "approveToken1": "0x36294cdd431c15e0f9fc2b37ebad07256dc34ec35a471a4c118bfdf7505a0215",
+        "mintLiquidity": "0x33a79c5bdcc1781e32a5530b4ed226bf0ba35773f8d3be9fe96d6cade59da68b",
+        "approveSwapInput": "0xb2ee311455a56a2b26a66413459f17c920239d4a3cb73a371c656b61e59b54f7",
+        "swapPairTokenForBaby": "0x6f20fece61de633c88178ffa450992b41af423ac053b23ebc79523766139b3bc"
+      }
     }
   ],
   "limitations": "Test assets have no monetary value. Planned mode sends no transaction; UNISWAP_EXECUTE=1 is required to create or fund pools."

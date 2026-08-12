@@ -12,6 +12,11 @@ const validArchitecture = `
 现有：Owner。计划：KMS Relayer。待验证：IAM。
 `;
 
+const remotelyVerifiedArchitecture = validArchitecture.replace(
+	"Worker/D1 本地已验证",
+	"Worker/D1 公开 API 已验证",
+);
+
 const validWorkerEvidence = `
 # Worker/D1 Phase 2 evidence
 Stable task key: chainId:marketplaceAddress:taskId
@@ -59,6 +64,21 @@ test("accepts a complete evidence mapping contract", () => {
 
 	assert.deepEqual(
 		validateDeliveryEvidence(validMap, validArchitecture, validWorkerEvidence),
+		[],
+	);
+});
+
+test("accepts stronger remote Worker and D1 verification", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+	]);
+
+	assert.deepEqual(
+		validateDeliveryEvidence(
+			validMap,
+			remotelyVerifiedArchitecture,
+			validWorkerEvidence,
+		),
 		[],
 	);
 });

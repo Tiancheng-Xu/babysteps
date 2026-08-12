@@ -24,4 +24,22 @@ describe("Sepolia Uniswap v3 delivery script", () => {
 		assert.match(source, /UNISWAP_BABY_WETH_AMOUNT\?\.trim\(\) \|\| "6"/u);
 		assert.match(source, /UNISWAP_WETH_AMOUNT\?\.trim\(\) \|\| "0\.003"/u);
 	});
+
+	it("bootstraps official USDC through the liquid WETH/USDC pool", async () => {
+		const source = await readFile(
+			new URL("../scripts/provisionSepoliaUniswapV3.ts", import.meta.url),
+			"utf8",
+		);
+
+		assert.match(source, /0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3/u);
+		assert.match(source, /BOOTSTRAP_FEE = 500/u);
+		assert.match(
+			source,
+			/UNISWAP_BOOTSTRAP_WETH_AMOUNT\?\.trim\(\) \|\| "0\.001"/u,
+		);
+		assert.match(source, /quoteExactInputSingle/u);
+		assert.match(source, /bootstrapWethForOfficialUsdc/u);
+		assert.match(source, /minimumAmountOut\(quotedUsdc, 500\)/u);
+		assert.match(source, /bootstrapOfficialUsdc/u);
+	});
 });

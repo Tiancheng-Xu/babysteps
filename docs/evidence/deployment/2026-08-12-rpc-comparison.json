@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-08-12T09:41:19.438Z",
+  "chain": "ethereum-sepolia",
+  "chainId": 11155111,
+  "account": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+  "transactionHash": "0xba0d13402507da21b4c680dbe1dd3413c7fd0eb2c97b93a30c8f86a0f0622cfd",
+  "sources": [
+    {
+      "provider": "public",
+      "status": "success",
+      "endpoint": "https://ethereum-sepolia-rpc.publicnode.com",
+      "latencyMs": 718
+    },
+    {
+      "provider": "infura",
+      "status": "success",
+      "endpoint": "https://sepolia.infura.io/v3/[redacted]",
+      "latencyMs": 1048
+    },
+    {
+      "provider": "alchemy",
+      "status": "success",
+      "endpoint": "https://eth-sepolia.g.alchemy.com/v2/[redacted]",
+      "latencyMs": 1525
+    }
+  ],
+  "normalizedFacts": {
+    "latestBlock": 11472376,
+    "balanceWei": "1201196717888214407",
+    "transactionBlock": 11453620,
+    "transactionFrom": "0x4d9df519abcbe51c0098649bcd0e17ac1548fa88",
+    "transactionTo": "0x2d1107610ebabbfa7cd9569eb42ef315eb6f25be",
+    "receiptStatus": 1,
+    "gasUsed": "188031",
+    "logCount": 2
+  },
+  "comparison": {
+    "consistent": true,
+    "mismatches": []
+  },
+  "complete": true,
+  "security": {
+    "credentialsStoredInRepository": false,
+    "endpointsRedacted": true,
+    "temporaryFilesMode": "0600",
+    "temporaryFilesRemovedAfterRun": true
+  },
+  "screenshots": [
+    "docs/evidence/screenshots/2026-08-12-web3-services/infura-sepolia-only-safe.png",
+    "docs/evidence/screenshots/2026-08-12-web3-services/infura-core-free-plan.png",
+    "docs/evidence/screenshots/2026-08-12-web3-services/alchemy-app-free-usage.png",
+    "docs/evidence/screenshots/2026-08-12-web3-services/alchemy-ethereum-sepolia-only.png"
+  ]
+}

@@ -1,0 +1,29 @@
+name: Verify BabySteps project
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: babysteps-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    uses: Tiancheng-Xu/.github/.github/workflows/verify-project.yml@main
+    with:
+      package-manager: pnpm
+      node-version: "22"
+      pnpm-version: "11.17.0"
+      install-command: pnpm install --frozen-lockfile
+      check-command: pnpm check
+      test-command: pnpm test
+      typecheck-command: pnpm typecheck
+      build-command: pnpm --filter @babysteps/web build
+      evidence-command: pnpm validate:delivery-evidence && pnpm validate:public-copy && pnpm validate:project-naming
+      publish-config-path: .github/baby2b-publish.yml

@@ -30,7 +30,7 @@ flowchart LR
     babySteps --> ethereum0["Ethereum Sepolia<br/>可信业务事实"]
     babySteps --> cloudflare0["Cloudflare Pages / Worker / D1<br/>Worker V2 + D1 + HTTPS 已验证"]
     babySteps --> aws0["AWS 可暂停阶段<br/>VPC / 私有 RDS / Readiness + 自动停库 Lambda<br/>云端已验证，RDS stopped"]
-    babySteps --> index0["The Graph + ethers 三 RPC<br/>本地实现；公共 RPC 已验证"]
+    babySteps --> index0["The Graph v0.1.0 已同步<br/>ethers 三 RPC 对照一致"]
 ```
 
 ## 运行时请求与数据流
@@ -38,13 +38,13 @@ flowchart LR
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#FFF3D6","primaryTextColor":"#4B2B20","primaryBorderColor":"#9A6548","lineColor":"#496B63","secondaryColor":"#F7B267","tertiaryColor":"#DCE9C8"}}}%%
 flowchart LR
-    parent["家长<br/>现有：外部钱包<br/>Privy 代码已实现，配置待验证"] --> web["BabySteps React<br/>现有并扩展"]
+    parent["家长<br/>外部钱包 + Privy<br/>App ID / 正式域名已配置；登录 UI 待发布验收"] --> web["BabySteps React<br/>现有并扩展"]
     provider["机构或育婴师<br/>V2 提交与审核已在 Sepolia 验证"] --> web
     owner["Owner<br/>现有管理员"] --> web
 
     web --> worker["Worker API<br/>V2 版本已发布；HTTP/TLS/CORS 已验证"]
     worker --> d1[("D1<br/>metadata、视频、评论、nonce、审计<br/>远程 DB + migrations 已验证")]
-    web --> router["Uniswap v3 Router / Quoter<br/>代码已实现；两池与真实 swap 待验证"]
+    web --> router["Uniswap v3 Router / Quoter<br/>BABY/USDC + BABY/WETH 两池与真实 swap 已验证"]
     web --> marketV1["Marketplace V1<br/>现有 Sepolia 证据"]
     web --> marketV2["Marketplace V2<br/>Sepolia 审核、购买、完成闭环已验证"]
     marketV1 --> coin["BabyCoin<br/>现有 Sepolia"]
@@ -55,20 +55,20 @@ flowchart LR
     worker -.->|"生产 Relayer 延后"| lambda["Readiness / 自动停库 Lambda<br/>43 项 AWS 包测试 + 云端调用通过"]
     lambda --> rds[("私有 RDS PostgreSQL<br/>5 分钟自动停库<br/>CREATE_COMPLETE / stopped")]
     kms["AWS KMS secp256k1 Relayer<br/>代码已验证；持续计费阶段延后"] -.-> marketV2
-    marketV2 --> graph["The Graph<br/>build + 4 tests；Studio 待部署"]
-    marketV2 --> rpc["ethers 公共 RPC 已验证<br/>Infura / Alchemy 待配置"]
+    marketV2 --> graph["The Graph Studio<br/>Sepolia v0.1.0；100% 同步；GraphQL 已读回"]
+    marketV2 --> rpc["ethers 三 RPC<br/>Public + Infura + Alchemy<br/>同一交易事实对照一致"]
 ```
 
 ## 链上与链下事实所有权
 
 ```mermaid
 flowchart TB
-    draft["D1 draftId<br/>标题、说明、封面、视频、完成规则<br/>本地已验证"]
-    canonical["规范化 metadata JSON<br/>keccak256 哈希<br/>本地已验证"]
-    event["TaskRequested event<br/>taskId + metadataHash<br/>本地已验证合约"]
-    key["稳定业务键<br/>chainId:marketplace:taskId<br/>本地已验证"]
-    task["D1 published_task<br/>保存 key、draftId、txHash、哈希<br/>本地已验证"]
-    read["详情聚合器<br/>链上状态 + D1 富内容<br/>本地已验证"]
+    draft["D1 draftId<br/>标题、说明、封面、视频、完成规则<br/>远程公开 API 已验证"]
+    canonical["规范化 metadata JSON<br/>keccak256 哈希<br/>Worker / 本地哈希一致"]
+    event["TaskRequested event<br/>taskId + metadataHash<br/>Sepolia Task #2 已验证"]
+    key["稳定业务键<br/>chainId:marketplace:taskId<br/>远程绑定已验证"]
+    task["D1 published_task<br/>保存 key、draftId、txHash、哈希<br/>远程写入已验证"]
+    read["详情聚合器<br/>链上状态 + D1 富内容<br/>公开读回已验证"]
 
     draft --> canonical
     canonical -->|"Provider requestTask"| event
@@ -78,8 +78,8 @@ flowchart TB
     event --> read
     task --> read
 
-    comments[("D1 comments<br/>公开读、购买后写、软隐藏<br/>本地已验证")] --> read
-    audit[("D1 audit_log<br/>nonce、绑定、资料、隐藏<br/>本地已验证")] -.-> task
+    comments[("D1 comments<br/>公开读、购买后写、软隐藏<br/>购买门控写入与公开读回已验证")] --> read
+    audit[("D1 audit_log<br/>nonce、绑定、资料、隐藏<br/>远程写入路径已验证")] -.-> task
 ```
 
 链上拥有 Provider、payee、状态、随机价格/时间、购买、完成和证书事实；D1 拥有富文本、视频 URL、用户名、评论、nonce、会话与审计。任何链上/D1 哈希不一致都返回明确冲突，不自动覆盖。
@@ -90,7 +90,7 @@ flowchart TB
 flowchart TB
     subgraph browser["浏览器信任边界"]
         ui["React UI<br/>交易状态与只读展示"]
-        wallet["Privy / Smart Wallet / 外部钱包<br/>代码已实现，App ID 待配置"]
+        wallet["Privy / Smart Wallet / 外部钱包<br/>App ID + Allowed origin 已配置；UI 登录待发布验收"]
     end
     subgraph cloudflare["Cloudflare 边界"]
         pages["Pages<br/>现有 Git 集成"]
@@ -102,7 +102,7 @@ flowchart TB
         oldMarket["Marketplace V1<br/>现有：0x2D11…25BE"]
         newMarket["Marketplace V2<br/>0x2EE9…15de<br/>Sepolia 完整闭环已验证"]
         cert["ERC-5192<br/>0xF4ef…F654<br/>SBT #1 locked"]
-        uni["Uniswap v3<br/>官方合约已核验；BABY pools 待注资"]
+        uni["Uniswap v3<br/>BABY/USDC + BABY/WETH 已注资并完成真实 swap"]
         chainlink["Chainlink VRF v2.5<br/>V1 + V2 真实履约证据"]
     end
     subgraph aws["AWS 当前允许边界（云端已验证，RDS 已 stopped）"]
@@ -139,7 +139,7 @@ flowchart TB
 
 ## 登录、写入与购买校验时序
 
-Worker/D1 本地已验证以下时序；Privy 邮箱/Google/Smart Wallet 入口代码已实现，但 App ID 和真实登录仍待外部配置。当前自动化测试使用运行时生成的测试钱包签名。
+Worker/D1 公开 API 已验证以下时序，并已绑定 Sepolia Task #2；Privy App ID 与正式 Allowed origin 已配置，邮箱/Google 登录 UI 仍待本批发布后验收。闭环签名由测试部署钱包真实执行，Evidence 不保存签名、Cookie 或私钥。
 
 ```mermaid
 sequenceDiagram
@@ -192,7 +192,7 @@ flowchart LR
     cleanupGate --> deleteApproval["最终删除 Stack<br/>复盘后确认精确目标"]
     main --> pagesDeploy["Cloudflare Pages Git 部署<br/>现有"]
     main --> workerDeploy["D1 migration + Worker V2 已完成<br/>自定义域名已绑定"]
-    main --> graphDeploy["Subgraph build/test 已完成<br/>Studio 待部署"]
+    main --> graphDeploy["Subgraph build/test + Studio 部署<br/>v0.1.0 已 100% 同步"]
     pagesDeploy --> httpCheck["HTTP、TLS、深链、非空产物<br/>现有门禁"]
     workerDeploy --> apiCheck["HTTP 200、TLS、允许/拒绝 Origin CORS<br/>远程 D1 只读核验"]
     awsDeploy --> awsCheck["IAM 最小权限、Lambda 200、RDS 自动停库<br/>云端已验证"]
@@ -204,7 +204,7 @@ flowchart LR
 flowchart LR
     owner2["Owner<br/>授予 Provider、审核、暂停"] --> market["Marketplace V2<br/>权限、随机、结算与 SBT 已在 Sepolia 验证"]
     provider2["Provider<br/>提交任务与完成证据"] --> market
-    provider2 --> api["Worker API<br/>外部已部署；签名业务流仍待公开端到端验收"]
+    provider2 --> api["Worker API<br/>外部已部署；真实签名、会话、D1 写入已验收"]
     parent2["Parent<br/>Swap、Approve、Buy"] --> market
     relayer2["KMS Relayer<br/>本地签名与幂等已验证；持续计费阶段延后<br/>未来仅 COMPLETION_RELAYER_ROLE"] -.-> market
     coordinator["VRF Coordinator<br/>仅随机回调"] --> market
@@ -237,4 +237,4 @@ flowchart LR
 
 `docs/architecture/starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 保留 StarBuddy 四阶段主题和产品业务视图；本 Mermaid 是包含当前部署状态、AWS 可暂停阶段、CI/CD、安全与清理边界的工程真相源。PNG 中未展示的 AWS 细节不得代替本 Mermaid 的验收状态。
 
-V2 合约与完整 Sepolia 业务闭环记录在 `docs/evidence/deployment/2026-08-11-sepolia-v2-business.json`；Worker V2、自定义域名、D1、HTTP/TLS/CORS 记录在 `docs/evidence/deployment/2026-08-11-cloudflare-worker-v2.json`；Privy、Uniswap、The Graph、三 RPC、IPFS 的未完成边界仍见各自 Evidence；AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。
+V2 合约与完整 Sepolia 业务闭环记录在 `docs/evidence/deployment/2026-08-11-sepolia-v2-business.json`；Worker V2、自定义域名、D1、HTTP/TLS/CORS 记录在 `docs/evidence/deployment/2026-08-11-cloudflare-worker-v2.json`；公开 API 的签名会话、Task #2、购买、用户名与评论闭环记录在 `docs/evidence/deployment/2026-08-12-public-api-closed-loop.json`；Uniswap 两池与 swap 记录在 `docs/evidence/deployment/2026-08-12-uniswap-v3-verification.json`；The Graph 与三 RPC 分别记录在 `docs/evidence/deployment/2026-08-12-the-graph-sepolia.json` 和 `2026-08-12-rpc-comparison.json`。仍待的硬性外部边界只有本批发布后的 Privy 登录 UI；IPFS pin 为增强项。AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。
