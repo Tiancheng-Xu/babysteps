@@ -97,6 +97,16 @@ export const taskMarketplaceV2Address = parseOptionalContractAddress(
 	"TaskMarketplaceV2",
 );
 
+export const starBuddyKeepsakeSbtAddress = parseOptionalContractAddress(
+	import.meta.env.VITE_STARBUDDY_KEEPSAKE_SBT_ADDRESS,
+	"StarBuddyKeepsakeSBT",
+);
+
+export const starBuddyKeepsakesAddress = parseOptionalContractAddress(
+	import.meta.env.VITE_STARBUDDY_KEEPSAKES_ADDRESS,
+	"StarBuddyKeepsakes",
+);
+
 export const babyCoinAbi = parseAbi([
 	"function balanceOf(address account) view returns (uint256)",
 	"function allowance(address owner, address spender) view returns (uint256)",
@@ -153,4 +163,20 @@ export const growthCertificateAbi = parseAbi([
 	"function tokenForPurchase(uint256 purchaseId) view returns (uint256)",
 	"function ownerOf(uint256 tokenId) view returns (address)",
 	"function tokenURI(uint256 tokenId) view returns (string)",
+]);
+
+export const starBuddyKeepsakeSbtAbi = parseAbi([
+	"function tokensOfOwner(address owner) view returns (uint256[] tokenIds)",
+	"function getKeepsake(uint256 tokenId) view returns (uint8 series, uint8 rarity)",
+	"function ownerOf(uint256 tokenId) view returns (address owner)",
+	"function tokenURI(uint256 tokenId) view returns (string)",
+]);
+
+export const starBuddyKeepsakesAbi = parseAbi([
+	"function requestDraw() returns (uint256 requestId)",
+	"function requestFusion(uint256[3] tokenIds) returns (uint256 requestId)",
+	"function recover(uint256 requestId)",
+	"function latestRequestIdByOwner(address owner) view returns (uint256 requestId)",
+	"function isTokenLocked(uint256 tokenId) view returns (bool)",
+	"function getRequest(uint256 requestId) view returns ((address owner,uint8 kind,uint8 status,uint64 requestedAt,uint256[3] tokenIds,uint256 resultTokenId,uint256 burnedTokenId) request)",
 ]);

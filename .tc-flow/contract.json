@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runId": "d91f8a58-65df-4bb4-92f9-fcfb2b9a4013",
+  "feature": "starbuddy-keepsakes",
+  "version": 1,
+  "contractHash": "7b99929c46cba4df2534ae5710377d53e95f181584fd088b8fd8fb63d25e80d4",
+  "goal": "Implement the approved StarBuddy keepsake draw, fusion, recovery, and responsive UI loop.",
+  "nonGoals": [
+    "Production release",
+    "Mainnet deployment",
+    "Migration of previous Sepolia state",
+    "Transfer or resale of keepsakes",
+    "Child or family-private metadata"
+  ],
+  "spec": "docs/superpowers/specs/2026-08-13-starbuddy-keepsakes-design.md",
+  "plan": "docs/superpowers/plans/2026-08-13-starbuddy-keepsakes.md",
+  "repository": "/Users/shier/Desktop/babysteps",
+  "branch": "feature/starbuddy-keepsakes",
+  "allowedWritePaths": [
+    ".tc-flow",
+    "contracts",
+    "web",
+    "docs",
+    "scripts"
+  ],
+  "networkScope": [
+    "local Hardhat",
+    "Ethereum Sepolia test environment only after local gates"
+  ],
+  "production": "manual"
+}

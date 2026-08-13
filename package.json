@@ -17,6 +17,8 @@
 		"validate:aws-readiness": "node scripts/validate-aws-readiness.mjs",
 		"validate:public-artifact": "node scripts/validate-public-artifact.mjs",
 		"validate:delivery-evidence": "node scripts/validate-delivery-evidence.mjs",
+		"validate:performance-pipeline": "node scripts/validate-performance-pipeline.mjs",
+		"validate:performance-budget": "node scripts/validate-performance-budget.mjs",
 		"prepare:ipfs": "node scripts/prepare-ipfs-metadata.mjs"
 	},
 	"devDependencies": {

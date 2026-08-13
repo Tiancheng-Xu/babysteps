@@ -7,6 +7,8 @@
 		"test": "vitest run",
 		"typecheck": "tsc --noEmit",
 		"build": "sam build --template-file template.yaml --build-dir dist --manifest lambda-package/package.json",
+		"build:performance:cleaner": "esbuild src/performance/cleanerMain.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/performance/cleaner.mjs --external:pg-native",
+		"build:performance:sam": "sam build --template-file performance-template.yaml --build-dir dist/performance-sam --manifest lambda-package/package.json",
 		"validate": "sam validate --template-file template.yaml"
 	},
 	"devDependencies": {
@@ -21,6 +23,7 @@
 	"dependencies": {
 		"@aws-sdk/client-kms": "3.1106.0",
 		"@aws-sdk/client-secrets-manager": "3.1106.0",
+		"@aws-sdk/client-sqs": "3.1106.0",
 		"pg": "8.23.0",
 		"viem": "2.55.10",
 		"zod": "4.4.3"

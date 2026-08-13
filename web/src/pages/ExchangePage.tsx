@@ -2,6 +2,9 @@ import { useUniswapSwap } from "../features/exchange/useUniswapSwap";
 
 export function ExchangePage() {
 	const exchange = useUniswapSwap();
+	const exactQuoteLabel = exchange.quotedBabyExact
+		? `完整链上报价 ${exchange.quotedBabyExact} BABY`
+		: undefined;
 	return (
 		<section className="product-page exchange-page">
 			<header className="product-page__hero product-page__hero--exchange">
@@ -40,8 +43,22 @@ export function ExchangePage() {
 					/>
 					<div className="exchange-quote">
 						<span>预计获得</span>
-						<strong>
-							{exchange.quotedBaby ? `${exchange.quotedBaby} BABY` : "等待报价"}
+						<strong title={exactQuoteLabel} aria-live="polite">
+							{exchange.quotedBaby ? (
+								<>
+									<span className="exchange-quote__number">
+										{exchange.quotedBaby}
+									</span>
+									<span className="exchange-quote__unit" translate="no">
+										BABY
+									</span>
+									{exchange.quotedBabyIsApproximate && exactQuoteLabel ? (
+										<span className="visually-hidden">{exactQuoteLabel}</span>
+									) : null}
+								</>
+							) : (
+								"等待报价"
+							)}
 						</strong>
 					</div>
 					<div className="button-row">

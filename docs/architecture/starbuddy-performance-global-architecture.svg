@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1600" viewBox="0 0 2400 1600" role="img" aria-labelledby="title desc">
+  <title id="title">BabySteps StarBuddy 性能观测展开版全局架构</title>
+  <desc id="desc">Browser SDK 经 Cloudflare Worker 的 Origin Token 信任边界进入 API Gateway 和 SQS，由一次性 ECS Fargate Cleaner 清洗并幂等写入共享 PostgreSQL，查询 Lambda 返回真实 sampleCount 与 p50 p75 p95。GitHub Actions 使用 OIDC 部署，取证后 DROP SCHEMA 并 delete-stack。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffaf0"/><stop offset=".55" stop-color="#f5eddc"/><stop offset="1" stop-color="#e3f0e2"/></linearGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#173d46"/><stop offset="1" stop-color="#386454"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#173d46" flood-opacity=".16"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#276b76"/></marker>
+    <marker id="dataArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#4e855b"/></marker>
+    <marker id="failArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#a14d47"/></marker>
+    <style>
+      text{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#173d46}.title{font-size:45px;font-weight:900;fill:#fffaf0}.subtitle{font-size:20px;font-weight:650;fill:#dcebe5}.lane{font-size:24px;font-weight:900;fill:#fffaf0}.cardTitle{font-size:21px;font-weight:900}.body{font-size:16px;font-weight:620}.small{font-size:14px;font-weight:650;fill:#516970}.status{font-size:14px;font-weight:850}.number{font-size:24px;font-weight:950;fill:#fff}.request{fill:none;stroke:#276b76;stroke-width:4;marker-end:url(#arrow)}.data{fill:none;stroke:#4e855b;stroke-width:4;stroke-dasharray:10 7;marker-end:url(#dataArrow)}.fail{fill:none;stroke:#a14d47;stroke-width:4;stroke-dasharray:8 7;marker-end:url(#failArrow)}
+    </style>
+  </defs>
+  <rect width="2400" height="1600" fill="url(#bg)"/><rect x="24" y="24" width="2352" height="1552" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
+  <rect x="44" y="44" width="2312" height="112" rx="28" fill="url(#head)" filter="url(#shadow)"/>
+  <g transform="translate(80 67)"><circle cx="34" cy="28" r="32" fill="#ffedb4" stroke="#e5a84f" stroke-width="4"/><path d="M34 4L42 21L61 24L47 37L51 56L34 47L17 56L21 37L7 24L26 21Z" fill="#f6c75c" stroke="#8b5626" stroke-width="2"/><circle cx="27" cy="31" r="2.5"/><circle cx="41" cy="31" r="2.5"/><path d="M29 39Q34 44 39 39" fill="none" stroke="#6b4328" stroke-width="2.5"/></g>
+  <text x="155" y="93" class="title">BabySteps × StarBuddy · 性能观测展开版全局架构</text>
+  <text x="157" y="130" class="subtitle">浏览器 SDK → Worker → AWS · 异步清洗、真实百分位、OIDC 临时部署与自动清理</text>
+  <g transform="translate(1820 74)"><rect width="170" height="34" rx="17" fill="#d9eccf"/><circle cx="19" cy="17" r="7" fill="#4e855b"/><text x="34" y="23" class="status">本地已验证</text><rect x="185" width="205" height="34" rx="17" fill="#ffe3ad"/><circle cx="204" cy="17" r="7" fill="#d69435"/><text x="220" y="23" class="status">AWS 云端待验证</text></g>
+
+  <!-- six responsibility columns -->
+  <g transform="translate(70 190)">
+    <g><rect width="350" height="68" rx="18" fill="#55775e"/><text x="175" y="43" text-anchor="middle" class="lane">01 用户 / 浏览器</text></g>
+    <g transform="translate(380)"><rect width="350" height="68" rx="18" fill="#315d66"/><text x="175" y="43" text-anchor="middle" class="lane">02 Cloudflare 边缘</text></g>
+    <g transform="translate(760)"><rect width="350" height="68" rx="18" fill="#6e6582"/><text x="175" y="43" text-anchor="middle" class="lane">03 AWS 接收层</text></g>
+    <g transform="translate(1140)"><rect width="350" height="68" rx="18" fill="#9b6626"/><text x="175" y="43" text-anchor="middle" class="lane">04 AWS 清洗层</text></g>
+    <g transform="translate(1520)"><rect width="350" height="68" rx="18" fill="#566b83"/><text x="175" y="43" text-anchor="middle" class="lane">05 数据与查询</text></g>
+    <g transform="translate(1900)"><rect width="350" height="68" rx="18" fill="#2f7150"/><text x="175" y="43" text-anchor="middle" class="lane">06 CI / Evidence</text></g>
+  </g>
+
+  <!-- trust boundaries -->
+  <rect x="52" y="278" width="718" height="1000" rx="24" fill="#ffffff" fill-opacity=".32" stroke="#55775e" stroke-width="3" stroke-dasharray="12 8"/><text x="74" y="309" class="status">公开客户端边界 · 不含 AWS 凭据 / Origin Token</text>
+  <rect x="790" y="278" width="1114" height="1000" rx="24" fill="#ffffff" fill-opacity=".28" stroke="#6e6582" stroke-width="3" stroke-dasharray="12 8"/><text x="812" y="309" class="status">AWS 项目边界 · babysteps-performance-* · 私网数据库访问</text>
+  <rect x="1924" y="278" width="424" height="1000" rx="24" fill="#ffffff" fill-opacity=".30" stroke="#2f7150" stroke-width="3" stroke-dasharray="12 8"/><text x="1946" y="309" class="status">短期 OIDC 身份 · 人工批准</text>
+
+  <!-- cards -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="350" width="310" height="235" rx="22" fill="#fffdf8" stroke="#55775e" stroke-width="2"/><text x="105" y="390" class="cardTitle">React + Browser SDK</text><text x="105" y="425" class="body">LCP · CLS · INP · FCP · TTFB</text><text x="105" y="453" class="body">resource / request · JS error</text><text x="105" y="481" class="body">custom mark · Web3 operation</text><text x="105" y="519" class="small">采样 · 每分钟限流 · 20 条批量</text><text x="105" y="545" class="small">5 秒 flush · 失败静默</text>
+    <rect x="460" y="350" width="280" height="235" rx="22" fill="#eef8f7" stroke="#315d66" stroke-width="2"/><text x="485" y="390" class="cardTitle">Cloudflare Worker</text><text x="485" y="425" class="body">同源 /api/performance/*</text><text x="485" y="453" class="body">128 KB 批量上限</text><text x="485" y="481" class="body">白名单筛选参数</text><text x="485" y="519" class="small">Origin Token 仅服务端注入</text><text x="485" y="545" class="small">上游故障安全降级</text>
+    <rect x="820" y="350" width="300" height="235" rx="22" fill="#f4f0fb" stroke="#6e6582" stroke-width="2"/><text x="845" y="390" class="cardTitle">API Gateway + Lambda</text><text x="845" y="425" class="body">POST /events · GET /stats</text><text x="845" y="453" class="body">Origin Token / Schema 校验</text><text x="845" y="481" class="body">时间窗 / 批量 / 精确字段</text><text x="845" y="519" class="small">202 只在成功入队后返回</text><text x="845" y="545" class="small">浏览器不接触 AWS 身份</text>
+    <rect x="1200" y="350" width="300" height="235" rx="22" fill="#fff5df" stroke="#9b6626" stroke-width="2"/><text x="1225" y="390" class="cardTitle">SQS 主队列</text><text x="1225" y="425" class="body">事件逐条异步缓冲</text><text x="1225" y="453" class="body">Visibility Timeout 60s</text><text x="1225" y="481" class="body">maxReceiveCount = 3</text><text x="1225" y="519" class="small">暂时失败重试</text><text x="1225" y="545" class="small">耗尽进入 SQS DLQ</text>
+    <rect x="1580" y="350" width="300" height="235" rx="22" fill="#eef2fa" stroke="#566b83" stroke-width="2"/><text x="1605" y="390" class="cardTitle">共享 PostgreSQL</text><text x="1605" y="425" class="body">babysteps_performance schema</text><text x="1605" y="453" class="body">raw events · UUID 去重</text><text x="1605" y="481" class="body">route / metric / version 索引</text><text x="1605" y="519" class="small">共享 RDS 引擎受保护</text><text x="1605" y="545" class="small">项目只拥有独立 schema</text>
+    <rect x="1960" y="350" width="350" height="235" rx="22" fill="#edf7ed" stroke="#2f7150" stroke-width="2"/><text x="1985" y="390" class="cardTitle">GitHub Actions + OIDC</text><text x="1985" y="425" class="body">手动 workflow_dispatch</text><text x="1985" y="453" class="body">aws-performance Environment</text><text x="1985" y="481" class="body">SAM / Budget / Test Gate</text><text x="1985" y="519" class="small">无长期 Access Key</text><text x="1985" y="545" class="small">精确项目 Role / Stack</text>
+
+    <rect x="80" y="665" width="310" height="220" rx="22" fill="#fffdf8" stroke="#55775e" stroke-width="2"/><text x="105" y="705" class="cardTitle">发送策略</text><text x="105" y="740" class="body">sendBeacon 优先</text><text x="105" y="768" class="body">fetch keepalive 兜底</text><text x="105" y="796" class="body">pagehide 最后 flush</text><text x="105" y="834" class="small">SDK 异常不破坏宿主页面</text><text x="105" y="860" class="small">不采 Cookie / Token / 请求体</text>
+    <rect x="1200" y="665" width="300" height="220" rx="22" fill="#fff5df" stroke="#9b6626" stroke-width="2"/><text x="1225" y="705" class="cardTitle">一次性 ECS Fargate Cleaner</text><text x="1225" y="740" class="body">脱敏 · 路由归一化</text><text x="1225" y="768" class="body">二次校验 · UUID 幂等</text><text x="1225" y="796" class="body">队列清空后自动退出</text><text x="1225" y="834" class="small">无 ECS Service / desired=0</text><text x="1225" y="860" class="small">永久毒消息丢弃并记录</text>
+    <rect x="1580" y="665" width="300" height="220" rx="22" fill="#eef2fa" stroke="#566b83" stroke-width="2"/><text x="1605" y="705" class="cardTitle">Query Lambda</text><text x="1605" y="740" class="body">1h / 24h / 7d</text><text x="1605" y="768" class="body">route / metric / env / version</text><text x="1605" y="796" class="body">真实 p50 / p75 / p95</text><text x="1605" y="834" class="small">真实 sampleCount / errorRate</text><text x="1605" y="860" class="small">无模拟数据兜底</text>
+    <rect x="1960" y="665" width="350" height="220" rx="22" fill="#edf7ed" stroke="#2f7150" stroke-width="2"/><text x="1985" y="705" class="cardTitle">Evidence 与成本清理</text><text x="1985" y="740" class="body">资源状态 / ECS exitCode</text><text x="1985" y="768" class="body">统计 JSON / commit / approval</text><text x="1985" y="796" class="body">DROP SCHEMA → delete-stack</text><text x="1985" y="834" class="small">项目栈自动清理</text><text x="1985" y="860" class="small">共享 VPC / NAT / RDS 保留</text>
+  </g>
+
+  <!-- numbered paths -->
+  <g>
+    <circle cx="105" cy="980" r="24" fill="#276b76"/><text x="105" y="988" text-anchor="middle" class="number">1</text><text x="145" y="987" class="cardTitle">采集与批量</text><path class="request" d="M300 980H585"/><text x="430" y="965" text-anchor="middle" class="small">性能事件，无 PII</text>
+    <circle cx="510" cy="1050" r="24" fill="#276b76"/><text x="510" y="1058" text-anchor="middle" class="number">2</text><text x="550" y="1057" class="cardTitle">同源代理</text><path class="request" d="M710 1050H955"/><text x="830" y="1035" text-anchor="middle" class="small">HTTPS + Origin Token</text>
+    <circle cx="865" cy="1120" r="24" fill="#6e6582"/><text x="865" y="1128" text-anchor="middle" class="number">3</text><text x="905" y="1127" class="cardTitle">校验入队</text><path class="data" d="M1075 1120H1330"/><text x="1200" y="1105" text-anchor="middle" class="small">202 accepted</text>
+    <circle cx="1240" cy="1190" r="24" fill="#9b6626"/><text x="1240" y="1198" text-anchor="middle" class="number">4</text><text x="1280" y="1197" class="cardTitle">清洗写库</text><path class="data" d="M1440 1190H1715"/><text x="1575" y="1175" text-anchor="middle" class="small">幂等 INSERT</text>
+    <circle cx="1605" cy="1260" r="24" fill="#566b83"/><text x="1605" y="1268" text-anchor="middle" class="number">5</text><text x="1645" y="1267" class="cardTitle">真实统计回读</text><path class="request" d="M1850 1260H2170"/><text x="2010" y="1245" text-anchor="middle" class="small">p50 / p75 / p95</text>
+  </g>
+
+  <rect x="72" y="1330" width="2256" height="130" rx="24" fill="#173d46"/>
+  <text x="105" y="1372" class="lane">失败与恢复</text><path class="fail" d="M280 1364H520"/><text x="550" y="1372" class="body" style="fill:#fffaf0">Worker 502 / 页面诚实显示“暂不可用”</text><path class="fail" d="M1030 1364H1240"/><text x="1270" y="1372" class="body" style="fill:#fffaf0">SQS 有界重试 → DLQ</text>
+  <text x="105" y="1418" class="body" style="fill:#cce8cc">清理责任：项目 Schema、SQS/DLQ、ECR、ECS Cluster/Task、Lambda/API、Log Group 随项目栈删除</text>
+  <text x="105" y="1444" class="body" style="fill:#ffdda0">受保护共享资源：VPC、公私子网、单 NAT、RDS 引擎、GitHub OIDC、Artifact Bucket 不进入项目 cleanup</text>
+  <rect x="72" y="1490" width="2256" height="54" rx="20" fill="#fff" fill-opacity=".68"/><text x="105" y="1524" class="status">状态：SDK / Worker / Lambda / Cleaner / Store / Dashboard / IaC / Gate 本地已验证 · AWS 云端待验证 · 无伪造统计</text>
+</svg>

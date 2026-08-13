@@ -1,0 +1,11 @@
+{
+  "exceptions": [
+    {
+      "logical_id": "PerformanceCluster",
+      "resource_type": "AWS::ECS::Cluster",
+      "approval_reference": "User approved completing Assignment 8 with AWS on 2026-08-13 and required paid project resources to be stopped or destroyed after evidence capture",
+      "reason": "Read-only inventory found no reusable ECS cluster. The assignment explicitly requires ECS cleaning; this cluster has no Service, runs only one controlled Fargate task, and is deleted with the exact project stack after verification.",
+      "expires_at": "2026-08-14"
+    }
+  ]
+}

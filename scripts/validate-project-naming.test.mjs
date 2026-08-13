@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { validateProjectNaming } from "./validate-project-naming.mjs";
+import {
+	trackedText,
+	validateProjectNaming,
+} from "./validate-project-naming.mjs";
 
 const aliases = [
 	String.fromCodePoint(0x68, 0x6f, 0x6d, 0x65, 0x77, 0x6f, 0x72, 0x6b),
@@ -53,5 +56,12 @@ test("rejects protected identifiers outside the exact allowlisted files", () => 
 	assert.deepEqual(
 		violations.map(({ path }) => path),
 		["README.md", "docs/notes.md"],
+	);
+});
+
+test("ignores a tracked file deleted by the current candidate change", () => {
+	assert.deepEqual(
+		trackedText([".github/workflows/pages.yml-does-not-exist"]),
+		new Map(),
 	);
 });

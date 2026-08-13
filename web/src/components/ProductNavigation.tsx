@@ -2,18 +2,22 @@ export type ProductView =
 	| "home"
 	| "marketplace"
 	| "parent"
+	| "keepsakes"
 	| "provider"
 	| "exchange"
 	| "profile"
+	| "performance"
 	| "evidence";
 
 const NAVIGATION_ITEMS: Array<{ id: ProductView; label: string }> = [
 	{ id: "home", label: "首页" },
 	{ id: "marketplace", label: "成长任务" },
 	{ id: "parent", label: "家长中心" },
+	{ id: "keepsakes", label: "星宝纪念馆" },
 	{ id: "provider", label: "Provider 控制台" },
 	{ id: "exchange", label: "兑换" },
 	{ id: "profile", label: "个人中心" },
+	{ id: "performance", label: "性能观测" },
 	{ id: "evidence", label: "工作证据" },
 ];
 

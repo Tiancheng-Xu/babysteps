@@ -15,6 +15,8 @@
 | ethers.js 通过公共 RPC、Infura、Alchemy 对照读取链上数据 | 同一交易、回执、区块、余额和链 ID 的三源读取与一致性报告；端点只通过 0600 临时文件注入，输出自动脱敏 | `contracts/scripts/readSepoliaAcrossProviders.ts:12`<br>`contracts/scripts/lib/rpcComparison.ts:163` | 公共 Sepolia、Infura Core、Alchemy Free 三源均读取交易 `0xba0d…02cfd` 成功；chainId、余额、交易、回执和日志完全一致，`complete: true`；证据见 `2026-08-12-rpc-comparison.json` | `complete` |
 | The Graph 通过日志索引并用 GraphQL 读回 | schema、V2 ABI、event handlers、Matchstick 测试和 delivery query；索引角色、任务、审核、随机、购买与完成事件 | `subgraph/subgraph.yaml:5`<br>`subgraph/src/task-marketplace.ts:58`<br>`subgraph/queries/delivery.graphql:1` | Studio `babysteps-sepolia@v0.1.0` 已部署并 100% 同步；从部署块 `11467677` 索引 9 个实体，真实 GraphQL 查询读回 2 个任务、2 笔购买和 1 张证书；证据见 `2026-08-12-the-graph-sepolia.json` | `complete` |
 | AWS VPC/RDS/Lambda/CodeBuild 部署闭环，费用可控 | 已部署：隔离 VPC、2 AZ 私有子网、私有 RDS、5 分钟自动停库、Readiness Lambda、OIDC/S3/CodeBuild；明确延后：API Gateway、NAT/EIP、KMS、Secrets、生产 Relayer | `aws/pausable-template.yaml:46`<br>`aws/pausable-template.yaml:181`<br>`aws/pausable-template.yaml:225`<br>`aws/pausable-template.yaml:297`<br>`aws/pausable-template.yaml:357`<br>`aws/bootstrap.yaml:30`<br>`aws/bootstrap.yaml:129`<br>`aws/bootstrap.yaml:277`<br>`aws/buildspec.yml:16`<br>`scripts/validate-aws-readiness.mjs:6` | 批准的可暂停阶段 complete、生产阶段 deferred；43 项 AWS 测试、validator、两份 SAM lint 通过；Runtime `CREATE_COMPLETE`，CodeBuild `SUCCEEDED`，RDS `stopped`，无 IGW/NAT；见 `docs/evidence/deployment/2026-08-11-aws-pausable.md` | `partial` |
+| 产品增强：可转送成长星兑换随机 StarBuddy 纪念卡，并允许同卡融合升级 | 固定 12 成长星抽卡；Chainlink VRF 独立随机四阶段和 70/22/7/1 稀有度；三张同系列同稀有度卡按 100/70/40% 融合；失败随机烧 1 张并解锁 2 张；24 小时超时退款/解锁且忽略迟到回调；卡片为 ERC-5192 SBT | `contracts/contracts/OnchainNotebook.sol`<br>`contracts/contracts/StarBuddyKeepsakes.sol`<br>`contracts/contracts/StarBuddyKeepsakeSBT.sol`<br>`web/src/features/keepsakes/KeepsakeGalleryPage.tsx`<br>`web/src/features/keepsakes/useKeepsakes.ts` | 合约全套 108/108、Web 全套 174/174、本地 1440/390/375/430 响应式验收通过；桌面/手机截图见 `docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/`；Sepolia 合约地址和交易尚不存在 | `partial` |
+| 性能 SDK、AWS 日志接收、ECS 清洗与真实统计页 | SDK 采集五项 Web Vitals、资源/请求、JS error、custom/Web3 时长；采样、限流、20 条/5 秒批量、sendBeacon 优先与失败静默；Worker 隐藏 Origin Token；API 校验后进 SQS/DLQ；一次性 ECS 脱敏、归一化，并用单条 SQL 按 event UUID 幂等写原始事件和小时聚合；Dashboard 只从聚合表回读，按时间/route/metric/env/version 筛选并显示真实 sampleCount、p50/p75/p95、错误率、趋势和 route 对比 | `web/src/performance/client.ts`<br>`worker/src/performanceProxy.ts`<br>`aws/src/performance/pipeline.ts`<br>`aws/src/performance/cleanerMain.ts`<br>`aws/src/performance/storage.ts`<br>`aws/migrations/0002_performance.sql`<br>`web/src/pages/PerformanceDashboardPage.tsx`<br>`aws/performance-template.yaml`<br>`.github/workflows/aws-performance.yml` | 本地：AWS 67/67、Web 185/185、Worker 55/55；严格类型检查、SAM lint、Lambda/ECS/Worker/Web 构建、预算 Gate、链路 Gate 通过；390px 无横向溢出。AWS 真实事件、ECS exitCode、统计 Artifact 和自动清理仍待 Actions 验证 | `partial` |
 
 ## 当前真实外部状态
 
@@ -33,6 +35,7 @@
 - AWS Runtime：`babysteps-delivery-readiness`，`CREATE_COMPLETE`；RDS `stopped`
 - Privy Dashboard 正式域名与生产 App ID 已配置；真实 Google/Email 登录 UI 仍待本批发布后验收
 - Subgraph Studio 已完成部署、同步和 GraphQL 读回；Infura 与 Alchemy 均为免费 Sepolia 专用配置，三源 RPC 已对照一致；IPFS pin 仍待外部完成证据
+- StarBuddy 纪念卡合约、前端和本地 Evidence 已验证；Sepolia 部署、VRF consumer 配置与真实抽卡/融合交易仍待执行
 
 ## 更新规则
 

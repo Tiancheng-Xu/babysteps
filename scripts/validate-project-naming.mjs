@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const ACADEMIC_ALIASES = [
@@ -72,9 +72,10 @@ function gitLines(args) {
 		.filter(Boolean);
 }
 
-function trackedText(paths) {
+export function trackedText(paths) {
 	const contents = new Map();
 	for (const path of paths) {
+		if (!existsSync(path)) continue;
 		const buffer = readFileSync(path);
 		if (buffer.includes(0)) continue;
 		try {

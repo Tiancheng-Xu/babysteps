@@ -17,7 +17,8 @@
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"viem": "2.55.10",
-		"wagmi": "3.7.5"
+		"wagmi": "3.7.5",
+		"web-vitals": "5.1.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",
