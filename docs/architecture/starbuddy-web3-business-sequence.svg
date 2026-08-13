@@ -1,120 +1,121 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
-  <title id="title">BabySteps 核心业务时序图</title>
-  <desc id="desc">从 Provider 创建成长任务、Owner 审核、Chainlink VRF 随机定价，到家长授权购买、完成确认、SBT 铸造和独立读回的完整时序及失败路径。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1800" viewBox="0 0 2400 1800" role="img" aria-labelledby="title desc">
+  <title id="title">BabySteps × StarBuddy Web3 五阶段完整业务时序</title>
+  <desc id="desc">五段完整闭环依次为登录会话、Uniswap 获得 BABY、Provider 上架与 Owner 审核、家长购买结算、完课与证书。失败路径包括签名过期、滑点 / 余额不足、哈希冲突、VRF pending、allowance / receipt 失败、Relayer 重试、Graph 延迟。</desc>
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#f4ede3"/></linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe6a4"/><stop offset="1" stop-color="#f6b963"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#173b4d" flood-opacity="0.14"/></filter>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#315d66"/></marker>
-    <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#c67b2b"/></marker>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="0.55" stop-color="#f7f0df"/><stop offset="1" stop-color="#e8f0e5"/></linearGradient>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#163f4a"/><stop offset="1" stop-color="#244f57"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#173d46" flood-opacity="0.15"/></filter>
+    <marker id="arrowRequest" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1 1L11 6L1 11Z" fill="#2d6570"/></marker>
+    <marker id="arrowChain" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1 1L11 6L1 11Z" fill="#c57c2d"/></marker>
+    <marker id="arrowEvent" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1 1L11 6L1 11Z" fill="#875d87"/></marker>
+    <marker id="arrowFailure" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1 1L11 6L1 11Z" fill="#b46d72"/></marker>
     <style>
-      .title{font:800 38px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#173b4d}
-      .subtitle{font:600 17px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#597078}
-      .actor{font:800 15px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#173b4d}
-      .step{font:700 14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#294d59}
-      .small{font:600 12px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#5a7077}
-      .number{font:800 14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#fff}
-      .life{stroke:#7f9499;stroke-width:2;stroke-dasharray:6 7}
-      .arrow{stroke:#315d66;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
-      .chain{stroke:#c67b2b;stroke-width:2.5;fill:none;marker-end:url(#arrowGold)}
-      .return{stroke:#55775e;stroke-width:2.2;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+      text{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;fill:#173d46}
+      .title{font-size:44px;font-weight:900}.subtitle{font-size:20px;font-weight:650;fill:#dfece7!important}
+      .actor{font-size:20px;font-weight:900;fill:#fffaf0!important}.actorSub{font-size:14px;font-weight:700;fill:#dfece7!important}
+      .phase{font-size:23px;font-weight:900}.phaseSub{font-size:15px;font-weight:650;fill:#536b70}
+      .step{font-size:17px;font-weight:800}.small{font-size:14px;font-weight:650;fill:#536b70}.tiny{font-size:12px;font-weight:700;fill:#536b70}
+      .status{font-size:13px;font-weight:850}.failureTitle{font-size:16px;font-weight:900;fill:#7d3c44}.failureBody{font-size:13px;font-weight:700;fill:#684c50}
+      .life{stroke:#80949a;stroke-width:2;stroke-dasharray:8 9}.request{stroke:#2d6570;stroke-width:4;fill:none;marker-end:url(#arrowRequest)}
+      .chain{stroke:#c57c2d;stroke-width:5;fill:none;marker-end:url(#arrowChain)}.event{stroke:#875d87;stroke-width:4;stroke-dasharray:12 9;fill:none;marker-end:url(#arrowEvent)}
+      .return{stroke:#4f875c;stroke-width:4;stroke-dasharray:16 8;fill:none;marker-end:url(#arrowRequest)}
+      .failure{stroke:#b46d72;stroke-width:3;stroke-dasharray:7 7;fill:none;marker-end:url(#arrowFailure)}
     </style>
   </defs>
-  <rect width="1600" height="1000" fill="url(#paper)"/>
-  <path d="M0 0H1600V14H0Z" fill="#173b4d"/>
-  <circle cx="72" cy="62" r="35" fill="url(#gold)" stroke="#173b4d" stroke-width="4"/>
-  <path d="M72 35l8 17 19 2-14 13 4 19-17-9-17 9 4-19-14-13 19-2z" fill="#fff7d2" stroke="#9e6630" stroke-width="2"/>
-  <text x="125" y="58" class="title">成长任务购买与证书 · 核心业务时序</text>
-  <text x="127" y="87" class="subtitle">Provider → Owner → VRF → approve / buy → 完成 → ERC-5192 SBT → 独立读回</text>
 
-  <!-- actors -->
-  <g transform="translate(42,116)">
-    <g filter="url(#shadow)"><rect width="170" height="66" rx="17" fill="#e5eedb" stroke="#55775e" stroke-width="2"/><text x="85" y="39" text-anchor="middle" class="actor">Provider 钱包</text></g>
-    <g transform="translate(205)" filter="url(#shadow)"><rect width="170" height="66" rx="17" fill="#fffdf7" stroke="#315d66" stroke-width="2"/><text x="85" y="30" text-anchor="middle" class="actor">React / 家长钱包</text><text x="85" y="49" text-anchor="middle" class="small">Privy · Reown</text></g>
-    <g transform="translate(410)" filter="url(#shadow)"><rect width="170" height="66" rx="17" fill="#ebe5f7" stroke="#806f8c" stroke-width="2"/><text x="85" y="30" text-anchor="middle" class="actor">Worker / D1</text><text x="85" y="49" text-anchor="middle" class="small">富内容 · 哈希 · 会话</text></g>
-    <g transform="translate(615)" filter="url(#shadow)"><rect width="170" height="66" rx="17" fill="#fff0c9" stroke="#c67b2b" stroke-width="2"/><text x="85" y="39" text-anchor="middle" class="actor">Owner 审核</text></g>
-    <g transform="translate(820)" filter="url(#shadow)"><rect width="190" height="66" rx="17" fill="#fff0c9" stroke="#c67b2b" stroke-width="2"/><text x="95" y="30" text-anchor="middle" class="actor">Marketplace V2</text><text x="95" y="49" text-anchor="middle" class="small">BabyCoin 结算</text></g>
-    <g transform="translate(1045)" filter="url(#shadow)"><rect width="170" height="66" rx="17" fill="#fff0c9" stroke="#c67b2b" stroke-width="2"/><text x="85" y="30" text-anchor="middle" class="actor">Chainlink VRF</text><text x="85" y="49" text-anchor="middle" class="small">v2.5</text></g>
-    <g transform="translate(1250)" filter="url(#shadow)"><rect width="235" height="66" rx="17" fill="#dfedf3" stroke="#315d66" stroke-width="2"/><text x="118" y="29" text-anchor="middle" class="actor">Relayer / SBT / Index</text><text x="118" y="49" text-anchor="middle" class="small">完成确认 · Graph · RPC</text></g>
+  <rect width="2400" height="1800" fill="url(#paper)"/>
+  <rect x="24" y="24" width="2352" height="1752" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
+  <rect x="44" y="44" width="2312" height="108" rx="28" fill="url(#header)" filter="url(#shadow)"/>
+  <g transform="translate(80,64)"><circle cx="39" cy="32" r="35" fill="#ffefbd" stroke="#e3a64a" stroke-width="4"/><path d="M39 7L47 24L66 27L52 40L56 59L39 50L22 59L26 40L12 27L31 24Z" fill="#f6c75c" stroke="#915c25" stroke-width="2.5"/><circle cx="32" cy="34" r="2.5" fill="#6b4328"/><circle cx="46" cy="34" r="2.5" fill="#6b4328"/><path d="M34 42Q39 47 44 42" fill="none" stroke="#6b4328" stroke-width="2.5" stroke-linecap="round"/></g>
+  <text x="165" y="90" class="title" style="fill:#fffaf0">BabySteps × StarBuddy Web3 · 五阶段完整业务时序</text>
+  <text x="167" y="126" class="subtitle" style="fill:#dfece7">登录 → 获币 → 上架审核 → approve / buy → 完成 → ERC-5192 SBT → 独立读回</text>
+  <g transform="translate(1870,72)"><rect width="190" height="34" rx="17" fill="#dce9c8"/><circle cx="20" cy="17" r="7" fill="#4f875c"/><text x="36" y="23" class="status" style="fill:#355940">已验证闭环</text><rect x="205" width="225" height="34" rx="17" fill="#e5dded"/><circle cx="225" cy="17" r="7" fill="#806f8c"/><text x="242" y="23" class="status" style="fill:#5f5269">生产 Relayer 延后</text></g>
+
+  <!-- eight responsibility columns -->
+  <g transform="translate(205,174)">
+    <g><rect width="250" height="78" rx="18" fill="#55775e"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">家长 / Provider</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">钱包 · 浏览器 · H5</text></g>
+    <g transform="translate(280)"><rect width="250" height="78" rx="18" fill="#315d66"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">React Web</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">Privy · Reown</text></g>
+    <g transform="translate(560)"><rect width="250" height="78" rx="18" fill="#6e6582"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">Worker + D1</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">Session · Metadata</text></g>
+    <g transform="translate(840)"><rect width="250" height="78" rx="18" fill="#55775e"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">Owner</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">审核 · 权限边界</text></g>
+    <g transform="translate(1120)"><rect width="250" height="78" rx="18" fill="#9b6626"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">Marketplace V2</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">任务 · 购买 · 完成</text></g>
+    <g transform="translate(1400)"><rect width="250" height="78" rx="18" fill="#9b6626"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">BabyCoin + Uniswap</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">ERC-20 · v3 池</text></g>
+    <g transform="translate(1680)"><rect width="250" height="78" rx="18" fill="#566b83"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">VRF + Relayer</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">随机 · 完成确认</text></g>
+    <g transform="translate(1960)"><rect width="250" height="78" rx="18" fill="#2f7150"/><text x="125" y="34" text-anchor="middle" class="actor" style="fill:#fffaf0">SBT + Graph + RPC</text><text x="125" y="58" text-anchor="middle" class="actorSub" style="fill:#dfece7">证明 · 索引 · 对照</text></g>
   </g>
 
   <!-- lifelines -->
-  <g>
-    <line x1="127" y1="184" x2="127" y2="765" class="life"/><line x1="332" y1="184" x2="332" y2="765" class="life"/>
-    <line x1="537" y1="184" x2="537" y2="765" class="life"/><line x1="742" y1="184" x2="742" y2="765" class="life"/>
-    <line x1="957" y1="184" x2="957" y2="765" class="life"/><line x1="1172" y1="184" x2="1172" y2="765" class="life"/>
-    <line x1="1410" y1="184" x2="1410" y2="765" class="life"/>
-  </g>
+  <g><line x1="330" y1="252" x2="330" y2="1570" class="life"/><line x1="610" y1="252" x2="610" y2="1570" class="life"/><line x1="890" y1="252" x2="890" y2="1570" class="life"/><line x1="1170" y1="252" x2="1170" y2="1570" class="life"/><line x1="1450" y1="252" x2="1450" y2="1570" class="life"/><line x1="1730" y1="252" x2="1730" y2="1570" class="life"/><line x1="2010" y1="252" x2="2010" y2="1570" class="life"/><line x1="2290" y1="252" x2="2290" y2="1570" class="life"/></g>
 
-  <!-- phase labels -->
-  <g transform="translate(18,205)"><rect width="28" height="88" rx="14" fill="#55775e"/><text transform="translate(20,77) rotate(-90)" class="number">任务上架</text></g>
-  <g transform="translate(18,315)"><rect width="28" height="112" rx="14" fill="#c67b2b"/><text transform="translate(20,98) rotate(-90)" class="number">随机与审核</text></g>
-  <g transform="translate(18,452)"><rect width="28" height="142" rx="14" fill="#9b5678"/><text transform="translate(20,125) rotate(-90)" class="number">授权与购买</text></g>
-  <g transform="translate(18,620)"><rect width="28" height="128" rx="14" fill="#315d66"/><text transform="translate(20,110) rotate(-90)" class="number">完成与证明</text></g>
+  <!-- phase 1 -->
+  <rect x="44" y="274" width="2312" height="184" rx="24" fill="#edf4e7" stroke="#86a083" stroke-width="2"/>
+  <rect x="58" y="288" width="130" height="156" rx="18" fill="#dce9c8"/><text x="78" y="325" class="phase">01 登录会话</text><text x="78" y="353" class="phaseSub">challenge</text><text x="78" y="376" class="phaseSub">sign / verify</text>
+  <circle cx="216" cy="313" r="16" fill="#55775e"/><text x="216" y="319" text-anchor="middle" class="status" style="fill:#fff">1</text>
+  <path class="request" d="M330 302H598"/><text x="464" y="291" text-anchor="middle" class="small">选择 Privy 或 Reown 钱包</text>
+  <path class="request" d="M610 326H878"/><text x="744" y="315" text-anchor="middle" class="small">GET challenge(nonce, expiresAt)</text>
+  <path class="return" d="M890 350H622"/><text x="756" y="339" text-anchor="middle" class="small">返回待签消息</text>
+  <path class="request" d="M610 374H342"/><text x="476" y="363" text-anchor="middle" class="small">请求钱包签名</text>
+  <path class="return" d="M330 398H598"/><text x="464" y="387" text-anchor="middle" class="small">返回 signature</text>
+  <path class="request" d="M610 422H878"/><text x="744" y="411" text-anchor="middle" class="small">Worker verify(message, signature)</text>
+  <path class="return" d="M890 446H622"/><text x="756" y="435" text-anchor="middle" class="small">HttpOnly session</text>
+  <g transform="translate(970,302)" filter="url(#shadow)"><rect width="350" height="124" rx="17" fill="#fffdf7" stroke="#55775e" stroke-width="2"/><text x="175" y="31" text-anchor="middle" class="step">会话边界</text><text x="175" y="60" text-anchor="middle" class="small">nonce 单次使用 · 域名白名单 · CORS</text><text x="175" y="86" text-anchor="middle" class="small">服务端只验证签名，不接触私钥</text><rect x="112" y="96" width="126" height="22" rx="11" fill="#dce9c8"/><text x="175" y="112" text-anchor="middle" class="status" style="fill:#355940">已实现</text></g>
+  <g transform="translate(1800,302)" filter="url(#shadow)"><rect width="470" height="124" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="22" y="32" class="failureTitle">签名过期 / nonce 重放</text><text x="22" y="62" class="failureBody">返回明确错误，重新获取 challenge；不创建会话</text><text x="22" y="89" class="failureBody">钱包拒签则停留当前页，不伪造已登录状态</text></g>
 
-  <!-- happy path -->
-  <g>
-    <circle cx="73" cy="224" r="15" fill="#55775e"/><text x="73" y="229" text-anchor="middle" class="number">1</text>
-    <path class="arrow" d="M127 224H525"/><text x="326" y="214" text-anchor="middle" class="step">创建草稿、视频/评论规则与 metadata</text>
-    <path class="return" d="M537 260H139"/><text x="338" y="251" text-anchor="middle" class="small">返回 draftId + canonical hash</text>
-    <circle cx="73" cy="286" r="15" fill="#55775e"/><text x="73" y="291" text-anchor="middle" class="number">2</text>
-    <path class="chain" d="M127 286H945"/><text x="536" y="277" text-anchor="middle" class="step">requestTask(metadata URI / hash / payee)</text>
+  <!-- phase 2 -->
+  <rect x="44" y="474" width="2312" height="206" rx="24" fill="#fff2cc" stroke="#dda43f" stroke-width="2"/>
+  <rect x="58" y="488" width="130" height="178" rx="18" fill="#ffe2a0"/><text x="78" y="525" class="phase">02 Uniswap</text><text x="78" y="552" class="phase">获得 BABY</text><text x="78" y="582" class="phaseSub">USDC / WETH</text><text x="78" y="605" class="phaseSub">→ BABY</text>
+  <circle cx="216" cy="511" r="16" fill="#c57c2d"/><text x="216" y="517" text-anchor="middle" class="status" style="fill:#fff">2</text>
+  <path class="request" d="M330 511H598"/><text x="464" y="499" text-anchor="middle" class="step">输入测试金额与最大滑点</text>
+  <path class="chain" d="M610 547H1718"/><text x="1164" y="535" text-anchor="middle" class="step">quote → approve 配对资产 → swapExactInput</text>
+  <path class="return" d="M1730 585H622"/><text x="1176" y="574" text-anchor="middle" class="small">receipt 成功 → 读取 BABY balanceOf → 友好格式化</text>
+  <g transform="translate(1260,596)" filter="url(#shadow)"><rect width="440" height="62" rx="15" fill="#fffdf7" stroke="#c57c2d" stroke-width="2"/><text x="220" y="27" text-anchor="middle" class="step">测试链资产：无真实价值</text><text x="220" y="50" text-anchor="middle" class="small">池深度与报价需运行时验证</text></g>
+  <g transform="translate(1800,500)" filter="url(#shadow)"><rect width="470" height="140" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="22" y="32" class="failureTitle">滑点 / 余额不足</text><text x="22" y="62" class="failureBody">quote 过期或池深度不足：重新报价，不自动扩大滑点</text><text x="22" y="89" class="failureBody">测试 ETH / USDC / WETH 不足：提示 faucet 或换小金额</text><text x="22" y="116" class="failureBody">交易失败不更新可用余额</text></g>
 
-    <circle cx="688" cy="335" r="15" fill="#c67b2b"/><text x="688" y="340" text-anchor="middle" class="number">3</text>
-    <path class="chain" d="M742 335H945"/><text x="844" y="325" text-anchor="middle" class="step">approveTask(taskId)</text>
-    <path class="chain" d="M969 371H1160"/><text x="1065" y="361" text-anchor="middle" class="step">requestRandomWords</text>
-    <circle cx="1224" cy="407" r="15" fill="#c67b2b"/><text x="1224" y="412" text-anchor="middle" class="number">4</text>
-    <path class="chain" d="M1172 407H969"/><text x="1070" y="397" text-anchor="middle" class="step">回填随机价格 + 时间范围</text>
+  <!-- phase 3 -->
+  <rect x="44" y="696" width="2312" height="268" rx="24" fill="#f0ebf6" stroke="#8b789b" stroke-width="2"/>
+  <rect x="58" y="710" width="130" height="240" rx="18" fill="#e5dded"/><text x="78" y="748" class="phase">03 Provider</text><text x="78" y="775" class="phase">上架与</text><text x="78" y="802" class="phase">Owner 审核</text><text x="78" y="835" class="phaseSub">链下富内容</text><text x="78" y="858" class="phaseSub">链上确权</text>
+  <circle cx="216" cy="733" r="16" fill="#806f8c"/><text x="216" y="739" text-anchor="middle" class="status" style="fill:#fff">3</text>
+  <path class="request" d="M330 733H878"/><text x="604" y="721" text-anchor="middle" class="step">创建草稿：名称 / 视频 / 评论规则 / payee</text>
+  <path class="return" d="M890 771H342"/><text x="616" y="760" text-anchor="middle" class="small">draftId + metadata URI + canonical hash</text>
+  <path class="chain" d="M330 809H1438"/><text x="884" y="797" text-anchor="middle" class="step">Provider requestTask(uri, hash, payee) → Pending</text>
+  <path class="chain" d="M1170 842H1438"/><text x="1304" y="831" text-anchor="middle" class="small">Owner approveTask(taskId)</text>
+  <path class="failure" d="M1170 870H1438"/><text x="1304" y="859" text-anchor="middle" class="small">Owner rejectTask(taskId) → Rejected</text>
+  <path class="event" d="M1450 900H1998"/><text x="1724" y="889" text-anchor="middle" class="small">Marketplace → Coordinator.requestRandomWords</text>
+  <path class="event" d="M2010 928H1462"/><text x="1736" y="917" text-anchor="middle" class="small">Coordinator 回调 Marketplace.fulfillRandomWords</text>
+  <path class="return" d="M1450 952H622"/><text x="1036" y="941" text-anchor="middle" class="tiny">Active：随机价格 / opensAt / closesAt 可读；pending 不可购买</text>
+  <g transform="translate(2070,716)" filter="url(#shadow)"><rect width="200" height="126" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="16" y="30" class="failureTitle">哈希冲突</text><text x="16" y="57" class="failureBody">URI 与 hash 不一致</text><text x="16" y="82" class="failureBody">停止绑定，不覆盖 D1</text><text x="16" y="106" class="failureBody">状态保持可审计</text></g>
+  <g transform="translate(2070,856)" filter="url(#shadow)"><rect width="200" height="80" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="16" y="30" class="failureTitle">VRF pending</text><text x="16" y="57" class="failureBody">不可购买；补资后继续</text></g>
 
-    <circle cx="278" cy="464" r="15" fill="#9b5678"/><text x="278" y="469" text-anchor="middle" class="number">5</text>
-    <path class="chain" d="M332 464H945"/><text x="638" y="454" text-anchor="middle" class="step">读取任务、BabyCoin 余额与 allowance</text>
-    <path class="return" d="M957 500H344"/><text x="650" y="491" text-anchor="middle" class="small">精确随机价格（2–4 BABY）</text>
-    <circle cx="278" cy="536" r="15" fill="#9b5678"/><text x="278" y="541" text-anchor="middle" class="number">6</text>
-    <path class="chain" d="M332 536H945"/><text x="638" y="526" text-anchor="middle" class="step">approve(精确金额) → buy(taskId)</text>
-    <path class="chain" d="M957 574H344"/><text x="650" y="565" text-anchor="middle" class="step">transferFrom → PurchaseRecorded → receipt 成功</text>
+  <!-- phase 4 -->
+  <rect x="44" y="980" width="2312" height="284" rx="24" fill="#fff2cc" stroke="#dda43f" stroke-width="2"/>
+  <rect x="58" y="994" width="130" height="256" rx="18" fill="#ffe2a0"/><text x="78" y="1032" class="phase">04 家长</text><text x="78" y="1059" class="phase">购买结算</text><text x="78" y="1092" class="phaseSub">精确 approve</text><text x="78" y="1115" class="phaseSub">→ buy</text>
+  <circle cx="216" cy="1017" r="16" fill="#c57c2d"/><text x="216" y="1023" text-anchor="middle" class="status" style="fill:#fff">4</text>
+  <path class="request" d="M330 1017H598"/><text x="464" y="1005" text-anchor="middle" class="step">选择 Active 成长任务</text>
+  <path class="request" d="M610 1055H1438"/><text x="1024" y="1043" text-anchor="middle" class="step">读取 price / status / balance / allowance</text>
+  <path class="chain" d="M610 1093H1718"/><text x="1164" y="1081" text-anchor="middle" class="step">BabyCoin.approve(marketplace, 精确价格)</text>
+  <path class="chain" d="M610 1131H1438"/><text x="1024" y="1119" text-anchor="middle" class="step">buy(taskId) · msg.sender 作为 buyer</text>
+  <path class="chain" d="M1450 1169H1718"/><text x="1584" y="1157" text-anchor="middle" class="step">transferFrom → Provider payee</text>
+  <path class="event" d="M1450 1207H878"/><text x="1164" y="1195" text-anchor="middle" class="step">PurchaseRecorded(purchaseId, buyer, price)</text>
+  <path class="return" d="M890 1237H622"/><text x="756" y="1226" text-anchor="middle" class="small">receipt 成功后刷新购买记录与余额</text>
+  <g transform="translate(1800,1020)" filter="url(#shadow)"><rect width="470" height="178" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="22" y="32" class="failureTitle">allowance / receipt 失败</text><text x="22" y="62" class="failureBody">授权不足：只补精确差额，不给无限授权</text><text x="22" y="89" class="failureBody">receipt revert：不写购买成功、不刷新伪余额</text><text x="22" y="116" class="failureBody">交易哈希保留用于 Etherscan 与 RPC 对照</text><text x="22" y="143" class="failureBody">重复提交由合约状态阻止</text></g>
 
-    <circle cx="128" cy="633" r="15" fill="#315d66"/><text x="128" y="638" text-anchor="middle" class="number">7</text>
-    <path class="arrow" d="M127 633H525"/><text x="326" y="623" text-anchor="middle" class="step">提交完成证据（链下富内容）</text>
-    <path class="arrow" d="M549 669H1398"/><text x="974" y="659" text-anchor="middle" class="step">受限 Relayer：confirmCompletion(purchaseId, evidenceHash)</text>
-    <circle cx="1360" cy="705" r="15" fill="#315d66"/><text x="1360" y="710" text-anchor="middle" class="number">8</text>
-    <path class="chain" d="M957 705H1398"/><text x="1178" y="695" text-anchor="middle" class="step">mint ERC-5192 SBT · locked</text>
-    <circle cx="278" cy="741" r="15" fill="#315d66"/><text x="278" y="746" text-anchor="middle" class="number">9</text>
-    <path class="return" d="M1410 741H344"/><text x="877" y="732" text-anchor="middle" class="step">The Graph + Public / Infura / Alchemy 独立读回</text>
-  </g>
+  <!-- phase 5 -->
+  <rect x="44" y="1280" width="2312" height="288" rx="24" fill="#e8f1f3" stroke="#668895" stroke-width="2"/>
+  <rect x="58" y="1294" width="130" height="260" rx="18" fill="#cfe2e5"/><text x="78" y="1332" class="phase">05 完课与</text><text x="78" y="1359" class="phase">证书</text><text x="78" y="1392" class="phaseSub">evidenceHash</text><text x="78" y="1415" class="phaseSub">→ locked SBT</text>
+  <circle cx="216" cy="1317" r="16" fill="#315d66"/><text x="216" y="1323" text-anchor="middle" class="status" style="fill:#fff">5</text>
+  <path class="request" d="M330 1317H878"/><text x="604" y="1305" text-anchor="middle" class="step">提交完成记录与链下 evidenceHash</text>
+  <path class="event" d="M890 1355H1998"/><text x="1444" y="1343" text-anchor="middle" class="small">Worker 交付待处理 evidenceHash → 受限 Relayer</text>
+  <path class="chain" d="M2010 1393H1462"/><text x="1736" y="1381" text-anchor="middle" class="step">Relayer → Marketplace.confirmCompletion</text>
+  <path class="chain" d="M1450 1431H2278"/><text x="1864" y="1419" text-anchor="middle" class="step">Marketplace → SBT.mintForPurchase · ERC-5192 locked</text>
+  <path class="event" d="M1450 1469H2278"/><text x="1864" y="1457" text-anchor="middle" class="small">TaskCompleted / CertificateIssued → The Graph</text>
+  <path class="return" d="M2290 1502H622"/><text x="1456" y="1491" text-anchor="middle" class="small">Graph + Public / Infura / Alchemy 读回 owner / tokenURI</text>
+  <g transform="translate(330,1520)"><rect width="520" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="260" y="21" text-anchor="middle" class="tiny">Relayer 重试：有界重试 + idempotency key，不重复完成 / 铸证</text></g>
+  <g transform="translate(875,1520)"><rect width="520" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="260" y="21" text-anchor="middle" class="tiny">Graph 延迟 / RPC 不一致：回退合约与三 RPC，链上事实不变</text></g>
+  <g transform="translate(1420,1520)"><rect width="850" height="32" rx="12" fill="#e5dded" stroke="#806f8c" stroke-width="2"/><text x="425" y="21" text-anchor="middle" class="tiny">生产 KMS Relayer：计划 / 延后；当前闭环的临时角色已撤销</text></g>
 
-  <!-- failure boundary -->
-  <g transform="translate(42,785)">
-    <rect width="1516" height="172" rx="24" fill="#173b4d"/>
-    <text x="26" y="34" class="actor" fill="#ffe0a2">失败与降级路径（不伪造成功）</text>
-    <g transform="translate(25,54)">
-      <rect width="280" height="92" rx="15" fill="#fff8e8"/>
-      <text x="18" y="27" class="actor">metadata 哈希不一致</text>
-      <text x="18" y="52" class="small">Worker 返回冲突并停止绑定</text>
-      <text x="18" y="73" class="small">不覆盖链上或 D1 事实</text>
-    </g>
-    <g transform="translate(323,54)">
-      <rect width="280" height="92" rx="15" fill="#fff8e8"/>
-      <text x="18" y="27" class="actor">VRF pending / 余额不足</text>
-      <text x="18" y="52" class="small">任务保持待履约状态</text>
-      <text x="18" y="73" class="small">补资后继续，不重复建任务</text>
-    </g>
-    <g transform="translate(621,54)">
-      <rect width="280" height="92" rx="15" fill="#fff8e8"/>
-      <text x="18" y="27" class="actor">allowance / receipt 失败</text>
-      <text x="18" y="52" class="small">不记录购买、不刷新伪余额</text>
-      <text x="18" y="73" class="small">保留明确错误与交易哈希</text>
-    </g>
-    <g transform="translate(919,54)">
-      <rect width="280" height="92" rx="15" fill="#fff8e8"/>
-      <text x="18" y="27" class="actor">Relayer 暂不可用</text>
-      <text x="18" y="52" class="small">有界重试 + idempotency key</text>
-      <text x="18" y="73" class="small">不重复完成、不重复铸证</text>
-    </g>
-    <g transform="translate(1217,54)">
-      <rect width="274" height="92" rx="15" fill="#fff8e8"/>
-      <text x="18" y="27" class="actor">索引延迟 / RPC 分歧</text>
-      <text x="18" y="52" class="small">回退合约直接读取</text>
-      <text x="18" y="73" class="small">Evidence 标记待验证</text>
-    </g>
-  </g>
+  <!-- evidence and legend footer -->
+  <rect x="58" y="1590" width="2284" height="158" rx="22" fill="#173d46"/>
+  <text x="86" y="1628" class="step" style="fill:#ffe0a2">可核验链路</text>
+  <text x="86" y="1658" class="small" style="fill:#dfece7">Task #1 · Purchase #1 · Certificate #1 · Sepolia 11155111 · 交易哈希与合约地址记录在 deployment Evidence</text>
+  <text x="86" y="1685" class="small" style="fill:#dfece7">事实优先级：链上状态 / receipt ＞ 三 RPC 对照 ＞ Graph 索引 ＞ D1 富内容；测试资产无真实价值</text>
+  <g transform="translate(90,1718)"><path class="request" d="M0 0H75"/><text x="88" y="6" class="status" style="fill:#fffaf0">请求 / 链下数据</text><path class="chain" d="M295 0H370"/><text x="383" y="6" class="status" style="fill:#fffaf0">用户签名交易</text><path class="event" d="M590 0H665"/><text x="678" y="6" class="status" style="fill:#fffaf0">异步事件 / 回调</text><path class="return" d="M925 0H1000"/><text x="1013" y="6" class="status" style="fill:#fffaf0">验证 / 读回</text><text x="1270" y="6" class="status" style="fill:#ffdda0">失败时：停止、回退或有界重试；从不伪造成功</text></g>
 </svg>

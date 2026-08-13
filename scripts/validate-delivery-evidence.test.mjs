@@ -80,6 +80,8 @@ const validAssetFacts = [
 				<text>代币购买随机与证书</text><text>CI/CD 安全可观测与清理</text>
 				<text>HTTPS</text><text>JSON-RPC</text><text>GraphQL</text><text>OIDC</text>
 				<text>已验证</text><text>已实现待验证</text><text>计划 / 延后</text>
+				<text>请求流</text><text>数据流</text><text>链上交易</text>
+				<text>异步事件</text><text>计划路径</text>
 			</svg>`,
 	},
 	{
@@ -95,6 +97,10 @@ const validAssetFacts = [
 				<text>完课与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>
 				<text>哈希冲突</text><text>VRF pending</text><text>allowance / receipt 失败</text>
 				<text>Relayer 重试</text><text>Graph 延迟</text>
+				<text>Worker verify</text><text>rejectTask</text>
+				<text>Coordinator 回调 Marketplace</text>
+				<text>Relayer → Marketplace.confirmCompletion</text>
+				<text>Marketplace → SBT.mintForPurchase</text><text>RPC 不一致</text>
 			</svg>`,
 	},
 ];
@@ -379,4 +385,9 @@ test("rejects a sequence image without all five business phases and bounded fail
 	assert.match(errors, /登录会话/);
 	assert.match(errors, /Uniswap 获得 BABY/);
 	assert.match(errors, /Relayer 重试/);
+	assert.match(errors, /Worker verify/);
+	assert.match(errors, /rejectTask/);
+	assert.match(errors, /Coordinator 回调 Marketplace/);
+	assert.match(errors, /Relayer → Marketplace\.confirmCompletion/);
+	assert.match(errors, /Marketplace → SBT\.mintForPurchase/);
 });

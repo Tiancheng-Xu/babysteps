@@ -99,8 +99,8 @@ export function EvidencePage() {
 							/>
 						</div>
 						<figcaption>
-							从登录与会话、Uniswap
-							获币、上架与审核、购买与结算，到完课与证书，形成五段可追踪业务闭环。
+							从登录与会话、<span>Uniswap 获币</span>
+							、上架与审核、购买与结算，到完课与证书，形成五段可追踪业务闭环。
 						</figcaption>
 					</figure>
 					<div className="evidence-diagram-walkthrough">
