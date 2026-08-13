@@ -31,3 +31,9 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.doesNotMatch(source, /^\s*(?:push|schedule):/m);
 	assert.doesNotMatch(source, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });
+
+test("the AWS workspace owns the cleaner bundler required by a clean CI install", async () => {
+	const packageJson = JSON.parse(await readFile("aws/package.json", "utf8"));
+	assert.equal(packageJson.devDependencies.esbuild, "0.28.1");
+	assert.match(packageJson.scripts["build:performance:cleaner"], /^esbuild /);
+});
