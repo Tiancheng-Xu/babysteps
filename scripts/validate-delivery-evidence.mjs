@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -11,11 +11,37 @@ const requiredHeaders = [
 ];
 const allowedStatuses = new Set(["complete", "partial", "pending", "blocked"]);
 const architectureSections = [
+	"系统上下文",
 	"运行时请求与数据流",
+	"链上与链下事实所有权",
+	"组件、职责、存储与外部服务",
 	"部署与 CI/CD",
 	"权限与安全边界",
+	"失败恢复与 Evidence",
+	"预览环境生命周期与清理",
 ];
 const architectureMarkers = ["现有", "计划", "待验证"];
+const architectureDiagramMarkers = ["flowchart", "sequenceDiagram"];
+const expectedDiagramAssets = [
+	{
+		kind: "global architecture image",
+		path: "docs/architecture/starbuddy-web3-global-architecture.svg",
+	},
+	{
+		kind: "business sequence image",
+		path: "docs/architecture/starbuddy-web3-business-sequence.svg",
+	},
+];
+const evidencePageMarkers = [
+	"全局架构图",
+	"核心业务时序图",
+	"看哪里",
+	"证明什么",
+	"查看全局架构原图",
+	"查看业务时序原图",
+	"BabySteps 全局架构图",
+	"BabySteps 核心业务时序图",
+];
 const workerEvidenceMarkers = [
 	"chainId:marketplaceAddress:taskId",
 	"nonce",
@@ -42,6 +68,8 @@ export function validateDeliveryEvidence(
 	mapText,
 	architectureText,
 	workerEvidenceText,
+	evidencePageText = "",
+	assetFacts = [],
 ) {
 	const errors = [];
 	const lines = mapText.split(/\r?\n/);
@@ -83,6 +111,11 @@ export function validateDeliveryEvidence(
 			errors.push(`architecture is missing status marker: ${marker}`);
 		}
 	}
+	for (const marker of architectureDiagramMarkers) {
+		if (!architectureText.includes(marker)) {
+			errors.push(`architecture is missing diagram syntax: ${marker}`);
+		}
+	}
 	if (
 		!["Worker/D1 本地已验证", "Worker/D1 公开 API 已验证"].some(
 			(marker) => architectureText.includes(marker),
@@ -100,7 +133,34 @@ export function validateDeliveryEvidence(
 		}
 	}
 
+	for (const marker of evidencePageMarkers) {
+		if (!evidencePageText.includes(marker)) {
+			errors.push(`Evidence page is missing marker: ${marker}`);
+		}
+	}
+	for (const asset of expectedDiagramAssets) {
+		if (!evidencePageText.includes(asset.path.split("/").at(-1))) {
+			errors.push(`Evidence page is missing ${asset.kind}`);
+		}
+		const fact = assetFacts.find((candidate) => candidate.path === asset.path);
+		if (!fact?.exists) {
+			errors.push(`${asset.kind} is missing: ${asset.path}`);
+		} else if (!(fact.bytes > 0)) {
+			errors.push(`${asset.kind} is empty: ${asset.path}`);
+		}
+	}
+
 	return errors;
+}
+
+async function readAssetFact(path) {
+	try {
+		const details = await stat(path);
+		return { path, exists: details.isFile(), bytes: details.size };
+	} catch (error) {
+		if (error?.code === "ENOENT") return { path, exists: false, bytes: 0 };
+		throw error;
+	}
 }
 
 async function main() {
@@ -110,15 +170,21 @@ async function main() {
 		process.argv[3] ?? "docs/architecture/starbuddy-web3-architecture.mmd";
 	const workerEvidencePath =
 		process.argv[4] ?? "docs/evidence/testing/2026-08-10-worker-d1.md";
-	const [mapText, architectureText, workerEvidenceText] = await Promise.all([
+	const evidencePagePath = process.argv[5] ?? "web/src/pages/EvidencePage.tsx";
+	const [mapText, architectureText, workerEvidenceText, evidencePageText, assetFacts] =
+		await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
 		readFile(workerEvidencePath, "utf8"),
+		readFile(evidencePagePath, "utf8"),
+		Promise.all(expectedDiagramAssets.map(({ path }) => readAssetFact(path))),
 	]);
 	const errors = validateDeliveryEvidence(
 		mapText,
 		architectureText,
 		workerEvidenceText,
+		evidencePageText,
+		assetFacts,
 	);
 	if (errors.length > 0) {
 		for (const error of errors) console.error(error);
