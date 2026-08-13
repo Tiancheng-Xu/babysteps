@@ -583,10 +583,9 @@ describe("OnchainNotebook", async () => {
 		await notebook.write.recordActivity([2], { account: author.account });
 
 		await viem.assertions.revertWithCustomErrorWithArgs(
-			notebook.write.spendTransferableBalance(
-				[author.account.address, 12n],
-				{ account: keepsakeConsumer.account },
-			),
+			notebook.write.spendTransferableBalance([author.account.address, 12n], {
+				account: keepsakeConsumer.account,
+			}),
 			notebook,
 			"UnauthorizedGrowthStarConsumer",
 			[keepsakeConsumer.account.address],
@@ -602,10 +601,9 @@ describe("OnchainNotebook", async () => {
 			[keepsakeConsumer.account.address, true],
 		);
 		await viem.assertions.emitWithArgs(
-			notebook.write.spendTransferableBalance(
-				[author.account.address, 12n],
-				{ account: keepsakeConsumer.account },
-			),
+			notebook.write.spendTransferableBalance([author.account.address, 12n], {
+				account: keepsakeConsumer.account,
+			}),
 			notebook,
 			"TransferableBalanceSpent",
 			[author.account.address, keepsakeConsumer.account.address, 12n, 2n],
@@ -658,10 +656,9 @@ describe("OnchainNotebook", async () => {
 		);
 
 		await viem.assertions.emitWithArgs(
-			notebook.write.refundTransferableBalance(
-				[author.account.address, 7n],
-				{ account: keepsakeConsumer.account },
-			),
+			notebook.write.refundTransferableBalance([author.account.address, 7n], {
+				account: keepsakeConsumer.account,
+			}),
 			notebook,
 			"TransferableBalanceRefunded",
 			[author.account.address, keepsakeConsumer.account.address, 7n, 7n],

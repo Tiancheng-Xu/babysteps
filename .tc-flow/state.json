@@ -10,9 +10,9 @@
   "worktreeDeviation": "User requested direct feature-branch work without an additional Codex worktree.",
   "tasks": {
     "T1": "completed",
-    "T2": "in_progress",
-    "T3": "pending",
-    "T4": "pending",
+    "T2": "completed",
+    "T3": "completed",
+    "T4": "in_progress",
     "T5": "pending"
   }
 }
