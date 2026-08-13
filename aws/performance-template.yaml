@@ -31,6 +31,7 @@ Resources:
     Type: AWS::SecretsManager::Secret
     DeletionPolicy: Delete
     Properties:
+      Name: !Sub babysteps-performance-db-${EnvironmentName}
       Description: !Sub Temporary BabySteps performance database identity ${EnvironmentName}
       GenerateSecretString:
         SecretStringTemplate: !Sub '{"host":"${SharedDatabaseHost}","port":5432,"username":"bs_perf_${EnvironmentName}","dbname":"${SharedDatabaseName}"}'
