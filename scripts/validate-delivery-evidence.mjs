@@ -25,6 +25,20 @@ const architectureMarkers = ["现有", "计划", "待验证"];
 const architectureDiagramMarkers = ["flowchart", "sequenceDiagram"];
 const expectedDiagramAssets = [
 	{
+		kind: "performance architecture image",
+		path: "docs/architecture/starbuddy-performance-global-architecture.svg",
+		minimumWidth: 2200,
+		minimumHeight: 1400,
+		markers: ["Browser SDK", "Cloudflare Worker", "Origin Token", "API Gateway", "SQS 主队列", "SQS DLQ", "一次性 ECS Fargate Cleaner", "共享 PostgreSQL", "p50 / p75 / p95", "GitHub Actions + OIDC", "项目栈自动清理", "本地已验证", "AWS 云端待验证"],
+	},
+	{
+		kind: "performance sequence image",
+		path: "docs/architecture/starbuddy-performance-pipeline-sequence.svg",
+		minimumWidth: 2200,
+		minimumHeight: 1400,
+		markers: ["01 采集", "02 批量上报", "03 异步入队", "04 ECS 清洗", "05 真实统计", "06 Evidence 与清理", "sendBeacon", "失败静默", "maxReceiveCount = 3", "幂等写入", "sampleCount", "DROP SCHEMA", "delete-stack"],
+	},
+	{
 		kind: "global architecture image",
 		path: "docs/architecture/starbuddy-web3-global-architecture.svg",
 		minimumWidth: 2200,
@@ -125,8 +139,33 @@ const expectedDiagramAssets = [
 		expectedBytes: 140715,
 		expectedSha256: "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe",
 	},
+	{
+		kind: "performance desktop screenshot",
+		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png",
+		minimumWidth: 0,
+		minimumHeight: 0,
+		markers: [],
+		expectedBytes: 95710,
+		expectedSha256: "54d204fe68e1de477c70bfcca0fb311954e4e186109abd2d9ef607e70359930b",
+	},
+	{
+		kind: "performance mobile screenshot",
+		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png",
+		minimumWidth: 0,
+		minimumHeight: 0,
+		markers: [],
+		expectedBytes: 66133,
+		expectedSha256: "47286d2140cb03a53d8ce4d4f01294b36f3af5c2bf9985a2d6210a70036e85a7",
+	},
 ];
 const evidencePageMarkers = [
+	"性能观测架构图",
+	"性能事件闭环时序图",
+	"浏览器 SDK → Worker → AWS",
+	"真实样本数与 p50 / p75 / p95",
+	"AWS 云端待验证",
+	"无演示数据兜底",
+	"该截图只证明本地 UI，不代表 AWS 已部署",
 	"全局架构图",
 	"核心业务时序图",
 	"看哪里",

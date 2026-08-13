@@ -1,0 +1,287 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: BabySteps temporary performance observability runtime
+
+Parameters:
+  EnvironmentName: { Type: String, Default: performance-preview }
+  ExpiresAt: { Type: String }
+  SharedVpcId: { Type: AWS::EC2::VPC::Id }
+  PrivateSubnetIds: { Type: List<AWS::EC2::Subnet::Id> }
+  SharedDatabaseSecurityGroupId: { Type: AWS::EC2::SecurityGroup::Id }
+  SharedDatabaseSecretArn: { Type: String }
+  SharedDatabaseHost: { Type: String }
+  SharedDatabaseName: { Type: String, Default: postgres }
+  OriginToken: { Type: String, NoEcho: true, MinLength: 32 }
+  CleanerImageTag: { Type: String, AllowedPattern: "^[a-f0-9]{7,40}$" }
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 20
+    Tags: &functionTags
+      Project: babysteps-performance
+      Environment: { Ref: EnvironmentName }
+      ManagedBy: cloudformation
+      ExpiresAt: { Ref: ExpiresAt }
+
+Resources:
+  ProjectDatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Description: !Sub Temporary BabySteps performance database identity ${EnvironmentName}
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"host":"${SharedDatabaseHost}","port":5432,"username":"bs_perf_${EnvironmentName}","dbname":"${SharedDatabaseName}"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+      Tags:
+        - { Key: Project, Value: babysteps-performance }
+        - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: ManagedBy, Value: cloudformation }
+        - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
+
+  PerformanceDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    Properties:
+      QueueName: !Sub babysteps-performance-dlq-${EnvironmentName}
+      MessageRetentionPeriod: 1209600
+      Tags: &resourceTags
+        - { Key: Project, Value: babysteps-performance }
+        - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: ManagedBy, Value: cloudformation }
+        - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
+
+  PerformanceQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    Properties:
+      QueueName: !Sub babysteps-performance-events-${EnvironmentName}
+      MessageRetentionPeriod: 86400
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt PerformanceDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      Tags: *resourceTags
+
+  CleanerRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Delete
+    Properties:
+      RepositoryName: !Sub babysteps-performance-cleaner-${EnvironmentName}
+      EmptyOnDelete: true
+      ImageScanningConfiguration: { ScanOnPush: true }
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep latest three","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":3},"action":{"type":"expire"}}]}'
+      Tags: *resourceTags
+
+  PerformanceCluster:
+    Type: AWS::ECS::Cluster
+    DeletionPolicy: Delete
+    Properties:
+      ClusterName: !Sub babysteps-performance-${EnvironmentName}
+      ClusterSettings: [{ Name: containerInsights, Value: disabled }]
+      Tags: *resourceTags
+
+  PerformanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /babysteps/performance/${EnvironmentName}
+      RetentionInDays: 7
+      Tags: *resourceTags
+
+  RuntimeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Delete
+    Properties:
+      GroupDescription: BabySteps performance runtime outbound boundary
+      VpcId: { Ref: SharedVpcId }
+      SecurityGroupEgress: [{ IpProtocol: "-1", CidrIp: 0.0.0.0/0 }]
+      Tags:
+        - { Key: Project, Value: babysteps-performance }
+        - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: ManagedBy, Value: cloudformation }
+        - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
+
+  SharedDatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DeletionPolicy: Delete
+    Properties:
+      GroupId: { Ref: SharedDatabaseSecurityGroupId }
+      SourceSecurityGroupId: { Ref: RuntimeSecurityGroup }
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      Description: Temporary BabySteps performance schema access
+
+  CleanerExecutionRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    Properties:
+      RoleName: !Sub babysteps-performance-execution-${EnvironmentName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy]
+      Tags: *resourceTags
+
+  CleanerTaskRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    Properties:
+      RoleName: !Sub babysteps-performance-task-${EnvironmentName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: exact-performance-runtime
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes], Resource: { Fn::GetAtt: [PerformanceQueue, Arn] } }
+              - { Effect: Allow, Action: secretsmanager:GetSecretValue, Resource: { Ref: ProjectDatabaseSecret } }
+      Tags: *resourceTags
+
+  DatabaseAdminTaskRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    Properties:
+      RoleName: !Sub babysteps-performance-db-admin-${EnvironmentName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: exact-performance-database-bootstrap
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: secretsmanager:GetSecretValue, Resource: [{ Ref: SharedDatabaseSecretArn }, { Ref: ProjectDatabaseSecret }] }
+      Tags: *resourceTags
+
+  QueryTaskRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    Properties:
+      RoleName: !Sub babysteps-performance-query-${EnvironmentName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: lambda.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole]
+      Policies:
+        - PolicyName: exact-performance-query-secret
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: [{ Effect: Allow, Action: secretsmanager:GetSecretValue, Resource: { Ref: ProjectDatabaseSecret } }]
+      Tags: *resourceTags
+
+  CleanerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DeletionPolicy: Delete
+    Properties:
+      Family: !Sub babysteps-performance-cleaner-${EnvironmentName}
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: { CpuArchitecture: ARM64, OperatingSystemFamily: LINUX }
+      ExecutionRoleArn: !GetAtt CleanerExecutionRole.Arn
+      TaskRoleArn: !GetAtt CleanerTaskRole.Arn
+      ContainerDefinitions:
+        - Name: cleaner
+          Essential: true
+          Image: !Sub ${CleanerRepository.RepositoryUri}:${CleanerImageTag}
+          Environment:
+            - { Name: QUEUE_URL, Value: { Ref: PerformanceQueue } }
+            - { Name: PROJECT_DATABASE_SECRET_ARN, Value: { Ref: ProjectDatabaseSecret } }
+            - { Name: NODE_EXTRA_CA_CERTS, Value: /app/certificates/us-east-1-bundle.pem }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: { Ref: PerformanceLogGroup }
+              awslogs-region: { Ref: AWS::Region }
+              awslogs-stream-prefix: cleaner
+      Tags: *resourceTags
+
+  DatabaseAdminTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DeletionPolicy: Delete
+    Properties:
+      Family: !Sub babysteps-performance-db-admin-${EnvironmentName}
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: { CpuArchitecture: ARM64, OperatingSystemFamily: LINUX }
+      ExecutionRoleArn: !GetAtt CleanerExecutionRole.Arn
+      TaskRoleArn: !GetAtt DatabaseAdminTaskRole.Arn
+      ContainerDefinitions:
+        - Name: cleaner
+          Essential: true
+          Image: !Sub ${CleanerRepository.RepositoryUri}:${CleanerImageTag}
+          Environment:
+            - { Name: QUEUE_URL, Value: { Ref: PerformanceQueue } }
+            - { Name: MASTER_DATABASE_SECRET_ARN, Value: { Ref: SharedDatabaseSecretArn } }
+            - { Name: PROJECT_DATABASE_SECRET_ARN, Value: { Ref: ProjectDatabaseSecret } }
+            - { Name: CLEANER_MODE, Value: initialize-schema }
+            - { Name: NODE_EXTRA_CA_CERTS, Value: /app/certificates/us-east-1-bundle.pem }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: { Ref: PerformanceLogGroup }
+              awslogs-region: { Ref: AWS::Region }
+              awslogs-stream-prefix: database-admin
+      Tags: *resourceTags
+
+  PerformanceApi:
+    Type: AWS::Serverless::HttpApi
+    DeletionPolicy: Delete
+    Properties:
+      StageName: $default
+      Tags: *functionTags
+
+  IngestFunction:
+    Type: AWS::Serverless::Function
+    DeletionPolicy: Delete
+    Properties:
+      FunctionName: !Sub babysteps-performance-ingest-${EnvironmentName}
+      CodeUri: .
+      Handler: src/performance/ingestLambda.handler
+      Environment:
+        Variables: { ORIGIN_TOKEN: { Ref: OriginToken }, QUEUE_URL: { Ref: PerformanceQueue } }
+      Policies:
+        - SQSSendMessagePolicy: { QueueName: { Fn::GetAtt: [PerformanceQueue, QueueName] } }
+      Events:
+        Ingest: { Type: HttpApi, Properties: { ApiId: { Ref: PerformanceApi }, Path: /events, Method: POST } }
+    Metadata: { BuildMethod: esbuild, BuildProperties: { EntryPoints: [src/performance/ingestLambda.ts], Minify: true, Target: es2022, Sourcemap: false } }
+
+  QueryFunction:
+    Type: AWS::Serverless::Function
+    DeletionPolicy: Delete
+    Properties:
+      FunctionName: !Sub babysteps-performance-query-${EnvironmentName}
+      CodeUri: .
+      Handler: src/performance/queryLambda.handler
+      Timeout: 30
+      Role: !GetAtt QueryTaskRole.Arn
+      VpcConfig: { SecurityGroupIds: [{ Ref: RuntimeSecurityGroup }], SubnetIds: { Ref: PrivateSubnetIds } }
+      Environment:
+        Variables:
+          PROJECT_DATABASE_SECRET_ARN: { Ref: ProjectDatabaseSecret }
+          ORIGIN_TOKEN: { Ref: OriginToken }
+          NODE_EXTRA_CA_CERTS: /var/runtime/ca-cert.pem
+      Events:
+        Query: { Type: HttpApi, Properties: { ApiId: { Ref: PerformanceApi }, Path: /stats, Method: GET } }
+    Metadata: { BuildMethod: esbuild, BuildProperties: { EntryPoints: [src/performance/queryLambda.ts], Minify: true, Target: es2022, Sourcemap: false } }
+
+Outputs:
+  ApiEndpoint: { Value: !Sub "https://${PerformanceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}" }
+  QueueUrl: { Value: { Ref: PerformanceQueue } }
+  ClusterArn: { Value: !GetAtt PerformanceCluster.Arn }
+  CleanerTaskDefinitionArn: { Value: { Ref: CleanerTaskDefinition } }
+  DatabaseAdminTaskDefinitionArn: { Value: { Ref: DatabaseAdminTaskDefinition } }
+  CleanerRepositoryUri: { Value: !GetAtt CleanerRepository.RepositoryUri }
+  RuntimeSecurityGroupId: { Value: { Ref: RuntimeSecurityGroup } }

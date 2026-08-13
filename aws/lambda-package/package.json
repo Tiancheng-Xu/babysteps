@@ -5,6 +5,7 @@
 	"dependencies": {
 		"@aws-sdk/client-kms": "3.1106.0",
 		"@aws-sdk/client-secrets-manager": "3.1106.0",
+		"@aws-sdk/client-sqs": "3.1106.0",
 		"esbuild": "0.28.1",
 		"pg": "8.23.0",
 		"viem": "2.55.10",

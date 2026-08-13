@@ -51,6 +51,10 @@ import globalArchitecture from "../../../docs/architecture/starbuddy-web3-global
 import businessSequence from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import keepsakeDesktop from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png";
 import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png";
+import performanceArchitecture from "../../../docs/architecture/starbuddy-performance-global-architecture.svg";
+import performanceSequence from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
+import performanceDesktop from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
+import performanceMobile from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
 <section aria-labelledby="global-architecture-title">
   <h2 id="global-architecture-title">全局架构图</h2>
   <a href={globalArchitecture}>查看全局架构原图</a>
@@ -66,6 +70,16 @@ import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-13-starbu
   <p><strong>证明什么</strong>：成功和失败路径均有边界。</p>
 </section>
 <section>
+  <h2>性能观测架构图</h2>
+  <img src={performanceArchitecture} alt="性能观测架构图" />
+  <h3>性能事件闭环时序图</h3>
+  <img src={performanceSequence} alt="性能事件闭环时序图" />
+  <img src={performanceDesktop} alt="性能统计页桌面端" />
+  <img src={performanceMobile} alt="性能统计页手机端" />
+  <p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · AWS 云端待验证</p>
+  <p>无演示数据兜底 · 该截图只证明本地 UI，不代表 AWS 已部署</p>
+</section>
+<section>
   <h2>StarBuddy 纪念卡抽取与融合</h2>
   <img src={keepsakeDesktop} alt="StarBuddy 纪念馆桌面端本地验证" />
   <img src={keepsakeMobile} alt="StarBuddy 纪念馆 390 像素移动端本地验证" />
@@ -74,6 +88,33 @@ import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-13-starbu
 `;
 
 const validAssetFacts = [
+	{
+		path: "docs/architecture/starbuddy-performance-global-architecture.svg",
+		exists: true,
+		bytes: 18000,
+		width: 2400,
+		height: 1600,
+		text: `<svg width="2400" height="1600">
+			<text>Browser SDK</text><text>Cloudflare Worker</text><text>Origin Token</text>
+			<text>API Gateway</text><text>SQS 主队列</text><text>SQS DLQ</text>
+			<text>一次性 ECS Fargate Cleaner</text><text>共享 PostgreSQL</text>
+			<text>p50 / p75 / p95</text><text>GitHub Actions + OIDC</text>
+			<text>项目栈自动清理</text><text>本地已验证</text><text>AWS 云端待验证</text>
+		</svg>`,
+	},
+	{
+		path: "docs/architecture/starbuddy-performance-pipeline-sequence.svg",
+		exists: true,
+		bytes: 16000,
+		width: 2400,
+		height: 1600,
+		text: `<svg width="2400" height="1600">
+			<text>01 采集</text><text>02 批量上报</text><text>03 异步入队</text>
+			<text>04 ECS 清洗</text><text>05 真实统计</text><text>06 Evidence 与清理</text>
+			<text>sendBeacon</text><text>失败静默</text><text>maxReceiveCount = 3</text>
+			<text>幂等写入</text><text>sampleCount</text><text>DROP SCHEMA</text><text>delete-stack</text>
+		</svg>`,
+	},
 	{
 		path: "docs/architecture/starbuddy-web3-global-architecture.svg",
 		exists: true,
@@ -144,6 +185,24 @@ const validAssetFacts = [
 		height: 0,
 		text: "",
 		sha256: "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png",
+		exists: true,
+		bytes: 95710,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "54d204fe68e1de477c70bfcca0fb311954e4e186109abd2d9ef607e70359930b",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png",
+		exists: true,
+		bytes: 66133,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "47286d2140cb03a53d8ce4d4f01294b36f3af5c2bf9985a2d6210a70036e85a7",
 	},
 ];
 
@@ -351,10 +410,15 @@ test("rejects missing or empty public diagram assets", () => {
 			"`complete`",
 		],
 	]);
-	const invalidAssets = [
-		{ ...validAssetFacts[0], exists: false, bytes: 0 },
-		{ ...validAssetFacts[1], bytes: 0 },
-	];
+	const invalidAssets = validAssetFacts.map((asset) => {
+		if (asset.path.endsWith("starbuddy-web3-global-architecture.svg")) {
+			return { ...asset, exists: false, bytes: 0 };
+		}
+		if (asset.path.endsWith("starbuddy-web3-business-sequence.svg")) {
+			return { ...asset, bytes: 0 };
+		}
+		return asset;
+	});
 
 	const errors = validate(
 		validMap,
@@ -377,15 +441,16 @@ test("rejects a compact global image without expanded responsibility and protoco
 			"`complete`",
 		],
 	]);
-	const compactAssets = [
-		{
-			...validAssetFacts[0],
-			width: 1600,
-			height: 1000,
-			text: "<svg><text>Cloudflare</text><text>Ethereum Sepolia</text></svg>",
-		},
-		validAssetFacts[1],
-	];
+	const compactAssets = validAssetFacts.map((asset) =>
+		asset.path.endsWith("starbuddy-web3-global-architecture.svg")
+			? {
+					...asset,
+					width: 1600,
+					height: 1000,
+					text: "<svg><text>Cloudflare</text><text>Ethereum Sepolia</text></svg>",
+				}
+			: asset,
+	);
 
 	const errors = validate(
 		validMap,
@@ -409,13 +474,14 @@ test("rejects a sequence image without all six business phases and bounded failu
 			"`complete`",
 		],
 	]);
-	const incompleteAssets = [
-		validAssetFacts[0],
-		{
-			...validAssetFacts[1],
-			text: "<svg><text>家长购买结算</text><text>完课与证书</text></svg>",
-		},
-	];
+	const incompleteAssets = validAssetFacts.map((asset) =>
+		asset.path.endsWith("starbuddy-web3-business-sequence.svg")
+			? {
+					...asset,
+					text: "<svg><text>家长购买结算</text><text>完课与证书</text></svg>",
+				}
+			: asset,
+	);
 
 	const errors = validate(
 		validMap,
@@ -436,7 +502,13 @@ test("rejects a sequence image without all six business phases and bounded failu
 
 test("rejects Evidence that omits the locally verified keepsake flow or screenshots", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["纪念卡", "抽卡融合", "`contracts/StarBuddy.sol`", "本地测试", "`partial`"],
+		[
+			"纪念卡",
+			"抽卡融合",
+			"`contracts/StarBuddy.sol`",
+			"本地测试",
+			"`partial`",
+		],
 	]);
 	const withoutKeepsakes = validEvidencePage
 		.replaceAll("StarBuddy 纪念卡抽取与融合", "普通展示")
@@ -458,7 +530,13 @@ test("rejects Evidence that omits the locally verified keepsake flow or screensh
 
 test("rejects a screenshot whose recorded proof hash no longer matches", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["纪念卡", "抽卡融合", "`contracts/StarBuddy.sol`", "本地测试", "`partial`"],
+		[
+			"纪念卡",
+			"抽卡融合",
+			"`contracts/StarBuddy.sol`",
+			"本地测试",
+			"`partial`",
+		],
 	]);
 	const changedAssets = validAssetFacts.map((asset) =>
 		asset.path.endsWith("keepsake-gallery-desktop.png")

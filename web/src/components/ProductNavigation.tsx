@@ -6,6 +6,7 @@ export type ProductView =
 	| "provider"
 	| "exchange"
 	| "profile"
+	| "performance"
 	| "evidence";
 
 const NAVIGATION_ITEMS: Array<{ id: ProductView; label: string }> = [
@@ -16,6 +17,7 @@ const NAVIGATION_ITEMS: Array<{ id: ProductView; label: string }> = [
 	{ id: "provider", label: "Provider 控制台" },
 	{ id: "exchange", label: "兑换" },
 	{ id: "profile", label: "个人中心" },
+	{ id: "performance", label: "性能观测" },
 	{ id: "evidence", label: "工作证据" },
 ];
 

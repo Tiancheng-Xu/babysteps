@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CourseEvidenceFooter } from "./components/CourseEvidenceFooter";
 import { Hero } from "./components/Hero";
@@ -16,6 +16,7 @@ import { EvidencePage } from "./pages/EvidencePage";
 import { ExchangePage } from "./pages/ExchangePage";
 import { GrowthMarketplacePage } from "./pages/GrowthMarketplacePage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
+import { PerformanceDashboardPage } from "./pages/PerformanceDashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ProviderConsolePage } from "./pages/ProviderConsolePage";
 
@@ -34,6 +35,9 @@ function HomeView() {
 
 export default function App() {
 	const [currentView, setCurrentView] = useState<ProductView>("home");
+	useEffect(() => {
+		document.documentElement.dataset.currentView = currentView;
+	}, [currentView]);
 
 	return (
 		<main className="page-shell">
@@ -48,6 +52,7 @@ export default function App() {
 			{currentView === "provider" ? <ProviderConsolePage /> : null}
 			{currentView === "exchange" ? <ExchangePage /> : null}
 			{currentView === "profile" ? <ProfilePage /> : null}
+			{currentView === "performance" ? <PerformanceDashboardPage /> : null}
 			{currentView === "evidence" ? <EvidencePage /> : null}
 			<CourseEvidenceFooter currentView={currentView} />
 		</main>

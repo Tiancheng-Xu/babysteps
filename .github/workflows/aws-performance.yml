@@ -1,0 +1,206 @@
+name: BabySteps AWS Performance Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_cloud_validation:
+        description: Create the temporary pipeline, prove one real event, then clean it up
+        required: true
+        default: false
+        type: boolean
+      approval_reference:
+        description: Human approval reference for this temporary paid run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: babysteps-performance-evidence
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.17.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @babysteps/aws test
+      - run: pnpm --filter @babysteps/aws typecheck
+      - run: sam validate --lint --region us-east-1 --template-file aws/performance-template.yaml
+      - name: aws-budget-guard
+        run: pnpm validate:performance-budget
+      - run: pnpm validate:performance-pipeline
+
+  prove-and-clean:
+    if: github.ref == 'refs/heads/main' && inputs.run_cloud_validation == true
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: aws-performance
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      STACK_NAME: babysteps-performance-${{ github.run_id }}
+      ENVIRONMENT_NAME: e${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.17.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Open ephemeral origin boundary
+        run: |
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "ORIGIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "EXPIRES_AT=$(date -u -v+4H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+4 hours' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+      - name: Validate budget and source
+        run: |
+          pnpm --filter @babysteps/aws test
+          pnpm --filter @babysteps/aws typecheck
+          pnpm validate:performance-budget
+      - name: Verify protected shared foundation is ready
+        run: |
+          test "$(aws ec2 describe-nat-gateways --nat-gateway-ids '${{ vars.AWS_SHARED_NAT_GATEWAY_ID }}' --query 'NatGateways[0].State' --output text)" = "available"
+          test "$(aws rds describe-db-instances --db-instance-identifier '${{ vars.AWS_SHARED_DATABASE_INSTANCE_ID }}' --query 'DBInstances[0].DBInstanceStatus' --output text)" = "available"
+          aws secretsmanager describe-secret --secret-id '${{ vars.AWS_SHARED_DATABASE_SECRET_ARN }}' >/dev/null
+          echo "SHARED_DATABASE_HOST=$(aws rds describe-db-instances --db-instance-identifier '${{ vars.AWS_SHARED_DATABASE_INSTANCE_ID }}' --query 'DBInstances[0].Endpoint.Address' --output text)" >> "$GITHUB_ENV"
+          database_name="$(aws rds describe-db-instances --db-instance-identifier '${{ vars.AWS_SHARED_DATABASE_INSTANCE_ID }}' --query 'DBInstances[0].DBName' --output text)"
+          test "$database_name" != "None" || database_name=postgres
+          echo "SHARED_DATABASE_NAME=$database_name" >> "$GITHUB_ENV"
+      - name: Build Lambda and cleaner artifacts
+        run: |
+          pnpm --filter @babysteps/aws build:performance:sam
+          pnpm --filter @babysteps/aws build:performance:cleaner
+          cp -R aws/migrations aws/dist/performance/migrations
+      - name: Deploy temporary project stack
+        id: deploy
+        run: |
+          sam deploy --region "$AWS_REGION" --template-file aws/dist/performance-sam/template.yaml \
+            --stack-name "$STACK_NAME" --role-arn "${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}" \
+            --s3-bucket "${{ vars.AWS_SHARED_ARTIFACT_BUCKET }}" --capabilities CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset --no-fail-on-empty-changeset \
+            --parameter-overrides EnvironmentName="$ENVIRONMENT_NAME" ExpiresAt="$EXPIRES_AT" \
+            SharedVpcId="${{ vars.AWS_SHARED_VPC_ID }}" PrivateSubnetIds="${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}" \
+            SharedDatabaseSecurityGroupId="${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}" \
+            SharedDatabaseSecretArn="${{ vars.AWS_SHARED_DATABASE_SECRET_ARN }}" \
+            SharedDatabaseHost="$SHARED_DATABASE_HOST" SharedDatabaseName="$SHARED_DATABASE_NAME" \
+            OriginToken="$ORIGIN_TOKEN" CleanerImageTag="${GITHUB_SHA}"
+      - name: Build and push immutable cleaner image
+        run: |
+          repository="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerRepositoryUri'].OutputValue" --output text)"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "${repository%%/*}"
+          docker buildx build --platform linux/arm64 --provenance=false --push -t "$repository:$GITHUB_SHA" -f aws/performance.Dockerfile .
+      - name: Initialize exact project database schema
+        id: database-init
+        run: |
+          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
+          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+          echo "task=$task" >> "$GITHUB_OUTPUT"
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+          test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"
+      - name: Start temporary Worker proxy
+        id: worker-proxy
+        run: |
+          api="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)"
+          state_dir="$RUNNER_TEMP/babysteps-worker-state"
+          env_file="$RUNNER_TEMP/babysteps-performance.dev.vars"
+          mkdir -p evidence "$state_dir"
+          umask 077
+          printf 'PERFORMANCE_API_URL=%s\nPERFORMANCE_ORIGIN_TOKEN=%s\n' "$api" "$ORIGIN_TOKEN" > "$env_file"
+          pnpm --filter @babysteps/worker exec wrangler d1 migrations apply DB --local --persist-to "$state_dir"
+          RUNNER_TRACKING_ID='' nohup pnpm --filter @babysteps/worker exec wrangler dev --local \
+            --ip 127.0.0.1 --port 8788 --persist-to "$state_dir" --env-file "$env_file" \
+            --show-interactive-dev-session=false > "$RUNNER_TEMP/worker-proxy.log" 2>&1 &
+          worker_pid=$!
+          echo "pid=$worker_pid" >> "$GITHUB_OUTPUT"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8788/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          tail -n 40 "$RUNNER_TEMP/worker-proxy.log"
+          exit 1
+      - name: Submit one controlled browser-shaped batch
+        run: |
+          node -e 'const fs=require("fs");fs.writeFileSync("event.json",JSON.stringify({schemaVersion:1,sentAt:Date.now(),events:[{eventId:crypto.randomUUID(),timestamp:Date.now(),type:"metric",name:"LCP",value:321,unit:"ms",route:"/performance",environment:"evidence",version:process.env.GITHUB_SHA.slice(0,12)}]}))'
+          curl --fail-with-body -sS -H "content-type: application/json" -H "origin: https://babysteps.baby2b.online" \
+            --data @event.json http://127.0.0.1:8788/api/performance/events | tee ingest-response.json
+          node -e 'const request=require("./event.json");const response=require("./ingest-response.json");if(response.eventIds?.[0]!==request.events[0].eventId)process.exit(1)'
+      - name: Run one on-demand ECS cleaning task
+        id: cleaner
+        run: |
+          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerTaskDefinitionArn'].OutputValue" --output text)"
+          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+          echo "task=$task" >> "$GITHUB_OUTPUT"
+          echo "cluster=$cluster" >> "$GITHUB_OUTPUT"
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+          exit_code="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)"
+          test "$exit_code" = "0"
+      - name: Query and verify real aggregate
+        run: |
+          curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&metric=LCP&environment=evidence&version=${GITHUB_SHA:0:12}" | tee performance-stats.json
+          node -e 'const s=require("./performance-stats.json");if(s.sampleCount!==1||s.p50!==321||s.p75!==321||s.p95!==321)process.exit(1)'
+      - name: Capture sanitized cloud evidence
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp event.json ingest-response.json performance-stats.json evidence/ 2>/dev/null || true
+          aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --query 'StackResources[].{type:ResourceType,status:ResourceStatus,logicalId:LogicalResourceId}' > evidence/resources.json 2>/dev/null || true
+          aws ecs describe-tasks --cluster "${{ steps.cleaner.outputs.cluster }}" --tasks "${{ steps.cleaner.outputs.task }}" --query 'tasks[0].{lastStatus:lastStatus,stopCode:stopCode,containers:containers[].{name:name,exitCode:exitCode}}' > evidence/cleaner-task.json 2>/dev/null || true
+          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.writeFileSync("evidence/run.json",JSON.stringify({commit:process.env.GITHUB_SHA,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex"),region:process.env.AWS_REGION,stack:process.env.STACK_NAME},null,2))'
+      - name: Stop temporary Worker proxy
+        if: always() && steps.worker-proxy.outputs.pid != ''
+        run: kill "${{ steps.worker-proxy.outputs.pid }}" 2>/dev/null || true
+      - name: DROP SCHEMA using exact schema-cleanup task
+        id: schema-cleanup
+        if: always() && steps.database-init.outputs.task != ''
+        run: |
+          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
+          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          for attempt in 1 2 3; do
+            cleanup_task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --overrides '{"containerOverrides":[{"name":"cleaner","environment":[{"name":"CLEANER_MODE","value":"cleanup-schema"}]}]}' --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+            aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$cleanup_task"
+            if test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$cleanup_task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"; then
+              printf '{"schemaDeleted":true,"attempt":%s}\n' "$attempt" > evidence/schema-cleanup.json
+              exit 0
+            fi
+          done
+          printf '{"schemaDeleted":false,"attempts":3}\n' > evidence/schema-cleanup.json
+          exit 1
+      - name: Delete exact project stack
+        id: delete-stack
+        if: always() && (steps.database-init.outputs.task == '' || steps.schema-cleanup.outcome == 'success')
+        run: |
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME" --role-arn "${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
+          test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$ENVIRONMENT_NAME')] | length(@)" --output text)" = "0"
+          printf '{"projectStackDeleted":true,"remainingProjectClusters":0,"sharedFoundationProtected":true}\n' > evidence/cleanup.json
+      - name: Record incomplete cleanup without claiming success
+        if: always() && steps.delete-stack.outcome != 'success'
+        run: printf '{"projectStackDeleted":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: babysteps-performance-evidence-${{ github.run_id }}, path: evidence, retention-days: 14 }

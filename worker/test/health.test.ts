@@ -6,6 +6,7 @@ const expectedTables = [
 	"audit_logs",
 	"auth_challenges",
 	"comments",
+	"performance_rate_limits",
 	"profiles",
 	"published_tasks",
 	"sessions",

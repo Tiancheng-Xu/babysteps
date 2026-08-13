@@ -413,8 +413,8 @@ describe("BabySteps App", () => {
 		).toBeTruthy();
 		expect(screen.getByRole("link", { name: "查看全局架构原图" })).toBeTruthy();
 		expect(screen.getByRole("link", { name: "查看业务时序原图" })).toBeTruthy();
-		expect(screen.getAllByText("看哪里")).toHaveLength(2);
-		expect(screen.getAllByText("证明什么")).toHaveLength(2);
+		expect(screen.getAllByText("看哪里")).toHaveLength(4);
+		expect(screen.getAllByText("证明什么")).toHaveLength(4);
 		expect(screen.getByText("六列 × 四带 × 七条编号流")).toBeTruthy();
 		expect(
 			screen.getByText(/六列责任边界.*四条数据带.*七条编号流/u),

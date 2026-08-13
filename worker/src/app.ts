@@ -6,6 +6,10 @@ import { createViemMarketplaceReader } from "./chain/viemMarketplaceReader";
 import { readConfig } from "./config";
 import { AppError } from "./http/errors";
 import { errorEnvelope } from "./http/respond";
+import {
+	createPerformanceRoutes,
+	type PerformanceFetch,
+} from "./performanceProxy";
 import { authRoutes } from "./routes/auth";
 import {
 	createCommentRoutes,
@@ -17,6 +21,7 @@ import { createTaskRoutes } from "./routes/tasks";
 export type AppDependencies = {
 	marketplaceReaderFactory?: MarketplaceReaderFactory;
 	ownerWalletFactory?: OwnerWalletFactory;
+	performanceFetch?: PerformanceFetch;
 };
 
 export function createApp(_dependencies: AppDependencies = {}) {
@@ -80,6 +85,10 @@ export function createApp(_dependencies: AppDependencies = {}) {
 
 	application.route("/api/auth", authRoutes);
 	application.route("/api/profile", profileRoutes);
+	application.route(
+		"/api/performance",
+		createPerformanceRoutes(_dependencies.performanceFetch),
+	);
 	application.route("/api", createTaskRoutes(marketplaceReaderFactory));
 	application.route(
 		"/api",

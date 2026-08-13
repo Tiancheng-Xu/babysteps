@@ -1,5 +1,9 @@
+import performanceArchitectureImage from "../../../docs/architecture/starbuddy-performance-global-architecture.svg";
+import performanceSequenceImage from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
+import performanceDashboardDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
+import performanceDashboardMobileImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png";
 
@@ -138,6 +142,149 @@ export function EvidencePage() {
 						查看业务时序原图
 					</a>
 				</article>
+			</section>
+
+			<section
+				className="evidence-feature-proof"
+				aria-labelledby="performance-proof-title"
+			>
+				<header className="evidence-feature-proof__header">
+					<div>
+						<p className="section-kicker">
+							ASSIGNMENT 8 · OBSERVABILITY PIPELINE
+						</p>
+						<h2 id="performance-proof-title">性能观测架构图</h2>
+					</div>
+					<span className="evidence-diagram-card__status">AWS 云端待验证</span>
+				</header>
+				<p className="evidence-feature-proof__lead">
+					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
+					清洗、共享数据库和真实统计拆成独立信任边界；本地代码、测试、SAM 与预算
+					Gate 已通过，云端资源和清理证据必须由 Actions 实际运行后补齐。
+				</p>
+				<div className="evidence-diagrams evidence-diagrams--performance">
+					<article className="evidence-diagram-card">
+						<header className="evidence-diagram-card__header">
+							<div>
+								<p className="section-kicker">SYSTEM + DATA + TRUST</p>
+								<h3>性能观测架构图</h3>
+							</div>
+							<span className="evidence-diagram-card__status">
+								六层责任边界
+							</span>
+						</header>
+						<figure className="architecture-figure">
+							<div className="evidence-diagram-frame">
+								<img
+									src={performanceArchitectureImage}
+									alt="BabySteps 性能观测完整架构图"
+									width="2400"
+									height="1600"
+									loading="lazy"
+									decoding="async"
+								/>
+							</div>
+							<figcaption>
+								浏览器、Cloudflare、AWS 接收与清洗、共享
+								PostgreSQL、真实查询、OIDC 发布和项目级清理都在同一张图中。
+							</figcaption>
+						</figure>
+						<div className="evidence-diagram-walkthrough">
+							<p>
+								<strong>看哪里</strong>先看三条虚线信任边界，再沿 1–5
+								编号箭头追踪数据；底部深色栏写清失败、DLQ、项目清理和受保护共享资源。
+							</p>
+							<p>
+								<strong>证明什么</strong>浏览器没有 AWS 凭据或 Origin Token；ECS
+								无常驻 Service；共享 VPC/NAT/RDS 不进入项目 cleanup。
+							</p>
+						</div>
+						<a
+							className="evidence-diagram-link"
+							href={performanceArchitectureImage}
+							target="_blank"
+							rel="noreferrer"
+						>
+							查看性能架构原图
+						</a>
+					</article>
+					<article className="evidence-diagram-card">
+						<header className="evidence-diagram-card__header">
+							<div>
+								<p className="section-kicker">EVENT LIFECYCLE</p>
+								<h3>性能事件闭环时序图</h3>
+							</div>
+							<span className="evidence-diagram-card__status">六阶段闭环</span>
+						</header>
+						<figure className="architecture-figure">
+							<div className="evidence-diagram-frame">
+								<img
+									src={performanceSequenceImage}
+									alt="BabySteps 性能事件闭环时序图"
+									width="2400"
+									height="1600"
+									loading="lazy"
+									decoding="async"
+								/>
+							</div>
+							<figcaption>
+								从采集和 sendBeacon，到 SQS 有界重试、ECS
+								幂等清洗、真实样本统计，再到 Evidence 与资源清理。
+							</figcaption>
+						</figure>
+						<div className="evidence-diagram-walkthrough">
+							<p>
+								<strong>看哪里</strong>从 01 到 06 顺序读；重点看 202
+								只在入队后返回、maxReceiveCount=3、幂等写入和最后的 DROP SCHEMA
+								→ delete-stack。
+							</p>
+							<p>
+								<strong>证明什么</strong>
+								{
+									"Dashboard 展示真实样本数与 p50 / p75 / p95，不平均 percentile，也不在链路故障时使用演示数据。"
+								}
+							</p>
+						</div>
+						<a
+							className="evidence-diagram-link"
+							href={performanceSequenceImage}
+							target="_blank"
+							rel="noreferrer"
+						>
+							查看性能时序原图
+						</a>
+					</article>
+				</div>
+				<div className="evidence-proof-gallery">
+					<figure>
+						<img
+							src={performanceDashboardDesktopImage}
+							alt="BabySteps 性能统计页桌面端本地响应式验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里：</strong>
+							时间、页面、指标、环境、版本五个筛选，以及“无演示数据兜底”。
+							<br />
+							<strong>证明什么：</strong>
+							桌面端会诚实展示上游不可用，不使用伪造曲线或 Mock 统计。
+						</figcaption>
+					</figure>
+					<figure>
+						<img
+							src={performanceDashboardMobileImage}
+							alt="BabySteps 性能统计页 390 像素手机端本地响应式验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里：</strong>390px
+							视口内筛选器与状态提示保持单列可读。
+							<br />
+							<strong>证明什么：</strong>
+							手机端没有根级横向溢出；该截图只证明本地 UI，不代表 AWS 已部署。
+						</figcaption>
+					</figure>
+				</div>
 			</section>
 
 			<section

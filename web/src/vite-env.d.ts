@@ -10,6 +10,7 @@ interface ImportMetaEnv {
 	readonly VITE_TASK_MARKETPLACE_V2_ADDRESS?: string;
 	readonly VITE_PRIVY_APP_ID?: string;
 	readonly VITE_BABYSTEPS_API_URL?: string;
+	readonly VITE_PERFORMANCE_EVIDENCE_FIXTURE?: string;
 }
 
 interface ImportMeta {
