@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runId": "d91f8a58-65df-4bb4-92f9-fcfb2b9a4013",
+  "feature": "starbuddy-keepsakes",
+  "contractHash": "7b99929c46cba4df2534ae5710377d53e95f181584fd088b8fd8fb63d25e80d4",
+  "node": "N3",
+  "strategy": "inline",
+  "difficulty": "high",
+  "workspace": "/Users/shier/Desktop/babysteps",
+  "worktreeDeviation": "User requested direct feature-branch work without an additional Codex worktree.",
+  "tasks": {
+    "T1": "completed",
+    "T2": "in_progress",
+    "T3": "pending",
+    "T4": "pending",
+    "T5": "pending"
+  }
+}

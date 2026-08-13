@@ -5,7 +5,7 @@ import { zeroAddress } from "viem";
 
 describe("OnchainNotebook", async () => {
 	const { viem, networkHelpers } = await network.create();
-	const [author, reader] = await viem.getWalletClients();
+	const [author, reader, keepsakeConsumer] = await viem.getWalletClients();
 
 	it("starts empty and isolates notes by wallet", async () => {
 		const notebook = await viem.deployContract("OnchainNotebook");
@@ -572,6 +572,108 @@ describe("OnchainNotebook", async () => {
 		assert.equal(
 			await notebook.read.getTransferableBalance([reader.account.address]),
 			2n,
+		);
+	});
+
+	it("allows only an authorized consumer to debit transferable stars", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([2], { account: author.account });
+		const recordedAt = Number(await networkHelpers.time.latest());
+		await networkHelpers.time.setNextBlockTimestamp(recordedAt + 6 * 60 * 60);
+		await notebook.write.recordActivity([2], { account: author.account });
+
+		await viem.assertions.revertWithCustomErrorWithArgs(
+			notebook.write.spendTransferableBalance(
+				[author.account.address, 12n],
+				{ account: keepsakeConsumer.account },
+			),
+			notebook,
+			"UnauthorizedGrowthStarConsumer",
+			[keepsakeConsumer.account.address],
+		);
+
+		await viem.assertions.emitWithArgs(
+			notebook.write.setGrowthStarConsumer(
+				[keepsakeConsumer.account.address, true],
+				{ account: author.account },
+			),
+			notebook,
+			"GrowthStarConsumerUpdated",
+			[keepsakeConsumer.account.address, true],
+		);
+		await viem.assertions.emitWithArgs(
+			notebook.write.spendTransferableBalance(
+				[author.account.address, 12n],
+				{ account: keepsakeConsumer.account },
+			),
+			notebook,
+			"TransferableBalanceSpent",
+			[author.account.address, keepsakeConsumer.account.address, 12n, 2n],
+		);
+
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			2n,
+		);
+		assert.equal(
+			await notebook.read.getGrowthPoints([author.account.address]),
+			14n,
+		);
+		assert.equal(
+			await notebook.read.getGrowthStage([author.account.address]),
+			2,
+		);
+	});
+
+	it("prevents wallets other than the deployer from authorizing consumers", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+
+		await viem.assertions.revertWithCustomErrorWithArgs(
+			notebook.write.setGrowthStarConsumer(
+				[keepsakeConsumer.account.address, true],
+				{ account: reader.account },
+			),
+			notebook,
+			"UnauthorizedNotebookAdmin",
+			[reader.account.address],
+		);
+		assert.equal(
+			await notebook.read.growthStarConsumers([
+				keepsakeConsumer.account.address,
+			]),
+			false,
+		);
+	});
+
+	it("refunds transferable stars without changing lifetime growth", async () => {
+		const notebook = await viem.deployContract("OnchainNotebook");
+		await notebook.write.recordActivity([2], { account: author.account });
+		await notebook.write.setGrowthStarConsumer(
+			[keepsakeConsumer.account.address, true],
+			{ account: author.account },
+		);
+		await notebook.write.spendTransferableBalance(
+			[author.account.address, 7n],
+			{ account: keepsakeConsumer.account },
+		);
+
+		await viem.assertions.emitWithArgs(
+			notebook.write.refundTransferableBalance(
+				[author.account.address, 7n],
+				{ account: keepsakeConsumer.account },
+			),
+			notebook,
+			"TransferableBalanceRefunded",
+			[author.account.address, keepsakeConsumer.account.address, 7n, 7n],
+		);
+
+		assert.equal(
+			await notebook.read.getTransferableBalance([author.account.address]),
+			7n,
+		);
+		assert.equal(
+			await notebook.read.getGrowthPoints([author.account.address]),
+			7n,
 		);
 	});
 });
