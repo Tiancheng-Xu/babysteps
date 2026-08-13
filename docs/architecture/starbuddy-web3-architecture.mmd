@@ -1,6 +1,8 @@
 # StarBuddy BabySteps Web3 architecture
 
-架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。参考 作业参考清单、公开同学项目 `Chi111/web3-university` 以及学习资料中的 Worker/Lambda 和 AWS 部署架构图；吸收链上/链下分层、证据门禁和私网部署思想，不复制 MockUSDC、明文 Worker 私钥或与作业无关的服务。
+架构源使用 StarBuddy 的奶油纸张、杏色、鼠尾草绿和星空蓝主题。参考作业参考清单、公开同学项目 `Chi111/web3-university`、`yue3694/x-web3` 以及学习资料中的 Worker/Lambda 和 AWS 部署架构图；吸收链上/链下分层、全局架构与业务时序分图、环境化 RPC、移动钱包兼容、证据门禁和私网部署思想，不复制 Foundry、固定 Sale、EC2 单机数据栈、MockUSDC、明文 Worker 私钥或与当前实现不符的服务。
+
+`x-web3` 的 `ChainlinkPriceOracle` 只提供 ETH/USD 参考价与新鲜度校验，项目 README 也明确它不决定 Swap 执行汇率。BabySteps 当前 Chainlink 集成是 VRF v2.5 随机数，不是价格预言机；BABY 兑换使用 Uniswap v3 Quoter/Router 的池内报价。因此架构图不会把 VRF 错标为价格 Oracle，也不会把外部参考价写成结算真相。
 
 状态含义：
 
@@ -217,6 +219,12 @@ flowchart LR
 
 安全约束：Worker 只能通过 D1 binding 访问数据库，不调用 Cloudflare 管理 REST API；请求级状态不得保存在模块全局变量；nonce 和会话令牌只保存 SHA-256 哈希；评论写入前重新读取链上 `purchaseIdForBuyer`。AWS 可暂停 Stack 已真实验证没有 IGW/NAT/公网 IP，RDS 无 ingress 且为 stopped；EC2 仍保留默认 SG egress，但路由表只有 local，因此当前没有实际公网出口，未来新增连接前必须收紧。密码由 CodeBuild 运行时生成并通过 CloudFormation `NoEcho` 参数传递；自动停库 Lambda 只能描述并停止目标 DB。GitHub OIDC 与角色已建，main Actions 触发仍待验证；执行角色无 NAT/EIP/KMS/Secrets/API Gateway 创建权限。完整 Worker→Lambda HMAC、KMS EIP-1559 signer 与 RDS 幂等代码仍保留为后续参考，但当前流水线不能部署。
 
+## 预览环境生命周期与清理
+
+Cloudflare Pages 的 feature/PR 构建只能作为预览，必须在合并前验证非空产物、deployment-specific URL、canonical pages.dev alias、自定义域名、TLS 和产品深链。PR 关闭后，清理逻辑只能按该 PR 的 `preview_id` 处理临时别名或临时资源；不能删除 Pages 正式项目、共享域名、共享 GitHub OIDC、共享 artifact bucket、BabySteps VPC 或 RDS。
+
+AWS 当前没有自动创建每 PR 重资源。可暂停 Stack 仅能通过人工批准的 `workflow_dispatch` 和费用 Gate 启动；RDS 由 EventBridge 自动停止，但存储仍会计费。最终删除 Stack 属于破坏性操作，必须重新只读盘点账号、Region、Stack 和受保护共享资源后获得明确授权。任何清理失败都应停止并记录，而不是扩大删除范围。
+
 ## 失败恢复与 Evidence
 
 ```mermaid
@@ -235,6 +243,6 @@ flowchart LR
 
 ## 当前图像证据
 
-`docs/architecture/starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 保留 StarBuddy 四阶段主题和产品业务视图；本 Mermaid 是包含当前部署状态、AWS 可暂停阶段、CI/CD、安全与清理边界的工程真相源。PNG 中未展示的 AWS 细节不得代替本 Mermaid 的验收状态。
+公开 Evidence 当前使用 `starbuddy-web3-global-architecture.svg` 与 `starbuddy-web3-business-sequence.svg`：前者展示运行、数据、Sepolia、交付/AWS 与失败清理边界，后者展示 Provider 请求、Owner 审核、VRF、精确授权购买、完成、SBT 和独立读回。`starbuddy-web3-architecture.png` 与 `starbuddy-web3-architecture-v2.png` 仅保留为早期 StarBuddy 产品视图，不再代表当前工程状态。本 Mermaid 仍是包含当前部署状态、CI/CD、安全与清理边界的工程真相源；任何图片不得覆盖这里的真实状态。
 
 V2 合约与完整 Sepolia 业务闭环记录在 `docs/evidence/deployment/2026-08-11-sepolia-v2-business.json`；Worker V2、自定义域名、D1、HTTP/TLS/CORS 记录在 `docs/evidence/deployment/2026-08-11-cloudflare-worker-v2.json`；公开 API 的签名会话、Task #2、购买、用户名与评论闭环记录在 `docs/evidence/deployment/2026-08-12-public-api-closed-loop.json`；Uniswap 两池与 swap 记录在 `docs/evidence/deployment/2026-08-12-uniswap-v3-verification.json`；The Graph 与三 RPC 分别记录在 `docs/evidence/deployment/2026-08-12-the-graph-sepolia.json` 和 `2026-08-12-rpc-comparison.json`。仍待的硬性外部边界只有本批发布后的 Privy 登录 UI；IPFS pin 为增强项。AWS 本地门禁见 `docs/evidence/testing/2026-08-10-aws-readiness-local.md`，真实云端部署、失败恢复、网络与停库证据见 `docs/evidence/deployment/2026-08-11-aws-pausable.md`。
