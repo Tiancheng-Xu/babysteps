@@ -48,6 +48,9 @@ describe("performance observability infrastructure", () => {
 		expect(source).toContain("maxReceiveCount: 3");
 		expect(source).toContain("DeletionPolicy: Delete");
 		expect(source).toContain("AWS::SecretsManager::Secret");
+		expect(source).toContain(
+			"Name: !Sub babysteps-performance-db-${EnvironmentName}",
+		);
 		expect(source).toContain("PROJECT_DATABASE_SECRET_ARN");
 		expect(source).toContain("MASTER_DATABASE_SECRET_ARN");
 		expect(source).toContain("DatabaseAdminTaskRole");

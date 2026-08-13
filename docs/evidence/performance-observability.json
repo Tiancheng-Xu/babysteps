@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "profile": "full",
+  "status": "planned",
+  "summary": "The complete performance observability pipeline is implemented and locally verified; the controlled AWS event, aggregate readback, and exact project cleanup are pending a successful GitHub Actions run.",
+  "evidenceUrl": "https://babysteps.baby2b.online/evidence",
+  "limitations": [
+    "Cloud evidence is not marked verified until one controlled event reaches the ECS cleaner, the real aggregate is queried, and the exact project resources are confirmed deleted."
+  ],
+  "nextStep": "Run the approved temporary AWS performance workflow, preserve its sanitized artifact, verify zero project resource residue, and then promote this contract to verified."
+}
