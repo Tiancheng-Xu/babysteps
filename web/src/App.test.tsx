@@ -127,7 +127,7 @@ describe("BabySteps App", () => {
 		babyCoinGrowthState = {
 			isConfigured: true,
 			walletState: "ready",
-			balance: 9n * 10n ** 18n,
+			balance: 10_650_166_471_630_484_868n,
 			lifetimeEarned: 15n * 10n ** 18n,
 			stage: "star",
 			availabilityByActivity: {
@@ -210,7 +210,9 @@ describe("BabySteps App", () => {
 			setAmount: vi.fn(),
 			configured: true,
 			walletState: "ready",
-			quotedBaby: undefined,
+			quotedBaby: "10.6502",
+			quotedBabyExact: "10.650166471630484868",
+			quotedBabyIsApproximate: true,
 			phase: "idle",
 			message: undefined,
 			transactionHash: undefined,
@@ -290,6 +292,45 @@ describe("BabySteps App", () => {
 		expect(screen.queryByText("成长纪念")).toBeNull();
 	});
 
+	it("keeps portfolio, product, and evidence navigation reciprocal on every view", () => {
+		render(<App />);
+
+		const footerNavigation = screen.getByRole("navigation", {
+			name: "作品与工作证明导航",
+		});
+		const links = within(footerNavigation).getAllByRole("link");
+		expect(links.map((link) => link.textContent)).toEqual([
+			"作品集首页",
+			"项目主页",
+			"工作证明",
+		]);
+		expect(links[0]?.getAttribute("href")).toBe("https://baby2b.online/");
+		expect(links[1]?.getAttribute("href")).toBe(
+			"https://babysteps.baby2b.online/",
+		);
+		expect(links[1]?.getAttribute("aria-current")).toBe("page");
+		expect(links[2]?.getAttribute("href")).toBe(
+			"https://evidence.baby2b.online/babysteps/",
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "查看完整工作证明" })
+				.getAttribute("href"),
+		).toBe("https://evidence.baby2b.online/babysteps/");
+
+		fireEvent.click(screen.getByRole("button", { name: "个人中心" }));
+		expect(
+			screen.getByRole("navigation", { name: "作品与工作证明导航" }),
+		).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("button", { name: "工作证据" }));
+		expect(
+			within(screen.getByRole("navigation", { name: "作品与工作证明导航" }))
+				.getByRole("link", { name: "工作证明" })
+				.getAttribute("aria-current"),
+		).toBe("page");
+	});
+
 	it("navigates the canonical Chinese Stitch product views", () => {
 		render(<App />);
 
@@ -315,8 +356,28 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByRole("heading", { name: "链上成长与可用余额" }),
 		).toBeTruthy();
-		expect(screen.getByText("9 BABY")).toBeTruthy();
-		expect(screen.getByText("15 BABY")).toBeTruthy();
+		const spendableMetric = screen.getByRole("article", {
+			name: "可用 BabyCoin",
+		});
+		expect(within(spendableMetric).getByText("10.6502")).toBeTruthy();
+		expect(within(spendableMetric).getByText("BABY")).toBeTruthy();
+		expect(
+			within(spendableMetric).getByText(
+				"完整链上数值 10.650166471630484868 BABY",
+			),
+		).toBeTruthy();
+		expect(
+			within(spendableMetric).getByText("可用于购买和转账，消费后会减少。"),
+		).toBeTruthy();
+
+		const lifetimeMetric = screen.getByRole("article", {
+			name: "累计成长奖励",
+		});
+		expect(within(lifetimeMetric).getByText("15")).toBeTruthy();
+		expect(within(lifetimeMetric).getByText("BABY")).toBeTruthy();
+		expect(
+			within(lifetimeMetric).getByText("决定星宝阶段，只增不减。"),
+		).toBeTruthy();
 
 		fireEvent.click(
 			within(navigation).getByRole("button", { name: "Provider 控制台" }),
@@ -328,6 +389,10 @@ describe("BabySteps App", () => {
 		fireEvent.click(within(navigation).getByRole("button", { name: "兑换" }));
 		expect(screen.getByRole("heading", { name: "BabyCoin 兑换" })).toBeTruthy();
 		expect(screen.getByText("不部署 MockUSDC")).toBeTruthy();
+		expect(screen.getByText("10.6502")).toBeTruthy();
+		expect(
+			screen.getByText("完整链上报价 10.650166471630484868 BABY"),
+		).toBeTruthy();
 
 		fireEvent.click(
 			within(navigation).getByRole("button", { name: "个人中心" }),
@@ -341,8 +406,15 @@ describe("BabySteps App", () => {
 		);
 		expect(screen.getByRole("heading", { name: "链上工作证据" })).toBeTruthy();
 		expect(
-			screen.getByRole("img", { name: "StarBuddy Web3 架构图" }),
+			screen.getByRole("img", { name: "BabySteps 全局架构图" }),
 		).toBeTruthy();
+		expect(
+			screen.getByRole("img", { name: "BabySteps 核心业务时序图" }),
+		).toBeTruthy();
+		expect(screen.getByRole("link", { name: "查看全局架构原图" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "查看业务时序原图" })).toBeTruthy();
+		expect(screen.getAllByText("看哪里")).toHaveLength(2);
+		expect(screen.getAllByText("证明什么")).toHaveLength(2);
 		expect(screen.getByText("Sepolia V2 闭环已验证")).toBeTruthy();
 		expect(screen.getByText("TaskMarketplaceV2")).toBeTruthy();
 		expect(screen.getByText(/0x2EE9/u)).toBeTruthy();

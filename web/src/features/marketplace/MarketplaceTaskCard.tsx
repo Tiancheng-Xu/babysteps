@@ -1,5 +1,4 @@
-import { formatUnits } from "viem";
-
+import { formatBabyCoinAmount } from "../babycoin/formatBabyCoinAmount";
 import type { MarketplaceTask } from "./marketplaceModel";
 import { useTaskPurchase } from "./useTaskPurchase";
 
@@ -75,6 +74,10 @@ function actionFor(
 
 export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 	const purchase = useTaskPurchase(task);
+	const formattedBalance = formatBabyCoinAmount(purchase.balance);
+	const exactBalanceLabel = formattedBalance.exact
+		? `完整链上数值 ${formattedBalance.exact} BABY`
+		: undefined;
 	const action = actionFor(task, purchase);
 	const actionHandler = "onClick" in action ? action.onClick : undefined;
 	const isError =
@@ -91,8 +94,17 @@ export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 				{task.state === "pending-randomness" ? "等待随机价格" : task.priceLabel}
 			</p>
 			{purchase.balance !== undefined ? (
-				<p className="marketplace-task-card__balance">
-					余额 {formatUnits(purchase.balance, 18)} BABY
+				<p
+					className="marketplace-task-card__balance"
+					title={exactBalanceLabel}
+					aria-live="polite"
+				>
+					<span>余额</span>
+					<strong>{formattedBalance.display}</strong>
+					<span translate="no">BABY</span>
+					{formattedBalance.isApproximate && exactBalanceLabel ? (
+						<span className="visually-hidden">{exactBalanceLabel}</span>
+					) : null}
 				</p>
 			) : null}
 			<dl>

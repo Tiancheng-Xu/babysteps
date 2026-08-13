@@ -1,4 +1,5 @@
-import architectureImage from "../../../docs/architecture/starbuddy-web3-architecture-v2.png";
+import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
+import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -26,15 +27,106 @@ export function EvidencePage() {
 				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
 
-			<div className="evidence-grid">
-				<figure className="architecture-figure">
-					<img src={architectureImage} alt="StarBuddy Web3 架构图" />
-					<figcaption>
-						StarBuddy
-						四阶段串起身份、任务、购买与证书，底层由合约、VRF、索引和链下服务协作。
-					</figcaption>
-				</figure>
+			<section className="evidence-diagrams" aria-label="架构与关键业务流程">
+				<article
+					className="evidence-diagram-card"
+					aria-labelledby="global-architecture-title"
+				>
+					<header className="evidence-diagram-card__header">
+						<div>
+							<p className="section-kicker">SYSTEM VIEW</p>
+							<h2 id="global-architecture-title">全局架构图</h2>
+						</div>
+						<span className="evidence-diagram-card__status">工程真相图</span>
+					</header>
+					<figure className="architecture-figure">
+						<div className="evidence-diagram-frame">
+							<img
+								src={globalArchitectureImage}
+								alt="BabySteps 全局架构图"
+								width="1600"
+								height="1000"
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+						<figcaption>
+							四条横向边界分别解释用户运行时、Cloudflare 链下数据、Sepolia
+							链上事实，以及 GitHub/AWS 交付与清理责任。
+						</figcaption>
+					</figure>
+					<div className="evidence-diagram-walkthrough">
+						<p>
+							<strong>看哪里</strong>
+							从上到下看四层信任边界，再看底部失败与回滚带；绿色、黄色、紫色分别表示已验证、待外部验证和计划/延后。
+						</p>
+						<p>
+							<strong>证明什么</strong>
+							运行请求、数据归属、合约与外部读取、CI/CD、安全权限和费用清理都进入同一架构，不把参考方案写成已完成。
+						</p>
+					</div>
+					<a
+						className="evidence-diagram-link"
+						href={globalArchitectureImage}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看全局架构原图
+					</a>
+				</article>
 
+				<article
+					className="evidence-diagram-card"
+					aria-labelledby="business-sequence-title"
+				>
+					<header className="evidence-diagram-card__header">
+						<div>
+							<p className="section-kicker">END-TO-END FLOW</p>
+							<h2 id="business-sequence-title">核心业务时序图</h2>
+						</div>
+						<span className="evidence-diagram-card__status">9 步闭环</span>
+					</header>
+					<figure className="architecture-figure">
+						<div className="evidence-diagram-frame">
+							<img
+								src={businessSequenceImage}
+								alt="BabySteps 核心业务时序图"
+								width="1600"
+								height="1000"
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+						<figcaption>
+							Provider 提交、Owner 审核、VRF
+							回调、家长精确授权购买、完成确认、SBT
+							铸造和独立读回形成一个可追踪闭环。
+						</figcaption>
+					</figure>
+					<div className="evidence-diagram-walkthrough">
+						<p>
+							<strong>看哪里</strong>沿 1–9
+							编号阅读成功路径，再看深蓝色区域中的哈希冲突、VRF
+							pending、授权失败、Relayer 重试和索引降级。
+						</p>
+						<p>
+							<strong>证明什么</strong>
+							购买必须经过 approve、buy 和
+							transferFrom；失败不会伪造余额、重复扣款、重复完成或重复铸证。
+						</p>
+					</div>
+					<a
+						className="evidence-diagram-link"
+						href={businessSequenceImage}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看业务时序原图
+					</a>
+				</article>
+			</section>
+
+			<div className="evidence-grid evidence-grid--summary">
 				<section
 					className="contract-evidence"
 					aria-labelledby="contract-evidence-heading"
@@ -71,7 +163,7 @@ export function EvidencePage() {
 					</a>
 					<div className="verification-summary">
 						<strong>自动门禁</strong>
-						<span>合约 82 · 前端 157 · Worker 48 · Subgraph 4 项测试</span>
+						<span>合约 82 · 前端 164 · Worker 48 · Subgraph 4 项测试</span>
 					</div>
 					<div className="verification-summary">
 						<strong>外部读链与索引</strong>

@@ -4,7 +4,7 @@ import {
 	waitForTransactionReceipt,
 } from "@wagmi/core";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { formatUnits, getAddress, type Hash, parseUnits } from "viem";
+import { getAddress, type Hash, parseUnits } from "viem";
 import { useAccount, useSwitchChain, useWriteContract } from "wagmi";
 import { sepolia } from "wagmi/chains";
 
@@ -18,6 +18,7 @@ import {
 	weth9Abi,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { formatBabyCoinAmount } from "../babycoin/formatBabyCoinAmount";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import { buildExactInputSingle, finiteApprovalAmount } from "./uniswapModel";
 
@@ -65,6 +66,7 @@ export function useUniswapSwap() {
 		}
 	}, [amount, selected.decimals]);
 	const configured = Boolean(babyCoinAddress);
+	const formattedQuote = formatBabyCoinAmount(quotedAmountOut);
 
 	const quote = useCallback(async () => {
 		if (!babyCoinAddress || !amountIn || amountIn <= 0n) {
@@ -232,9 +234,9 @@ export function useUniswapSwap() {
 		configured,
 		walletState,
 		quotedBaby:
-			quotedAmountOut === undefined
-				? undefined
-				: formatUnits(quotedAmountOut, 18),
+			quotedAmountOut === undefined ? undefined : formattedQuote.display,
+		quotedBabyExact: formattedQuote.exact,
+		quotedBabyIsApproximate: formattedQuote.isApproximate,
 		phase,
 		message,
 		transactionHash,
