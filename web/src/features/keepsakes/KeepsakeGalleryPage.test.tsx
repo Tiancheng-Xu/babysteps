@@ -113,4 +113,25 @@ describe("KeepsakeGalleryPage", () => {
 		expect(screen.getByText("融合成功！")).toBeTruthy();
 		expect(screen.getAllByText("稀有 · 蛋蛋星宝").length).toBeGreaterThan(0);
 	});
+
+	it("labels a successful draw as a draw instead of a fusion", () => {
+		keepsakeState.phase = "success";
+		keepsakeState.request = {
+			requestId: 89n,
+			kind: 1,
+			status: 2,
+			requestedAt: 1_786_000_000n,
+			tokenIds: [0n, 0n, 0n],
+			resultTokenId: 5n,
+			burnedTokenId: 0n,
+		};
+		keepsakeState.cards = [
+			{ tokenId: 5n, series: 1, rarity: 0, locked: false },
+		];
+		render(<KeepsakeGalleryPage />);
+
+		expect(screen.getByRole("status", { name: "抽取成功反馈" })).toBeTruthy();
+		expect(screen.getByText("抽取成功！")).toBeTruthy();
+		expect(screen.queryByText("融合成功！")).toBeNull();
+	});
 });

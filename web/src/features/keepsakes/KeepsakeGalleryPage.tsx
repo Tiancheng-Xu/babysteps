@@ -71,6 +71,7 @@ export function KeepsakeGalleryPage() {
 				(card) => card.tokenId === keepsakes.request?.resultTokenId,
 			)
 		: undefined;
+	const isFusionResult = keepsakes.request?.kind === 2;
 	const canDraw =
 		keepsakes.isConfigured &&
 		keepsakes.walletState === "ready" &&
@@ -267,13 +268,13 @@ export function KeepsakeGalleryPage() {
 				<div
 					className="keepsake-celebration"
 					role="status"
-					aria-label="融合成功反馈"
+					aria-label={isFusionResult ? "融合成功反馈" : "抽取成功反馈"}
 					data-full-motion-ms="2100"
 					data-reduced-motion-ms="150"
 				>
 					<div className="keepsake-celebration__glow" aria-hidden="true" />
 					<KeepsakeArtwork card={resultCard} />
-					<p>融合成功！</p>
+					<p>{isFusionResult ? "融合成功！" : "抽取成功！"}</p>
 					<h2>{keepsakeName(resultCard.series, resultCard.rarity)}</h2>
 					<small>新 Token ID #{resultCard.tokenId.toString()}</small>
 				</div>
