@@ -37,7 +37,9 @@ export function EvidencePage() {
 							<p className="section-kicker">SYSTEM VIEW</p>
 							<h2 id="global-architecture-title">全局架构图</h2>
 						</div>
-						<span className="evidence-diagram-card__status">六列 × 四带</span>
+						<span className="evidence-diagram-card__status">
+							六列 × 四带 × 六条编号流
+						</span>
 					</header>
 					<figure className="architecture-figure">
 						<div className="evidence-diagram-frame">
@@ -45,25 +47,29 @@ export function EvidencePage() {
 								src={globalArchitectureImage}
 								alt="BabySteps 全局架构图"
 								width="2400"
-								height="1500"
+								height="1800"
 								loading="lazy"
 								decoding="async"
 							/>
 						</div>
 						<figcaption>
-							六列责任边界 × 四条数据带，把用户、Web、Cloudflare、Sepolia、外部
-							Web3 服务和交付平台放进同一张工程真相图。
+							六列责任边界 × 四条数据带 ×
+							六条编号流，把用户、Web、Cloudflare、Sepolia、外部 Web3
+							服务和交付平台放进同一张可跨层追踪的工程真相图。
 						</figcaption>
 					</figure>
 					<div className="evidence-diagram-walkthrough">
 						<p>
 							<strong>看哪里</strong>
-							先按六列责任边界找系统负责人，再沿四条数据带追踪认证、内容、链上资产和交付；最后看箭头协议、失败回滚与状态图例。
+							先按六列责任边界找系统负责人，再到图底部选择 01–06
+							编号流跨层追踪载荷、交易、事件和验收结果；重点看兑换的
+							{" Router / Pool "}与购买后的 Provider 结算。
 						</p>
 						<p>
 							<strong>证明什么</strong>
 							HTTPS、签名交易、JSON-RPC、GraphQL、事件与 OIDC
-							各有真实方向；链上/链下事实、安全权限、费用清理和待验证边界没有被压成节点清单。
+							各有真实方向；Quote → Approve → Router → Pool → BABY、精确授权 →
+							buy → transferFrom → Provider payee 以及失败回滚都能沿线复核。
 						</p>
 					</div>
 					<a

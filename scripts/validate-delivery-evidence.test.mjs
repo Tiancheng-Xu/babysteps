@@ -53,14 +53,14 @@ import businessSequence from "../../../docs/architecture/starbuddy-web3-business
   <h2 id="global-architecture-title">全局架构图</h2>
   <a href={globalArchitecture}>查看全局架构原图</a>
   <img src={globalArchitecture} alt="BabySteps 全局架构图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：六列责任边界与四条数据带。</p>
+  <p><strong>看哪里</strong>：六列责任边界、四条数据带与六条编号流，支持跨层追踪。</p>
   <p><strong>证明什么</strong>：运行、数据、部署和清理路径完整。</p>
 </section>
 <section aria-labelledby="business-sequence-title">
   <h2 id="business-sequence-title">核心业务时序图</h2>
   <a href={businessSequence}>查看业务时序原图</a>
   <img src={businessSequence} alt="BabySteps 核心业务时序图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：五段完整闭环包含登录与会话、Uniswap 获币、上架与审核、购买与结算、完课与证书。</p>
+  <p><strong>看哪里</strong>：五段完整闭环包含登录与会话、Uniswap 获币、Router / Pool、上架与审核、购买与结算、完课与证书。</p>
   <p><strong>证明什么</strong>：成功和失败路径均有边界。</p>
 </section>
 `;
@@ -74,6 +74,9 @@ const validAssetFacts = [
 		height: 1500,
 		text: `
 			<svg width="2400" height="1500">
+				<text>01 登录会话流</text><text>02 兑换获币流</text>
+				<text>03 上架激活流</text><text>04 购买结算流</text>
+				<text>05 完课证书流</text><text>06 交付回滚流</text>
 				<text>用户与角色</text><text>React Web</text><text>Cloudflare</text>
 				<text>Ethereum Sepolia</text><text>Web3 外部依赖</text><text>交付与 AWS</text>
 				<text>用户运行与认证</text><text>任务内容与事实所有权</text>
@@ -82,6 +85,9 @@ const validAssetFacts = [
 				<text>已验证</text><text>已实现待验证</text><text>计划 / 延后</text>
 				<text>请求流</text><text>数据流</text><text>链上交易</text>
 				<text>异步事件</text><text>计划路径</text>
+				<text>Quote → Approve → Router → Pool → BABY</text>
+				<text>transferFrom → Provider payee</text>
+				<text>失败保持上一有效部署</text>
 			</svg>`,
 	},
 	{
@@ -92,6 +98,11 @@ const validAssetFacts = [
 		height: 1800,
 		text: `
 			<svg width="2400" height="1800">
+				<text>02A 获取报价</text><text>02B 授权配对资产</text>
+				<text>02C Router 路由到 Pool</text><text>02D receipt 后刷新 BABY</text>
+				<text>04A 读取任务与余额</text><text>04B 精确授权 BABY</text>
+				<text>04C buy 写入购买</text><text>04D Provider 收款</text>
+				<text>04E 事件与独立读回</text>
 				<text>登录会话</text><text>Uniswap 获得 BABY</text>
 				<text>Provider 上架与 Owner 审核</text><text>家长购买结算</text>
 				<text>完课与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>

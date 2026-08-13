@@ -415,7 +415,11 @@ describe("BabySteps App", () => {
 		expect(screen.getByRole("link", { name: "查看业务时序原图" })).toBeTruthy();
 		expect(screen.getAllByText("看哪里")).toHaveLength(2);
 		expect(screen.getAllByText("证明什么")).toHaveLength(2);
-		expect(screen.getAllByText(/六列责任边界.*四条数据带/u)).toHaveLength(2);
+		expect(screen.getByText("六列 × 四带 × 六条编号流")).toBeTruthy();
+		expect(
+			screen.getByText(/六列责任边界.*四条数据带.*六条编号流/u),
+		).toBeTruthy();
+		expect(screen.getByText(/Router \/ Pool/u)).toBeTruthy();
 		expect(screen.getAllByText(/五段完整闭环/u)).toHaveLength(2);
 		expect(screen.getByText(/登录与会话/u)).toBeTruthy();
 		expect(screen.getByText(/Uniswap 获币/u)).toBeTruthy();

@@ -62,12 +62,14 @@
 
   <!-- phase 2 -->
   <rect x="44" y="474" width="2312" height="206" rx="24" fill="#fff2cc" stroke="#dda43f" stroke-width="2"/>
-  <rect x="58" y="488" width="130" height="178" rx="18" fill="#ffe2a0"/><text x="78" y="525" class="phase">02 Uniswap</text><text x="78" y="552" class="phase">获得 BABY</text><text x="78" y="582" class="phaseSub">USDC / WETH</text><text x="78" y="605" class="phaseSub">→ BABY</text>
+  <rect x="58" y="488" width="130" height="202" rx="18" fill="#ffe2a0"/><text x="78" y="525" class="phase">02 Uniswap</text><text x="78" y="552" class="phase">获得 BABY</text><text x="78" y="582" class="phaseSub">USDC / WETH</text><text x="78" y="605" class="phaseSub">→ Router / Pool</text><text x="78" y="628" class="phaseSub">→ BABY</text>
   <circle cx="216" cy="511" r="16" fill="#c57c2d"/><text x="216" y="517" text-anchor="middle" class="status" style="fill:#fff">2</text>
   <path class="request" d="M330 511H598"/><text x="464" y="499" text-anchor="middle" class="step">输入测试金额与最大滑点</text>
-  <path class="chain" d="M610 547H1718"/><text x="1164" y="535" text-anchor="middle" class="step">quote → approve 配对资产 → swapExactInput</text>
-  <path class="return" d="M1730 585H622"/><text x="1176" y="574" text-anchor="middle" class="small">receipt 成功 → 读取 BABY balanceOf → 友好格式化</text>
-  <g transform="translate(1260,596)" filter="url(#shadow)"><rect width="440" height="62" rx="15" fill="#fffdf7" stroke="#c57c2d" stroke-width="2"/><text x="220" y="27" text-anchor="middle" class="step">测试链资产：无真实价值</text><text x="220" y="50" text-anchor="middle" class="small">池深度与报价需运行时验证</text></g>
+  <path class="request" d="M610 535H1718"/><text x="1164" y="524" text-anchor="middle" class="step">02A 获取报价 · Quoter.quoteExactInputSingle(tokenIn, BABY, amountIn)</text>
+  <path class="chain" d="M610 568H1718"/><text x="1164" y="557" text-anchor="middle" class="step">02B 授权配对资产 · USDC / WETH.approve(SwapRouter02, exactAmount)</text>
+  <path class="chain" d="M610 601H1718"/><text x="1164" y="590" text-anchor="middle" class="step">02C Router 路由到 Pool · exactInputSingle → BABY/USDC 或 BABY/WETH</text>
+  <path class="return" d="M1730 634H622"/><text x="1176" y="623" text-anchor="middle" class="step">02D receipt 后刷新 BABY · balanceOf + decimals → 友好余额</text>
+  <g transform="translate(1120,649)" filter="url(#shadow)"><rect width="580" height="36" rx="15" fill="#fffdf7" stroke="#c57c2d" stroke-width="2"/><text x="290" y="24" text-anchor="middle" class="small">测试链资产无真实价值 · 池深度、报价、新鲜度与滑点均在运行时验证</text></g>
   <g transform="translate(1800,500)" filter="url(#shadow)"><rect width="470" height="140" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="22" y="32" class="failureTitle">滑点 / 余额不足</text><text x="22" y="62" class="failureBody">quote 过期或池深度不足：重新报价，不自动扩大滑点</text><text x="22" y="89" class="failureBody">测试 ETH / USDC / WETH 不足：提示 faucet 或换小金额</text><text x="22" y="116" class="failureBody">交易失败不更新可用余额</text></g>
 
   <!-- phase 3 -->
@@ -90,12 +92,12 @@
   <rect x="58" y="994" width="130" height="256" rx="18" fill="#ffe2a0"/><text x="78" y="1032" class="phase">04 家长</text><text x="78" y="1059" class="phase">购买结算</text><text x="78" y="1092" class="phaseSub">精确 approve</text><text x="78" y="1115" class="phaseSub">→ buy</text>
   <circle cx="216" cy="1017" r="16" fill="#c57c2d"/><text x="216" y="1023" text-anchor="middle" class="status" style="fill:#fff">4</text>
   <path class="request" d="M330 1017H598"/><text x="464" y="1005" text-anchor="middle" class="step">选择 Active 成长任务</text>
-  <path class="request" d="M610 1055H1438"/><text x="1024" y="1043" text-anchor="middle" class="step">读取 price / status / balance / allowance</text>
-  <path class="chain" d="M610 1093H1718"/><text x="1164" y="1081" text-anchor="middle" class="step">BabyCoin.approve(marketplace, 精确价格)</text>
-  <path class="chain" d="M610 1131H1438"/><text x="1024" y="1119" text-anchor="middle" class="step">buy(taskId) · msg.sender 作为 buyer</text>
-  <path class="chain" d="M1450 1169H1718"/><text x="1584" y="1157" text-anchor="middle" class="step">transferFrom → Provider payee</text>
-  <path class="event" d="M1450 1207H878"/><text x="1164" y="1195" text-anchor="middle" class="step">PurchaseRecorded(purchaseId, buyer, price)</text>
-  <path class="return" d="M890 1237H622"/><text x="756" y="1226" text-anchor="middle" class="small">receipt 成功后刷新购买记录与余额</text>
+  <path class="request" d="M610 1055H1438"/><text x="1024" y="1043" text-anchor="middle" class="step">04A 读取任务与余额 · status / price / balance / allowance / payee</text>
+  <path class="chain" d="M610 1093H1718"/><text x="1164" y="1081" text-anchor="middle" class="step">04B 精确授权 BABY · approve(marketplace, priceWei) · 不使用无限授权</text>
+  <path class="chain" d="M610 1131H1438"/><text x="1024" y="1119" text-anchor="middle" class="step">04C buy 写入购买 · buy(taskId) · msg.sender 固化为 buyer</text>
+  <path class="chain" d="M1450 1169H1718"/><text x="1584" y="1157" text-anchor="middle" class="step">04D Provider 收款 · transferFrom(buyer, providerPayee, priceWei)</text>
+  <path class="event" d="M1450 1207H878"/><text x="1164" y="1195" text-anchor="middle" class="step">04E 事件与独立读回 · PurchaseRecorded(purchaseId, buyer, price)</text>
+  <path class="return" d="M890 1237H622"/><text x="756" y="1226" text-anchor="middle" class="small">receipt status=1 后才刷新订单、BABY 余额与 remaining allowance</text>
   <g transform="translate(1800,1020)" filter="url(#shadow)"><rect width="470" height="178" rx="17" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="22" y="32" class="failureTitle">allowance / receipt 失败</text><text x="22" y="62" class="failureBody">授权不足：只补精确差额，不给无限授权</text><text x="22" y="89" class="failureBody">receipt revert：不写购买成功、不刷新伪余额</text><text x="22" y="116" class="failureBody">交易哈希保留用于 Etherscan 与 RPC 对照</text><text x="22" y="143" class="failureBody">重复提交由合约状态阻止</text></g>
 
   <!-- phase 5 -->
