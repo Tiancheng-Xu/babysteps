@@ -37,32 +37,33 @@ export function EvidencePage() {
 							<p className="section-kicker">SYSTEM VIEW</p>
 							<h2 id="global-architecture-title">全局架构图</h2>
 						</div>
-						<span className="evidence-diagram-card__status">工程真相图</span>
+						<span className="evidence-diagram-card__status">六列 × 四带</span>
 					</header>
 					<figure className="architecture-figure">
 						<div className="evidence-diagram-frame">
 							<img
 								src={globalArchitectureImage}
 								alt="BabySteps 全局架构图"
-								width="1600"
-								height="1000"
+								width="2400"
+								height="1500"
 								loading="lazy"
 								decoding="async"
 							/>
 						</div>
 						<figcaption>
-							四条横向边界分别解释用户运行时、Cloudflare 链下数据、Sepolia
-							链上事实，以及 GitHub/AWS 交付与清理责任。
+							六列责任边界 × 四条数据带，把用户、Web、Cloudflare、Sepolia、外部
+							Web3 服务和交付平台放进同一张工程真相图。
 						</figcaption>
 					</figure>
 					<div className="evidence-diagram-walkthrough">
 						<p>
 							<strong>看哪里</strong>
-							从上到下看四层信任边界，再看底部失败与回滚带；绿色、黄色、紫色分别表示已验证、待外部验证和计划/延后。
+							先按六列责任边界找系统负责人，再沿四条数据带追踪认证、内容、链上资产和交付；最后看箭头协议、失败回滚与状态图例。
 						</p>
 						<p>
 							<strong>证明什么</strong>
-							运行请求、数据归属、合约与外部读取、CI/CD、安全权限和费用清理都进入同一架构，不把参考方案写成已完成。
+							HTTPS、签名交易、JSON-RPC、GraphQL、事件与 OIDC
+							各有真实方向；链上/链下事实、安全权限、费用清理和待验证边界没有被压成节点清单。
 						</p>
 					</div>
 					<a
@@ -84,35 +85,34 @@ export function EvidencePage() {
 							<p className="section-kicker">END-TO-END FLOW</p>
 							<h2 id="business-sequence-title">核心业务时序图</h2>
 						</div>
-						<span className="evidence-diagram-card__status">9 步闭环</span>
+						<span className="evidence-diagram-card__status">五段完整闭环</span>
 					</header>
 					<figure className="architecture-figure">
 						<div className="evidence-diagram-frame">
 							<img
 								src={businessSequenceImage}
 								alt="BabySteps 核心业务时序图"
-								width="1600"
-								height="1000"
+								width="2400"
+								height="1800"
 								loading="lazy"
 								decoding="async"
 							/>
 						</div>
 						<figcaption>
-							Provider 提交、Owner 审核、VRF
-							回调、家长精确授权购买、完成确认、SBT
-							铸造和独立读回形成一个可追踪闭环。
+							从登录与会话、Uniswap
+							获币、上架与审核、购买与结算，到完课与证书，形成五段可追踪业务闭环。
 						</figcaption>
 					</figure>
 					<div className="evidence-diagram-walkthrough">
 						<p>
-							<strong>看哪里</strong>沿 1–9
-							编号阅读成功路径，再看深蓝色区域中的哈希冲突、VRF
-							pending、授权失败、Relayer 重试和索引降级。
+							<strong>看哪里</strong>
+							从上到下阅读五段完整闭环；每段先看成功主线，再看同色失败分支如何停止、重试或降级读回。
 						</p>
 						<p>
 							<strong>证明什么</strong>
-							购买必须经过 approve、buy 和
-							transferFrom；失败不会伪造余额、重复扣款、重复完成或重复铸证。
+							登录签名、Uniswap swap、VRF、精确 approve → buy →
+							transferFrom、Relayer 与 SBT
+							都有明确责任方；失败不会伪造会话、余额、购买或证书。
 						</p>
 					</div>
 					<a

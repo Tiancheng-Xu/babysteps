@@ -415,6 +415,13 @@ describe("BabySteps App", () => {
 		expect(screen.getByRole("link", { name: "查看业务时序原图" })).toBeTruthy();
 		expect(screen.getAllByText("看哪里")).toHaveLength(2);
 		expect(screen.getAllByText("证明什么")).toHaveLength(2);
+		expect(screen.getAllByText(/六列责任边界.*四条数据带/u)).toHaveLength(2);
+		expect(screen.getAllByText(/五段完整闭环/u)).toHaveLength(2);
+		expect(screen.getByText(/登录与会话/u)).toBeTruthy();
+		expect(screen.getByText(/Uniswap 获币/u)).toBeTruthy();
+		expect(screen.getByText(/上架与审核/u)).toBeTruthy();
+		expect(screen.getByText(/购买与结算/u)).toBeTruthy();
+		expect(screen.getByText(/完课与证书/u)).toBeTruthy();
 		expect(screen.getByText("Sepolia V2 闭环已验证")).toBeTruthy();
 		expect(screen.getByText("TaskMarketplaceV2")).toBeTruthy();
 		expect(screen.getByText(/0x2EE9/u)).toBeTruthy();

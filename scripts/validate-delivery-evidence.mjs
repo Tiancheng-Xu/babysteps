@@ -26,10 +26,47 @@ const expectedDiagramAssets = [
 	{
 		kind: "global architecture image",
 		path: "docs/architecture/starbuddy-web3-global-architecture.svg",
+		minimumWidth: 2200,
+		minimumHeight: 1400,
+		markers: [
+			"用户与角色",
+			"React Web",
+			"Cloudflare",
+			"Ethereum Sepolia",
+			"Web3 外部依赖",
+			"交付与 AWS",
+			"用户运行与认证",
+			"任务内容与事实所有权",
+			"代币购买随机与证书",
+			"CI/CD 安全可观测与清理",
+			"HTTPS",
+			"JSON-RPC",
+			"GraphQL",
+			"OIDC",
+			"已验证",
+			"已实现待验证",
+			"计划 / 延后",
+		],
 	},
 	{
 		kind: "business sequence image",
 		path: "docs/architecture/starbuddy-web3-business-sequence.svg",
+		minimumWidth: 2200,
+		minimumHeight: 1600,
+		markers: [
+			"登录会话",
+			"Uniswap 获得 BABY",
+			"Provider 上架与 Owner 审核",
+			"家长购买结算",
+			"完课与证书",
+			"签名过期",
+			"滑点 / 余额不足",
+			"哈希冲突",
+			"VRF pending",
+			"allowance / receipt 失败",
+			"Relayer 重试",
+			"Graph 延迟",
+		],
 	},
 ];
 const evidencePageMarkers = [
@@ -41,6 +78,14 @@ const evidencePageMarkers = [
 	"查看业务时序原图",
 	"BabySteps 全局架构图",
 	"BabySteps 核心业务时序图",
+	"六列责任边界",
+	"四条数据带",
+	"五段完整闭环",
+	"登录与会话",
+	"Uniswap 获币",
+	"上架与审核",
+	"购买与结算",
+	"完课与证书",
 ];
 const workerEvidenceMarkers = [
 	"chainId:marketplaceAddress:taskId",
@@ -117,8 +162,8 @@ export function validateDeliveryEvidence(
 		}
 	}
 	if (
-		!["Worker/D1 本地已验证", "Worker/D1 公开 API 已验证"].some(
-			(marker) => architectureText.includes(marker),
+		!["Worker/D1 本地已验证", "Worker/D1 公开 API 已验证"].some((marker) =>
+			architectureText.includes(marker),
 		)
 	) {
 		errors.push("architecture must mark Worker/D1 本地或公开 API 已验证");
@@ -147,6 +192,20 @@ export function validateDeliveryEvidence(
 			errors.push(`${asset.kind} is missing: ${asset.path}`);
 		} else if (!(fact.bytes > 0)) {
 			errors.push(`${asset.kind} is empty: ${asset.path}`);
+		} else {
+			if (
+				!(fact.width >= asset.minimumWidth) ||
+				!(fact.height >= asset.minimumHeight)
+			) {
+				errors.push(
+					`${asset.kind} canvas must be at least ${asset.minimumWidth}x${asset.minimumHeight}`,
+				);
+			}
+			for (const marker of asset.markers) {
+				if (!fact.text?.includes(marker)) {
+					errors.push(`${asset.kind} is missing marker: ${marker}`);
+				}
+			}
 		}
 	}
 
@@ -156,9 +215,22 @@ export function validateDeliveryEvidence(
 async function readAssetFact(path) {
 	try {
 		const details = await stat(path);
-		return { path, exists: details.isFile(), bytes: details.size };
+		const text = details.isFile() ? await readFile(path, "utf8") : "";
+		const svgTag = text.match(/<svg\b[^>]*>/u)?.[0] ?? "";
+		const width = Number(svgTag.match(/\bwidth=["'](\d+)["']/u)?.[1] ?? 0);
+		const height = Number(svgTag.match(/\bheight=["'](\d+)["']/u)?.[1] ?? 0);
+		return {
+			path,
+			exists: details.isFile(),
+			bytes: details.size,
+			text,
+			width,
+			height,
+		};
 	} catch (error) {
-		if (error?.code === "ENOENT") return { path, exists: false, bytes: 0 };
+		if (error?.code === "ENOENT") {
+			return { path, exists: false, bytes: 0, text: "", width: 0, height: 0 };
+		}
 		throw error;
 	}
 }
@@ -171,8 +243,13 @@ async function main() {
 	const workerEvidencePath =
 		process.argv[4] ?? "docs/evidence/testing/2026-08-10-worker-d1.md";
 	const evidencePagePath = process.argv[5] ?? "web/src/pages/EvidencePage.tsx";
-	const [mapText, architectureText, workerEvidenceText, evidencePageText, assetFacts] =
-		await Promise.all([
+	const [
+		mapText,
+		architectureText,
+		workerEvidenceText,
+		evidencePageText,
+		assetFacts,
+	] = await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
 		readFile(workerEvidencePath, "utf8"),

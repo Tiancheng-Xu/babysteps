@@ -53,14 +53,14 @@ import businessSequence from "../../../docs/architecture/starbuddy-web3-business
   <h2 id="global-architecture-title">全局架构图</h2>
   <a href={globalArchitecture}>查看全局架构原图</a>
   <img src={globalArchitecture} alt="BabySteps 全局架构图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：四层信任边界。</p>
+  <p><strong>看哪里</strong>：六列责任边界与四条数据带。</p>
   <p><strong>证明什么</strong>：运行、数据、部署和清理路径完整。</p>
 </section>
 <section aria-labelledby="business-sequence-title">
   <h2 id="business-sequence-title">核心业务时序图</h2>
   <a href={businessSequence}>查看业务时序原图</a>
   <img src={businessSequence} alt="BabySteps 核心业务时序图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：Provider 到 SBT 的编号步骤。</p>
+  <p><strong>看哪里</strong>：五段完整闭环包含登录与会话、Uniswap 获币、上架与审核、购买与结算、完课与证书。</p>
   <p><strong>证明什么</strong>：成功和失败路径均有边界。</p>
 </section>
 `;
@@ -69,12 +69,33 @@ const validAssetFacts = [
 	{
 		path: "docs/architecture/starbuddy-web3-global-architecture.svg",
 		exists: true,
-		bytes: 12000,
+		bytes: 24000,
+		width: 2400,
+		height: 1500,
+		text: `
+			<svg width="2400" height="1500">
+				<text>用户与角色</text><text>React Web</text><text>Cloudflare</text>
+				<text>Ethereum Sepolia</text><text>Web3 外部依赖</text><text>交付与 AWS</text>
+				<text>用户运行与认证</text><text>任务内容与事实所有权</text>
+				<text>代币购买随机与证书</text><text>CI/CD 安全可观测与清理</text>
+				<text>HTTPS</text><text>JSON-RPC</text><text>GraphQL</text><text>OIDC</text>
+				<text>已验证</text><text>已实现待验证</text><text>计划 / 延后</text>
+			</svg>`,
 	},
 	{
 		path: "docs/architecture/starbuddy-web3-business-sequence.svg",
 		exists: true,
-		bytes: 11000,
+		bytes: 22000,
+		width: 2400,
+		height: 1800,
+		text: `
+			<svg width="2400" height="1800">
+				<text>登录会话</text><text>Uniswap 获得 BABY</text>
+				<text>Provider 上架与 Owner 审核</text><text>家长购买结算</text>
+				<text>完课与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>
+				<text>哈希冲突</text><text>VRF pending</text><text>allowance / receipt 失败</text>
+				<text>Relayer 重试</text><text>Graph 延迟</text>
+			</svg>`,
 	},
 ];
 
@@ -130,24 +151,21 @@ test("accepts a complete evidence mapping contract", () => {
 		],
 	]);
 
-	assert.deepEqual(
-		validate(validMap),
-		[],
-	);
+	assert.deepEqual(validate(validMap), []);
 });
 
 test("accepts stronger remote Worker and D1 verification", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
 	]);
 
-	assert.deepEqual(
-		validate(
-			validMap,
-			remotelyVerifiedArchitecture,
-		),
-		[],
-	);
+	assert.deepEqual(validate(validMap, remotelyVerifiedArchitecture), []);
 });
 
 test("rejects a map without the evidence column", () => {
@@ -156,10 +174,7 @@ test("rejects a map without the evidence column", () => {
 		[["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "`pending`"]],
 	);
 
-	assert.match(
-		validate(invalidMap)[0],
-		/验证证据/,
-	);
+	assert.match(validate(invalidMap)[0], /验证证据/);
 });
 
 test("rejects an unsupported status", () => {
@@ -167,12 +182,7 @@ test("rejects an unsupported status", () => {
 		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "测试待补", "`done`"],
 	]);
 
-	assert.match(
-		validate(
-			invalidMap,
-		).join("\n"),
-		/invalid status: done/,
-	);
+	assert.match(validate(invalidMap).join("\n"), /invalid status: done/);
 });
 
 test("rejects architecture without truthful status markers", () => {
@@ -214,40 +224,84 @@ test("rejects missing Worker and D1 Phase 2 proof", () => {
 
 test("rejects architecture without a sequence diagram", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
 	]);
-	const withoutSequence = validArchitecture.replace("sequenceDiagram", "flowchart LR");
+	const withoutSequence = validArchitecture.replace(
+		"sequenceDiagram",
+		"flowchart LR",
+	);
 
-	assert.match(validate(validMap, withoutSequence).join("\n"), /sequenceDiagram/);
+	assert.match(
+		validate(validMap, withoutSequence).join("\n"),
+		/sequenceDiagram/,
+	);
 });
 
 test("rejects architecture without failure recovery and cleanup lifecycle", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
 	]);
 	const incomplete = validArchitecture
 		.replace("## 失败恢复与 Evidence", "## 运行说明")
 		.replace("## 预览环境生命周期与清理", "## 附录");
 
-	assert.match(validate(validMap, incomplete).join("\n"), /失败恢复与 Evidence/);
-	assert.match(validate(validMap, incomplete).join("\n"), /预览环境生命周期与清理/);
+	assert.match(
+		validate(validMap, incomplete).join("\n"),
+		/失败恢复与 Evidence/,
+	);
+	assert.match(
+		validate(validMap, incomplete).join("\n"),
+		/预览环境生命周期与清理/,
+	);
 });
 
 test("rejects an Evidence page that does not publish both diagram images", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
 	]);
 	const oneImageOnly = validEvidencePage.replaceAll(
 		"starbuddy-web3-business-sequence.svg",
 		"starbuddy-web3-global-architecture.svg",
 	);
 
-	assert.match(validate(validMap, validArchitecture, validWorkerEvidence, oneImageOnly).join("\n"), /business sequence image/);
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			oneImageOnly,
+		).join("\n"),
+		/business sequence image/,
+	);
 });
 
 test("rejects missing or empty public diagram assets", () => {
 	const validMap = mapWith(requiredHeaders, [
-		["链上列表", "taskId 映射", "`worker/src/tasks.ts`", "远程闭环", "`complete`"],
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
 	]);
 	const invalidAssets = [
 		{ ...validAssetFacts[0], exists: false, bytes: 0 },
@@ -263,4 +317,66 @@ test("rejects missing or empty public diagram assets", () => {
 	).join("\n");
 	assert.match(errors, /global architecture image is missing/);
 	assert.match(errors, /business sequence image is empty/);
+});
+
+test("rejects a compact global image without expanded responsibility and protocol detail", () => {
+	const validMap = mapWith(requiredHeaders, [
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
+	]);
+	const compactAssets = [
+		{
+			...validAssetFacts[0],
+			width: 1600,
+			height: 1000,
+			text: "<svg><text>Cloudflare</text><text>Ethereum Sepolia</text></svg>",
+		},
+		validAssetFacts[1],
+	];
+
+	const errors = validate(
+		validMap,
+		validArchitecture,
+		validWorkerEvidence,
+		validEvidencePage,
+		compactAssets,
+	).join("\n");
+	assert.match(errors, /global architecture image canvas/);
+	assert.match(errors, /用户与角色/);
+	assert.match(errors, /JSON-RPC/);
+});
+
+test("rejects a sequence image without all five business phases and bounded failures", () => {
+	const validMap = mapWith(requiredHeaders, [
+		[
+			"链上列表",
+			"taskId 映射",
+			"`worker/src/tasks.ts`",
+			"远程闭环",
+			"`complete`",
+		],
+	]);
+	const incompleteAssets = [
+		validAssetFacts[0],
+		{
+			...validAssetFacts[1],
+			text: "<svg><text>家长购买结算</text><text>完课与证书</text></svg>",
+		},
+	];
+
+	const errors = validate(
+		validMap,
+		validArchitecture,
+		validWorkerEvidence,
+		validEvidencePage,
+		incompleteAssets,
+	).join("\n");
+	assert.match(errors, /登录会话/);
+	assert.match(errors, /Uniswap 获得 BABY/);
+	assert.match(errors, /Relayer 重试/);
 });
