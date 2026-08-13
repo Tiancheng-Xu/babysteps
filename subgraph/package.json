@@ -5,7 +5,7 @@
 	"scripts": {
 		"abi": "pnpm --filter @babysteps/contracts exec hardhat compile && node scripts/export-abi.mjs",
 		"codegen": "pnpm abi && graph codegen",
-		"test": "pnpm codegen && graph test",
+		"test": "pnpm codegen && graph test -v 0.6.0",
 		"build": "pnpm codegen && graph build"
 	},
 	"dependencies": {
