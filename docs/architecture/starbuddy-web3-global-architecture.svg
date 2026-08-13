@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1800" viewBox="0 0 2400 1800" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1880" viewBox="0 0 2400 1880" role="img" aria-labelledby="title desc">
   <title id="title">BabySteps 与 StarBuddy Web3 展开版全局架构</title>
-  <desc id="desc">以六列责任边界展示用户、React Web、Cloudflare、Ethereum Sepolia、Web3 外部依赖、交付与 AWS。四条数据带为用户运行与认证、任务内容与事实所有权、代币购买随机与证书、CI/CD 安全可观测与清理。六条编号流为 01 登录会话流、02 兑换获币流、03 上架激活流、04 购买结算流、05 完课证书流、06 交付回滚流，共同覆盖真实请求、数据、链上交易、事件、部署、安全和清理路径。</desc>
+  <desc id="desc">以六列责任边界展示用户、React Web、Cloudflare、Ethereum Sepolia、Web3 外部依赖、交付与 AWS。四条数据带是用户运行与认证、任务内容与事实所有权、代币购买随机与证书、CI/CD 安全可观测与清理。七条编号流覆盖 01 登录会话流、02 兑换获币流、03 上架激活流、04 购买结算流、05 成长任务完成证书流、06 交付回滚流、07 纪念卡抽取融合流。纪念卡链上闭环为本地已验证、Sepolia 待部署。</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fffaf0"/>
@@ -51,8 +51,8 @@
     </style>
   </defs>
 
-  <rect width="2400" height="1500" fill="url(#bg)"/>
-  <rect x="24" y="24" width="2352" height="1752" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
+  <rect width="2400" height="1880" fill="url(#bg)"/>
+  <rect x="24" y="24" width="2352" height="1832" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
 
   <rect x="44" y="44" width="2312" height="108" rx="28" fill="url(#header)" filter="url(#shadow)"/>
   <g transform="translate(80,64)">
@@ -158,11 +158,11 @@
   <path class="deploy" d="M1960 1260H2010"/><text x="1985" y="1248" text-anchor="middle" class="protocol">OIDC</text>
 
   <!-- end-to-end trace ledger -->
-  <rect x="44" y="1418" width="2312" height="300" rx="25" fill="#f8f2e8" stroke="#173d46" stroke-width="2.5"/>
-  <text x="78" y="1456" class="laneTitle">端到端跨层追踪 · 六条编号流</text>
-  <text x="555" y="1456" class="laneCopy">从左到右按责任边界读；每个词是实际传递的载荷、交易、事件或验收结果</text>
+  <rect x="44" y="1418" width="2312" height="380" rx="25" fill="#f8f2e8" stroke="#173d46" stroke-width="2.5"/>
+  <text x="78" y="1456" class="laneTitle">端到端跨层追踪 · 七条编号流</text>
+  <text x="555" y="1456" class="laneCopy">从左到右按责任边界读；每个词是实际传递的载荷、交易、事件或核验结果</text>
   <g opacity="0.22" stroke="#173d46" stroke-dasharray="6 7">
-    <path d="M600 1468V1704"/><path d="M950 1468V1704"/><path d="M1300 1468V1704"/><path d="M1650 1468V1704"/><path d="M2000 1468V1704"/>
+    <path d="M600 1468V1784"/><path d="M950 1468V1784"/><path d="M1300 1468V1784"/><path d="M1650 1468V1784"/><path d="M2000 1468V1784"/>
   </g>
   <g>
     <rect x="68" y="1474" width="2264" height="34" rx="14" fill="#e7f2f4"/>
@@ -187,19 +187,25 @@
 
     <rect x="68" y="1634" width="2264" height="34" rx="14" fill="#e8f1e8"/>
     <circle cx="91" cy="1651" r="13" fill="#4f875c"/><text x="91" y="1656" text-anchor="middle" class="status" fill="#fff">05</text>
-    <text x="114" y="1657" class="status">完课证书流</text><path class="data" d="M270 1651H1245"/><path class="planned" d="M1245 1651H1595"/><path class="event" d="M1595 1651H1945"/><path class="data" d="M1945 1651H2295"/>
+    <text x="114" y="1657" class="status">成长任务完成证书流</text><path class="data" d="M270 1651H1245"/><path class="planned" d="M1245 1651H1595"/><path class="event" d="M1595 1651H1945"/><path class="data" d="M1945 1651H2295"/>
     <text x="415" y="1645" text-anchor="middle" class="tiny">提交完成证据</text><text x="765" y="1645" text-anchor="middle" class="tiny">完成状态 / SBT 展示</text><text x="1115" y="1645" text-anchor="middle" class="tiny">evidenceHash / 幂等键</text><text x="1465" y="1645" text-anchor="middle" class="tiny">confirmCompletion / mint</text><text x="1815" y="1645" text-anchor="middle" class="tiny">Graph + RPC 独立读回</text><text x="2165" y="1645" text-anchor="middle" class="tiny">证书与交易 Evidence</text>
 
     <rect x="68" y="1674" width="2264" height="34" rx="14" fill="#e7f2f4"/>
     <circle cx="91" cy="1691" r="13" fill="#2f7150"/><text x="91" y="1696" text-anchor="middle" class="status" fill="#fff">06</text>
     <text x="114" y="1697" class="status">交付回滚流</text><path class="deploy" d="M270 1691H2295"/>
     <text x="415" y="1685" text-anchor="middle" class="tiny">开发者提交</text><text x="765" y="1685" text-anchor="middle" class="tiny">本地 Gate / build</text><text x="1115" y="1685" text-anchor="middle" class="tiny">Pages PR Preview</text><text x="1465" y="1685" text-anchor="middle" class="tiny">合约 / RPC smoke</text><text x="1815" y="1685" text-anchor="middle" class="tiny">HTTP / TLS / Graph 健康</text><text x="2165" y="1685" text-anchor="middle" class="tiny">失败保持上一有效部署</text>
+
+    <rect x="68" y="1714" width="2264" height="66" rx="14" fill="#f0ebf6" stroke="#806f8c" stroke-width="1.5"/>
+    <circle cx="91" cy="1731" r="13" fill="#806f8c"/><text x="91" y="1736" text-anchor="middle" class="status" fill="#fff">07</text>
+    <text x="114" y="1737" class="status">纪念卡抽取融合流</text><path class="chain" d="M270 1731H1595"/><path class="event" d="M1595 1731H1945"/><path class="data" d="M1945 1731H2295"/>
+    <text x="415" y="1725" text-anchor="middle" class="tiny">固定扣 12 成长星</text><text x="765" y="1725" text-anchor="middle" class="tiny">抽卡 / 三卡融合 UI</text><text x="1115" y="1725" text-anchor="middle" class="tiny">不写 D1 私有数据</text><text x="1465" y="1725" text-anchor="middle" class="tiny">Keepsakes + ERC-5192</text><text x="1815" y="1725" text-anchor="middle" class="tiny">VRF 稀有度 / 阶段 / 成败</text><text x="2165" y="1725" text-anchor="middle" class="tiny">本地 Evidence · Sepolia 待部署</text>
+    <text x="415" y="1762" text-anchor="middle" class="tiny">24h 可恢复</text><text x="765" y="1762" text-anchor="middle" class="tiny">失败烧 1 / 解锁 2</text><text x="1115" y="1762" text-anchor="middle" class="tiny">迟到回调忽略</text><text x="1465" y="1762" text-anchor="middle" class="tiny">spend / refund 边界</text><text x="1815" y="1762" text-anchor="middle" class="tiny">Chainlink VRF v2.5</text><text x="2165" y="1762" text-anchor="middle" class="tiny">已实现待验证</text>
   </g>
   <text x="1660" y="1456" class="protocol">02：Quote → Approve → Router → Pool → BABY</text>
 
   <!-- footer legend -->
-  <rect x="58" y="1734" width="2284" height="42" rx="18" fill="#173d46"/>
-  <g transform="translate(82,1755)">
+  <rect x="58" y="1814" width="2284" height="42" rx="18" fill="#173d46"/>
+  <g transform="translate(82,1835)">
     <path class="request" d="M0 0H55"/><text x="66" y="6" class="status" style="fill:#fffaf0">请求流</text>
     <path class="data" d="M155 0H210"/><text x="221" y="6" class="status" style="fill:#fffaf0">数据流</text>
     <path class="chain" d="M310 0H365"/><text x="376" y="6" class="status" style="fill:#fffaf0">链上交易</text>

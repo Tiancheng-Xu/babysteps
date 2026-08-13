@@ -3,7 +3,7 @@
   "runId": "d91f8a58-65df-4bb4-92f9-fcfb2b9a4013",
   "feature": "starbuddy-keepsakes",
   "contractHash": "7b99929c46cba4df2534ae5710377d53e95f181584fd088b8fd8fb63d25e80d4",
-  "node": "N3",
+  "node": "N8",
   "strategy": "inline",
   "difficulty": "high",
   "workspace": "/Users/shier/Desktop/babysteps",
@@ -13,6 +13,6 @@
     "T2": "completed",
     "T3": "completed",
     "T4": "completed",
-    "T5": "in_progress"
+    "T5": "completed"
   }
 }

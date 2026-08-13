@@ -49,19 +49,27 @@ Boundary: local only; no remote D1 or Worker deployment
 const validEvidencePage = `
 import globalArchitecture from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import businessSequence from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
+import keepsakeDesktop from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png";
+import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png";
 <section aria-labelledby="global-architecture-title">
   <h2 id="global-architecture-title">全局架构图</h2>
   <a href={globalArchitecture}>查看全局架构原图</a>
   <img src={globalArchitecture} alt="BabySteps 全局架构图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：六列责任边界、四条数据带与六条编号流，支持跨层追踪。</p>
+  <p><strong>看哪里</strong>：六列责任边界、四条数据带与七条编号流，支持跨层追踪。</p>
   <p><strong>证明什么</strong>：运行、数据、部署和清理路径完整。</p>
 </section>
 <section aria-labelledby="business-sequence-title">
   <h2 id="business-sequence-title">核心业务时序图</h2>
   <a href={businessSequence}>查看业务时序原图</a>
   <img src={businessSequence} alt="BabySteps 核心业务时序图" width="1600" height="1000" />
-  <p><strong>看哪里</strong>：五段完整闭环包含登录与会话、Uniswap 获币、Router / Pool、上架与审核、购买与结算、完课与证书。</p>
+  <p><strong>看哪里</strong>：六段完整闭环包含登录与会话、Uniswap 获币、Router / Pool、上架与审核、购买与结算、成长任务完成与证书。</p>
   <p><strong>证明什么</strong>：成功和失败路径均有边界。</p>
+</section>
+<section>
+  <h2>StarBuddy 纪念卡抽取与融合</h2>
+  <img src={keepsakeDesktop} alt="StarBuddy 纪念馆桌面端本地验证" />
+  <img src={keepsakeMobile} alt="StarBuddy 纪念馆 390 像素移动端本地验证" />
+  <p>固定 12 成长星 · Sepolia 待部署 · 24 小时未回调可恢复</p>
 </section>
 `;
 
@@ -76,7 +84,9 @@ const validAssetFacts = [
 			<svg width="2400" height="1500">
 				<text>01 登录会话流</text><text>02 兑换获币流</text>
 				<text>03 上架激活流</text><text>04 购买结算流</text>
-				<text>05 完课证书流</text><text>06 交付回滚流</text>
+				<text>05 成长任务完成证书流</text><text>06 交付回滚流</text>
+				<text>07 纪念卡抽取融合流</text><text>固定扣 12 成长星</text>
+				<text>失败烧 1 / 解锁 2</text><text>Sepolia 待部署</text>
 				<text>用户与角色</text><text>React Web</text><text>Cloudflare</text>
 				<text>Ethereum Sepolia</text><text>Web3 外部依赖</text><text>交付与 AWS</text>
 				<text>用户运行与认证</text><text>任务内容与事实所有权</text>
@@ -105,14 +115,35 @@ const validAssetFacts = [
 				<text>04E 事件与独立读回</text>
 				<text>登录会话</text><text>Uniswap 获得 BABY</text>
 				<text>Provider 上架与 Owner 审核</text><text>家长购买结算</text>
-				<text>完课与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>
+				<text>成长任务完成与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>
 				<text>哈希冲突</text><text>VRF pending</text><text>allowance / receipt 失败</text>
 				<text>Relayer 重试</text><text>Graph 延迟</text>
 				<text>Worker verify</text><text>rejectTask</text>
 				<text>Coordinator 回调 Marketplace</text>
 				<text>Relayer → Marketplace.confirmCompletion</text>
 				<text>Marketplace → SBT.mintForPurchase</text><text>RPC 不一致</text>
+				<text>06 纪念卡</text><text>spendTransferable(12)</text>
+				<text>70/22/7/1</text><text>24h recover</text>
+				<text>迟到 VRF 回调忽略</text>
 			</svg>`,
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png",
+		exists: true,
+		bytes: 190032,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "43324f6b226e8c9e20a948f40cdda9e52517ca92e20e8e1a8f3b9fbae83622db",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png",
+		exists: true,
+		bytes: 140715,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe",
 	},
 ];
 
@@ -368,7 +399,7 @@ test("rejects a compact global image without expanded responsibility and protoco
 	assert.match(errors, /JSON-RPC/);
 });
 
-test("rejects a sequence image without all five business phases and bounded failures", () => {
+test("rejects a sequence image without all six business phases and bounded failures", () => {
 	const validMap = mapWith(requiredHeaders, [
 		[
 			"链上列表",
@@ -401,4 +432,48 @@ test("rejects a sequence image without all five business phases and bounded fail
 	assert.match(errors, /Coordinator 回调 Marketplace/);
 	assert.match(errors, /Relayer → Marketplace\.confirmCompletion/);
 	assert.match(errors, /Marketplace → SBT\.mintForPurchase/);
+});
+
+test("rejects Evidence that omits the locally verified keepsake flow or screenshots", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["纪念卡", "抽卡融合", "`contracts/StarBuddy.sol`", "本地测试", "`partial`"],
+	]);
+	const withoutKeepsakes = validEvidencePage
+		.replaceAll("StarBuddy 纪念卡抽取与融合", "普通展示")
+		.replaceAll("keepsake-gallery-desktop.png", "missing-desktop.png");
+	const assetsWithoutDesktop = validAssetFacts.filter(
+		(asset) => !asset.path.endsWith("keepsake-gallery-desktop.png"),
+	);
+
+	const errors = validate(
+		validMap,
+		validArchitecture,
+		validWorkerEvidence,
+		withoutKeepsakes,
+		assetsWithoutDesktop,
+	).join("\n");
+	assert.match(errors, /StarBuddy 纪念卡抽取与融合/);
+	assert.match(errors, /keepsake desktop screenshot/);
+});
+
+test("rejects a screenshot whose recorded proof hash no longer matches", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["纪念卡", "抽卡融合", "`contracts/StarBuddy.sol`", "本地测试", "`partial`"],
+	]);
+	const changedAssets = validAssetFacts.map((asset) =>
+		asset.path.endsWith("keepsake-gallery-desktop.png")
+			? { ...asset, sha256: "changed" }
+			: asset,
+	);
+
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			validEvidencePage,
+			changedAssets,
+		).join("\n"),
+		/keepsake desktop screenshot SHA-256 mismatch/,
+	);
 });

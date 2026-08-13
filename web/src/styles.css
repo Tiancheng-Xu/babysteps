@@ -1767,6 +1767,65 @@ textarea[aria-invalid="true"] {
 	grid-template-columns: 1fr;
 }
 
+.evidence-feature-proof {
+	display: grid;
+	gap: 20px;
+	margin-bottom: 28px;
+	padding: 28px;
+	border: 2px solid var(--ink);
+	border-radius: 26px;
+	background: linear-gradient(
+		135deg,
+		rgba(255, 247, 223, 0.96),
+		rgba(238, 232, 251, 0.86)
+	);
+	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+}
+
+.evidence-feature-proof__header {
+	display: flex;
+	gap: 18px;
+	align-items: flex-start;
+	justify-content: space-between;
+}
+
+.evidence-feature-proof__lead {
+	max-width: 82ch;
+	margin: 0;
+	line-height: 1.75;
+	color: var(--ink-soft);
+}
+
+.evidence-proof-gallery {
+	display: grid;
+	grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+	gap: 18px;
+}
+
+.evidence-proof-gallery figure {
+	display: grid;
+	align-content: start;
+	gap: 12px;
+	margin: 0;
+	padding: 14px;
+	border: 2px solid var(--line);
+	border-radius: 20px;
+	background: rgba(255, 253, 247, 0.82);
+}
+
+.evidence-proof-gallery img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border: 1px solid var(--line);
+	border-radius: 14px;
+}
+
+.evidence-proof-gallery figcaption {
+	line-height: 1.65;
+	color: var(--ink-soft);
+}
+
 .contract-evidence ul {
 	display: grid;
 	gap: 13px;
@@ -2201,6 +2260,19 @@ textarea[aria-invalid="true"] {
 	.evidence-diagram-card__header {
 		align-items: stretch;
 		flex-direction: column;
+	}
+
+	.evidence-feature-proof {
+		padding: 20px;
+	}
+
+	.evidence-feature-proof__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.evidence-proof-gallery {
+		grid-template-columns: 1fr;
 	}
 
 	.evidence-diagram-card__status {

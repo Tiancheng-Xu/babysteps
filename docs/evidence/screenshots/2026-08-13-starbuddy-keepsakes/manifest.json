@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-08-13",
+  "scope": "StarBuddy keepsake gallery and Evidence responsive verification",
+  "assets": [
+    {
+      "file": "keepsake-gallery-desktop.png",
+      "bytes": 190032,
+      "width": 1440,
+      "height": 1732,
+      "sha256": "43324f6b226e8c9e20a948f40cdda9e52517ca92e20e8e1a8f3b9fbae83622db"
+    },
+    {
+      "file": "keepsake-gallery-mobile-390.png",
+      "bytes": 140715,
+      "width": 390,
+      "height": 2856,
+      "sha256": "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe"
+    },
+    {
+      "file": "evidence-keepsakes-desktop-1440.jpg",
+      "bytes": 830001,
+      "width": 1440,
+      "height": 5212,
+      "sha256": "ca90dbefa663d4615ddbdc68fa5330083b1ab130a4fba8c07f524bed2c2a2eb5"
+    },
+    {
+      "file": "evidence-keepsakes-mobile-390.jpg",
+      "bytes": 413812,
+      "width": 390,
+      "height": 6328,
+      "sha256": "ad6007b8699fd8fc3c9736aba6cb0c43925c0e653fab4265cde88c8e8752f33e"
+    }
+  ],
+  "truthBoundary": "UI and contracts are locally verified. StarBuddy keepsake Sepolia addresses and transactions remain pending."
+}

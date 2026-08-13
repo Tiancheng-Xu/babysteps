@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1800" viewBox="0 0 2400 1800" role="img" aria-labelledby="title desc">
-  <title id="title">BabySteps × StarBuddy Web3 五阶段完整业务时序</title>
-  <desc id="desc">五段完整闭环依次为登录会话、Uniswap 获得 BABY、Provider 上架与 Owner 审核、家长购买结算、完课与证书。失败路径包括签名过期、滑点 / 余额不足、哈希冲突、VRF pending、allowance / receipt 失败、Relayer 重试、Graph 延迟。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2100" viewBox="0 0 2400 2100" role="img" aria-labelledby="title desc">
+  <title id="title">BabySteps × StarBuddy Web3 六阶段完整业务时序</title>
+  <desc id="desc">六段完整闭环依次为登录会话、Uniswap 获得 BABY、Provider 上架与 Owner 审核、家长购买结算、成长任务完成与证书、纪念卡抽取与融合。纪念卡合约本地已验证、Sepolia 待部署。</desc>
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="0.55" stop-color="#f7f0df"/><stop offset="1" stop-color="#e8f0e5"/></linearGradient>
     <linearGradient id="header" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#163f4a"/><stop offset="1" stop-color="#244f57"/></linearGradient>
@@ -23,12 +23,12 @@
     </style>
   </defs>
 
-  <rect width="2400" height="1800" fill="url(#paper)"/>
-  <rect x="24" y="24" width="2352" height="1752" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
+  <rect width="2400" height="2100" fill="url(#paper)"/>
+  <rect x="24" y="24" width="2352" height="2052" rx="34" fill="none" stroke="#173d46" stroke-width="5"/>
   <rect x="44" y="44" width="2312" height="108" rx="28" fill="url(#header)" filter="url(#shadow)"/>
   <g transform="translate(80,64)"><circle cx="39" cy="32" r="35" fill="#ffefbd" stroke="#e3a64a" stroke-width="4"/><path d="M39 7L47 24L66 27L52 40L56 59L39 50L22 59L26 40L12 27L31 24Z" fill="#f6c75c" stroke="#915c25" stroke-width="2.5"/><circle cx="32" cy="34" r="2.5" fill="#6b4328"/><circle cx="46" cy="34" r="2.5" fill="#6b4328"/><path d="M34 42Q39 47 44 42" fill="none" stroke="#6b4328" stroke-width="2.5" stroke-linecap="round"/></g>
-  <text x="165" y="90" class="title" style="fill:#fffaf0">BabySteps × StarBuddy Web3 · 五阶段完整业务时序</text>
-  <text x="167" y="126" class="subtitle" style="fill:#dfece7">登录 → 获币 → 上架审核 → approve / buy → 完成 → ERC-5192 SBT → 独立读回</text>
+  <text x="165" y="90" class="title" style="fill:#fffaf0">BabySteps × StarBuddy Web3 · 六阶段完整业务时序</text>
+  <text x="167" y="126" class="subtitle" style="fill:#dfece7">登录 → 获币 → 上架审核 → 购买 → 成长任务完成证书 → 纪念卡抽取 / 融合 / 恢复</text>
   <g transform="translate(1870,72)"><rect width="190" height="34" rx="17" fill="#dce9c8"/><circle cx="20" cy="17" r="7" fill="#4f875c"/><text x="36" y="23" class="status" style="fill:#355940">已验证闭环</text><rect x="205" width="225" height="34" rx="17" fill="#e5dded"/><circle cx="225" cy="17" r="7" fill="#806f8c"/><text x="242" y="23" class="status" style="fill:#5f5269">生产 Relayer 延后</text></g>
 
   <!-- eight responsibility columns -->
@@ -102,7 +102,7 @@
 
   <!-- phase 5 -->
   <rect x="44" y="1280" width="2312" height="288" rx="24" fill="#e8f1f3" stroke="#668895" stroke-width="2"/>
-  <rect x="58" y="1294" width="130" height="260" rx="18" fill="#cfe2e5"/><text x="78" y="1332" class="phase">05 完课与</text><text x="78" y="1359" class="phase">证书</text><text x="78" y="1392" class="phaseSub">evidenceHash</text><text x="78" y="1415" class="phaseSub">→ locked SBT</text>
+  <rect x="58" y="1294" width="130" height="260" rx="18" fill="#cfe2e5"/><text x="78" y="1332" class="phase">05 成长任务</text><text x="78" y="1359" class="phase">完成证书</text><text x="78" y="1392" class="phaseSub">家长/孩子完成</text><text x="78" y="1415" class="phaseSub">→ locked SBT</text>
   <circle cx="216" cy="1317" r="16" fill="#315d66"/><text x="216" y="1323" text-anchor="middle" class="status" style="fill:#fff">5</text>
   <path class="request" d="M330 1317H878"/><text x="604" y="1305" text-anchor="middle" class="step">提交完成记录与链下 evidenceHash</text>
   <path class="event" d="M890 1355H1998"/><text x="1444" y="1343" text-anchor="middle" class="small">Worker 交付待处理 evidenceHash → 受限 Relayer</text>
@@ -114,10 +114,24 @@
   <g transform="translate(875,1520)"><rect width="520" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="260" y="21" text-anchor="middle" class="tiny">Graph 延迟 / RPC 不一致：回退合约与三 RPC，链上事实不变</text></g>
   <g transform="translate(1420,1520)"><rect width="850" height="32" rx="12" fill="#e5dded" stroke="#806f8c" stroke-width="2"/><text x="425" y="21" text-anchor="middle" class="tiny">生产 KMS Relayer：计划 / 延后；当前闭环的临时角色已撤销</text></g>
 
+  <!-- phase 6 -->
+  <rect x="44" y="1584" width="2312" height="290" rx="24" fill="#f0ebf6" stroke="#806f8c" stroke-width="2"/>
+  <rect x="58" y="1598" width="130" height="262" rx="18" fill="#e5dded"/><text x="78" y="1636" class="phase">06 纪念卡</text><text x="78" y="1663" class="phase">抽取融合</text><text x="78" y="1696" class="phaseSub">本地已验证</text><text x="78" y="1719" class="phaseSub">Sepolia 待部署</text>
+  <circle cx="216" cy="1621" r="16" fill="#806f8c"/><text x="216" y="1627" text-anchor="middle" class="status" style="fill:#fff">6</text>
+  <path class="chain" d="M330 1621H1438"/><text x="884" y="1609" text-anchor="middle" class="step">06A requestDraw · 固定 spendTransferable(12) · 不减少 lifetimeEarned</text>
+  <path class="event" d="M1450 1659H1998"/><text x="1724" y="1647" text-anchor="middle" class="step">06B Chainlink VRF · 稀有度 70/22/7/1 + 四阶段独立随机</text>
+  <path class="chain" d="M2010 1697H1462"/><text x="1736" y="1685" text-anchor="middle" class="step">06C fulfill → KeepsakeSBT.mint · ERC-5192 locked</text>
+  <path class="chain" d="M610 1735H1438"/><text x="1024" y="1723" text-anchor="middle" class="step">06D 三张同系列同稀有度卡 requestFusion · 锁定 parents</text>
+  <path class="event" d="M1450 1773H1998"/><text x="1724" y="1761" text-anchor="middle" class="step">06E 成功：burn 3 + mint next；失败：随机 burn 1 + unlock 2</text>
+  <path class="return" d="M2010 1811H622"/><text x="1316" y="1799" text-anchor="middle" class="small">06F 24h recover：抽卡退款 / 融合解锁；迟到 VRF 回调忽略</text>
+  <g transform="translate(330,1826)"><rect width="650" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="325" y="21" text-anchor="middle" class="tiny">余额不足 / 非同款 / Collector 再融合：交易 revert，不扣星、不锁卡</text></g>
+  <g transform="translate(1000,1826)"><rect width="620" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="310" y="21" text-anchor="middle" class="tiny">VRF pending：等待；达到恢复时间才可 recoverRequest</text></g>
+  <g transform="translate(1640,1826)"><rect width="630" height="32" rx="12" fill="#ffe6b2" stroke="#c57c2d" stroke-width="2"/><text x="315" y="21" text-anchor="middle" class="tiny">新合约地址 / consumer / tx：待 Sepolia 部署，不伪造 Evidence</text></g>
+
   <!-- evidence and legend footer -->
-  <rect x="58" y="1590" width="2284" height="158" rx="22" fill="#173d46"/>
-  <text x="86" y="1628" class="step" style="fill:#ffe0a2">可核验链路</text>
-  <text x="86" y="1658" class="small" style="fill:#dfece7">Task #1 · Purchase #1 · Certificate #1 · Sepolia 11155111 · 交易哈希与合约地址记录在 deployment Evidence</text>
-  <text x="86" y="1685" class="small" style="fill:#dfece7">事实优先级：链上状态 / receipt ＞ 三 RPC 对照 ＞ Graph 索引 ＞ D1 富内容；测试资产无真实价值</text>
-  <g transform="translate(90,1718)"><path class="request" d="M0 0H75"/><text x="88" y="6" class="status" style="fill:#fffaf0">请求 / 链下数据</text><path class="chain" d="M295 0H370"/><text x="383" y="6" class="status" style="fill:#fffaf0">用户签名交易</text><path class="event" d="M590 0H665"/><text x="678" y="6" class="status" style="fill:#fffaf0">异步事件 / 回调</text><path class="return" d="M925 0H1000"/><text x="1013" y="6" class="status" style="fill:#fffaf0">验证 / 读回</text><text x="1270" y="6" class="status" style="fill:#ffdda0">失败时：停止、回退或有界重试；从不伪造成功</text></g>
+  <rect x="58" y="1890" width="2284" height="158" rx="22" fill="#173d46"/>
+  <text x="86" y="1928" class="step" style="fill:#ffe0a2">可核验链路</text>
+  <text x="86" y="1958" class="small" style="fill:#dfece7">原有任务平台：Sepolia Task #1 · Purchase #1 · Certificate #1；纪念卡：合约 / Web / 1440 与 390px 本地已验证</text>
+  <text x="86" y="1985" class="small" style="fill:#dfece7">事实优先级：链上状态 / receipt ＞ 三 RPC 对照 ＞ Graph 索引 ＞ D1 富内容；测试资产无真实价值</text>
+  <g transform="translate(90,2018)"><path class="request" d="M0 0H75"/><text x="88" y="6" class="status" style="fill:#fffaf0">请求 / 链下数据</text><path class="chain" d="M295 0H370"/><text x="383" y="6" class="status" style="fill:#fffaf0">用户签名交易</text><path class="event" d="M590 0H665"/><text x="678" y="6" class="status" style="fill:#fffaf0">异步事件 / 回调</text><path class="return" d="M925 0H1000"/><text x="1013" y="6" class="status" style="fill:#fffaf0">验证 / 读回</text><text x="1270" y="6" class="status" style="fill:#ffdda0">失败时：停止、回退或有界重试；从不伪造成功</text></g>
 </svg>

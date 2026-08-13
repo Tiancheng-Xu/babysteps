@@ -1,4 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -33,8 +34,12 @@ const expectedDiagramAssets = [
 			"02 兑换获币流",
 			"03 上架激活流",
 			"04 购买结算流",
-			"05 完课证书流",
+			"05 成长任务完成证书流",
 			"06 交付回滚流",
+			"07 纪念卡抽取融合流",
+			"固定扣 12 成长星",
+			"失败烧 1 / 解锁 2",
+			"Sepolia 待部署",
 			"用户与角色",
 			"React Web",
 			"Cloudflare",
@@ -81,7 +86,7 @@ const expectedDiagramAssets = [
 			"Uniswap 获得 BABY",
 			"Provider 上架与 Owner 审核",
 			"家长购买结算",
-			"完课与证书",
+			"成长任务完成与证书",
 			"签名过期",
 			"滑点 / 余额不足",
 			"哈希冲突",
@@ -95,7 +100,30 @@ const expectedDiagramAssets = [
 			"Relayer → Marketplace.confirmCompletion",
 			"Marketplace → SBT.mintForPurchase",
 			"RPC 不一致",
+			"06 纪念卡",
+			"spendTransferable(12)",
+			"70/22/7/1",
+			"24h recover",
+			"迟到 VRF 回调忽略",
 		],
+	},
+	{
+		kind: "keepsake desktop screenshot",
+		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png",
+		minimumWidth: 0,
+		minimumHeight: 0,
+		markers: [],
+		expectedBytes: 190032,
+		expectedSha256: "43324f6b226e8c9e20a948f40cdda9e52517ca92e20e8e1a8f3b9fbae83622db",
+	},
+	{
+		kind: "keepsake mobile screenshot",
+		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png",
+		minimumWidth: 0,
+		minimumHeight: 0,
+		markers: [],
+		expectedBytes: 140715,
+		expectedSha256: "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe",
 	},
 ];
 const evidencePageMarkers = [
@@ -109,15 +137,19 @@ const evidencePageMarkers = [
 	"BabySteps 核心业务时序图",
 	"六列责任边界",
 	"四条数据带",
-	"五段完整闭环",
-	"六条编号流",
+	"六段完整闭环",
+	"七条编号流",
 	"跨层追踪",
 	"Router / Pool",
 	"登录与会话",
 	"Uniswap 获币",
 	"上架与审核",
 	"购买与结算",
-	"完课与证书",
+	"成长任务完成与证书",
+	"StarBuddy 纪念卡抽取与融合",
+	"固定 12 成长星",
+	"Sepolia 待部署",
+	"24 小时未回调可恢复",
 ];
 const workerEvidenceMarkers = [
 	"chainId:marketplaceAddress:taskId",
@@ -225,6 +257,12 @@ export function validateDeliveryEvidence(
 		} else if (!(fact.bytes > 0)) {
 			errors.push(`${asset.kind} is empty: ${asset.path}`);
 		} else {
+			if (asset.expectedBytes && fact.bytes !== asset.expectedBytes) {
+				errors.push(`${asset.kind} byte count mismatch`);
+			}
+			if (asset.expectedSha256 && fact.sha256 !== asset.expectedSha256) {
+				errors.push(`${asset.kind} SHA-256 mismatch`);
+			}
 			if (
 				!(fact.width >= asset.minimumWidth) ||
 				!(fact.height >= asset.minimumHeight)
@@ -247,7 +285,8 @@ export function validateDeliveryEvidence(
 async function readAssetFact(path) {
 	try {
 		const details = await stat(path);
-		const text = details.isFile() ? await readFile(path, "utf8") : "";
+		const bytes = details.isFile() ? await readFile(path) : Buffer.alloc(0);
+		const text = path.endsWith(".svg") ? bytes.toString("utf8") : "";
 		const svgTag = text.match(/<svg\b[^>]*>/u)?.[0] ?? "";
 		const width = Number(svgTag.match(/\bwidth=["'](\d+)["']/u)?.[1] ?? 0);
 		const height = Number(svgTag.match(/\bheight=["'](\d+)["']/u)?.[1] ?? 0);
@@ -255,6 +294,7 @@ async function readAssetFact(path) {
 			path,
 			exists: details.isFile(),
 			bytes: details.size,
+			sha256: createHash("sha256").update(bytes).digest("hex"),
 			text,
 			width,
 			height,
