@@ -10,6 +10,7 @@ import { SafetyNoticeGrid } from "./components/SafetyNoticeGrid";
 import { WalletPanel } from "./components/WalletPanel";
 import { GrowthPanel } from "./features/growth/GrowthPanel";
 import { PointTransferPanel } from "./features/growth/PointTransferPanel";
+import { KeepsakeGalleryPage } from "./features/keepsakes/KeepsakeGalleryPage";
 import { NotebookPanel } from "./features/notebook/NotebookPanel";
 import { EvidencePage } from "./pages/EvidencePage";
 import { ExchangePage } from "./pages/ExchangePage";
@@ -27,7 +28,6 @@ function HomeView() {
 			<GrowthPanel />
 			<PointTransferPanel />
 			<NotebookPanel />
-			<CourseEvidenceFooter />
 		</>
 	);
 }
@@ -44,10 +44,12 @@ export default function App() {
 			{currentView === "home" ? <HomeView /> : null}
 			{currentView === "marketplace" ? <GrowthMarketplacePage /> : null}
 			{currentView === "parent" ? <ParentDashboardPage /> : null}
+			{currentView === "keepsakes" ? <KeepsakeGalleryPage /> : null}
 			{currentView === "provider" ? <ProviderConsolePage /> : null}
 			{currentView === "exchange" ? <ExchangePage /> : null}
 			{currentView === "profile" ? <ProfilePage /> : null}
 			{currentView === "evidence" ? <EvidencePage /> : null}
+			<CourseEvidenceFooter currentView={currentView} />
 		</main>
 	);
 }

@@ -6,5 +6,14 @@
 		"vrfKeyHash": "0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae",
 		"vrfRequestConfirmations": 3,
 		"vrfCallbackGasLimit": 500000
+	},
+	"StarBuddyKeepsakesSepoliaModule": {
+		"onchainNotebookAddress": "0x0000000000000000000000000000000000000000",
+		"metadataBaseUri": "https://babysteps.baby2b.online/metadata/keepsakes/",
+		"vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
+		"vrfSubscriptionId": "0",
+		"vrfKeyHash": "0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae",
+		"vrfRequestConfirmations": 3,
+		"vrfCallbackGasLimit": 500000
 	}
 }

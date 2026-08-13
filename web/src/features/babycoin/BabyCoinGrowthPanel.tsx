@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { formatUnits } from "viem";
 
 import { StarBuddy } from "../../components/StarBuddy";
 import {
@@ -8,13 +7,48 @@ import {
 	type GrowthActivityId,
 	growthStageLabel,
 } from "../growth/growthModel";
+import { formatBabyCoinAmount } from "./formatBabyCoinAmount";
 import { useBabyCoinGrowth } from "./useBabyCoinGrowth";
 
 const EXPLORER_TX_BASE = "https://sepolia.etherscan.io/tx/";
 const TOKEN_UNIT = 10n ** 18n;
 
-function displayBabyCoin(value: bigint | undefined) {
-	return value === undefined ? "连接后读取" : formatUnits(value, 18);
+type BabyCoinMetricProps = {
+	id: string;
+	label: string;
+	note: string;
+	value: bigint | undefined;
+	warm?: boolean;
+};
+
+function BabyCoinMetric({ id, label, note, value, warm }: BabyCoinMetricProps) {
+	const formatted = formatBabyCoinAmount(value);
+	const exactLabel = formatted.exact
+		? `完整链上数值 ${formatted.exact} BABY`
+		: undefined;
+
+	return (
+		<article
+			className={warm ? "metric-tile metric-tile--warm" : "metric-tile"}
+			aria-labelledby={`${id}-label`}
+		>
+			<h3 className="metric-tile__label" id={`${id}-label`}>
+				{label}
+			</h3>
+			<p className="metric-tile__value" title={exactLabel} aria-live="polite">
+				<span className="metric-tile__number">{formatted.display}</span>
+				<span className="metric-tile__unit" translate="no">
+					BABY
+				</span>
+				{formatted.isApproximate && exactLabel ? (
+					<span className="visually-hidden">{exactLabel}</span>
+				) : null}
+			</p>
+			<p className="metric-tile__note">
+				{value === undefined ? "连接 Sepolia 钱包后读取。" : note}
+			</p>
+		</article>
+	);
 }
 
 function activityStatus(
@@ -61,18 +95,19 @@ export function BabyCoinGrowthPanel() {
 
 				<div className="growth-summary-card">
 					<div className="metric-grid">
-						<article className="metric-tile">
-							<p className="metric-tile__label">可用 BabyCoin</p>
-							<p className="metric-tile__value">
-								{displayBabyCoin(growth.balance)} BABY
-							</p>
-						</article>
-						<article className="metric-tile metric-tile--warm">
-							<p className="metric-tile__label">累计活动奖励</p>
-							<p className="metric-tile__value">
-								{displayBabyCoin(growth.lifetimeEarned)} BABY
-							</p>
-						</article>
+						<BabyCoinMetric
+							id="spendable-babycoin"
+							label="可用 BabyCoin"
+							note="可用于购买和转账，消费后会减少。"
+							value={growth.balance}
+						/>
+						<BabyCoinMetric
+							id="lifetime-babycoin"
+							label="累计成长奖励"
+							note="决定星宝阶段，只增不减。"
+							value={growth.lifetimeEarned}
+							warm
+						/>
 					</div>
 
 					<div

@@ -30,6 +30,9 @@ contract OnchainNotebook {
     mapping(address account => uint256 balance) private transferableBalances;
     mapping(address account => mapping(ActivityType activity => ActivityProgress progress))
         private activityProgress;
+    mapping(address consumer => bool authorized) public growthStarConsumers;
+
+    address public immutable admin;
 
     error NoteTooLong(uint256 actualLength, uint256 maximumLength);
     error ActivityCoolingDown(address account, ActivityType activity);
@@ -45,6 +48,8 @@ contract OnchainNotebook {
         uint256 available,
         uint256 requested
     );
+    error UnauthorizedNotebookAdmin(address caller);
+    error UnauthorizedGrowthStarConsumer(address caller);
 
     event NoteUpdated(address indexed author, string note);
     event NoteCleared(address indexed author);
@@ -63,6 +68,38 @@ contract OnchainNotebook {
         uint256 senderBalance,
         uint256 recipientBalance
     );
+    event GrowthStarConsumerUpdated(
+        address indexed consumer,
+        bool authorized
+    );
+    event TransferableBalanceSpent(
+        address indexed account,
+        address indexed consumer,
+        uint256 amount,
+        uint256 remainingBalance
+    );
+    event TransferableBalanceRefunded(
+        address indexed account,
+        address indexed consumer,
+        uint256 amount,
+        uint256 resultingBalance
+    );
+
+    constructor() {
+        admin = msg.sender;
+    }
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert UnauthorizedNotebookAdmin(msg.sender);
+        _;
+    }
+
+    modifier onlyGrowthStarConsumer() {
+        if (!growthStarConsumers[msg.sender]) {
+            revert UnauthorizedGrowthStarConsumer(msg.sender);
+        }
+        _;
+    }
 
     function getNote(address author) external view returns (string memory) {
         return notes[author];
@@ -152,6 +189,50 @@ contract OnchainNotebook {
             amount,
             senderBalance,
             recipientBalance
+        );
+    }
+
+    function setGrowthStarConsumer(
+        address consumer,
+        bool authorized
+    ) external onlyAdmin {
+        if (consumer == address(0)) revert InvalidTransferRecipient(consumer);
+        growthStarConsumers[consumer] = authorized;
+        emit GrowthStarConsumerUpdated(consumer, authorized);
+    }
+
+    function spendTransferableBalance(
+        address account,
+        uint256 amount
+    ) external onlyGrowthStarConsumer {
+        if (amount == 0) revert InvalidTransferAmount();
+        uint256 available = transferableBalances[account];
+        if (available < amount) {
+            revert InsufficientTransferableBalance(available, amount);
+        }
+
+        uint256 remainingBalance = available - amount;
+        transferableBalances[account] = remainingBalance;
+        emit TransferableBalanceSpent(
+            account,
+            msg.sender,
+            amount,
+            remainingBalance
+        );
+    }
+
+    function refundTransferableBalance(
+        address account,
+        uint256 amount
+    ) external onlyGrowthStarConsumer {
+        if (amount == 0) revert InvalidTransferAmount();
+        uint256 resultingBalance = transferableBalances[account] + amount;
+        transferableBalances[account] = resultingBalance;
+        emit TransferableBalanceRefunded(
+            account,
+            msg.sender,
+            amount,
+            resultingBalance
         );
     }
 
