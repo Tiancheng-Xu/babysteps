@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { parse } from "yaml";
 
 test("performance workflow is manual, OIDC-only, validated and self-cleaning", async () => {
 	const source = await readFile(".github/workflows/aws-performance.yml", "utf8");
+	assert.doesNotThrow(() => parse(source));
 	assert.match(source, /workflow_dispatch:/);
 	assert.match(source, /environment: aws-performance/);
 	assert.match(source, /id-token: write/);

@@ -200,7 +200,11 @@ jobs:
           printf '{"projectStackDeleted":true,"remainingProjectClusters":0,"sharedFoundationProtected":true}\n' > evidence/cleanup.json
       - name: Record incomplete cleanup without claiming success
         if: always() && steps.delete-stack.outcome != 'success'
-        run: printf '{"projectStackDeleted":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
+        run: |
+          printf '{"projectStackDeleted":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: babysteps-performance-evidence-${{ github.run_id }}, path: evidence, retention-days: 14 }
+        with:
+          name: babysteps-performance-evidence-${{ github.run_id }}
+          path: evidence
+          retention-days: 14

@@ -35,6 +35,9 @@ importers:
       multiformats:
         specifier: 14.0.5
         version: 14.0.5
+      yaml:
+        specifier: ^2.8.1
+        version: 2.8.1
 
   aws:
     dependencies:
