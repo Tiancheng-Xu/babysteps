@@ -22,7 +22,7 @@ export function ProfilePage() {
 					<p>
 						代码已限制为 Google、邮箱、外部钱包三种入口，并接入 Smart
 						Wallet；请在公开环境变量中配置 VITE_PRIVY_APP_ID
-						后进行真实登录验收。
+						后完成真实登录验证。
 					</p>
 					<p className="identity-note">
 						App ID 是公开标识，不是 API Secret；任何私钥或服务端密钥都不得放进

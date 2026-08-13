@@ -61,9 +61,24 @@ describe("MarketplaceTaskCard", () => {
 
 		expect(screen.getByRole("heading", { name: "亲子共读" })).toBeTruthy();
 		expect(screen.getByText("0x2222…2222")).toBeTruthy();
-		expect(screen.getByText("余额 8 BABY")).toBeTruthy();
+		expect(screen.getByText("余额").parentElement?.textContent).toContain(
+			"余额8BABY",
+		);
 		fireEvent.click(screen.getByRole("button", { name: "授权 3 BABY" }));
 		expect(mocks.approve).toHaveBeenCalledOnce();
+	});
+
+	it("keeps long wallet balances readable without hiding the exact value", () => {
+		mocks.useTaskPurchase.mockReturnValue({
+			...mocks.useTaskPurchase(),
+			balance: 10_650_166_471_630_484_868n,
+		});
+		render(<MarketplaceTaskCard task={task} />);
+
+		expect(screen.getByText("10.6502")).toBeTruthy();
+		expect(
+			screen.getByText("完整链上数值 10.650166471630484868 BABY"),
+		).toBeTruthy();
 	});
 
 	it("requires a separate purchase after allowance is sufficient", () => {

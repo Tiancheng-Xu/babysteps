@@ -1,4 +1,5 @@
-import architectureImage from "../../../docs/architecture/starbuddy-web3-architecture-v2.png";
+import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
+import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -26,15 +27,112 @@ export function EvidencePage() {
 				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
 
-			<div className="evidence-grid">
-				<figure className="architecture-figure">
-					<img src={architectureImage} alt="StarBuddy Web3 架构图" />
-					<figcaption>
-						StarBuddy
-						四阶段串起身份、任务、购买与证书，底层由合约、VRF、索引和链下服务协作。
-					</figcaption>
-				</figure>
+			<section className="evidence-diagrams" aria-label="架构与关键业务流程">
+				<article
+					className="evidence-diagram-card"
+					aria-labelledby="global-architecture-title"
+				>
+					<header className="evidence-diagram-card__header">
+						<div>
+							<p className="section-kicker">SYSTEM VIEW</p>
+							<h2 id="global-architecture-title">全局架构图</h2>
+						</div>
+						<span className="evidence-diagram-card__status">
+							六列 × 四带 × 六条编号流
+						</span>
+					</header>
+					<figure className="architecture-figure">
+						<div className="evidence-diagram-frame">
+							<img
+								src={globalArchitectureImage}
+								alt="BabySteps 全局架构图"
+								width="2400"
+								height="1800"
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+						<figcaption>
+							六列责任边界 × 四条数据带 ×
+							六条编号流，把用户、Web、Cloudflare、Sepolia、外部 Web3
+							服务和交付平台放进同一张可跨层追踪的工程真相图。
+						</figcaption>
+					</figure>
+					<div className="evidence-diagram-walkthrough">
+						<p>
+							<strong>看哪里</strong>
+							先按六列责任边界找系统负责人，再到图底部选择 01–06
+							编号流跨层追踪载荷、交易、事件和验收结果；重点看兑换的
+							{" Router / Pool "}与购买后的 Provider 结算。
+						</p>
+						<p>
+							<strong>证明什么</strong>
+							HTTPS、签名交易、JSON-RPC、GraphQL、事件与 OIDC
+							各有真实方向；Quote → Approve → Router → Pool → BABY、精确授权 →
+							buy → transferFrom → Provider payee 以及失败回滚都能沿线复核。
+						</p>
+					</div>
+					<a
+						className="evidence-diagram-link"
+						href={globalArchitectureImage}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看全局架构原图
+					</a>
+				</article>
 
+				<article
+					className="evidence-diagram-card"
+					aria-labelledby="business-sequence-title"
+				>
+					<header className="evidence-diagram-card__header">
+						<div>
+							<p className="section-kicker">END-TO-END FLOW</p>
+							<h2 id="business-sequence-title">核心业务时序图</h2>
+						</div>
+						<span className="evidence-diagram-card__status">五段完整闭环</span>
+					</header>
+					<figure className="architecture-figure">
+						<div className="evidence-diagram-frame">
+							<img
+								src={businessSequenceImage}
+								alt="BabySteps 核心业务时序图"
+								width="2400"
+								height="1800"
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+						<figcaption>
+							从登录与会话、<span>Uniswap 获币</span>
+							、上架与审核、购买与结算，到完课与证书，形成五段可追踪业务闭环。
+						</figcaption>
+					</figure>
+					<div className="evidence-diagram-walkthrough">
+						<p>
+							<strong>看哪里</strong>
+							从上到下阅读五段完整闭环；每段先看成功主线，再看同色失败分支如何停止、重试或降级读回。
+						</p>
+						<p>
+							<strong>证明什么</strong>
+							登录签名、Uniswap swap、VRF、精确 approve → buy →
+							transferFrom、Relayer 与 SBT
+							都有明确责任方；失败不会伪造会话、余额、购买或证书。
+						</p>
+					</div>
+					<a
+						className="evidence-diagram-link"
+						href={businessSequenceImage}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看业务时序原图
+					</a>
+				</article>
+			</section>
+
+			<div className="evidence-grid evidence-grid--summary">
 				<section
 					className="contract-evidence"
 					aria-labelledby="contract-evidence-heading"
@@ -71,7 +169,7 @@ export function EvidencePage() {
 					</a>
 					<div className="verification-summary">
 						<strong>自动门禁</strong>
-						<span>合约 82 · 前端 157 · Worker 48 · Subgraph 4 项测试</span>
+						<span>合约 82 · 前端 164 · Worker 48 · Subgraph 4 项测试</span>
 					</div>
 					<div className="verification-summary">
 						<strong>外部读链与索引</strong>

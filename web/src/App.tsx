@@ -27,7 +27,6 @@ function HomeView() {
 			<GrowthPanel />
 			<PointTransferPanel />
 			<NotebookPanel />
-			<CourseEvidenceFooter />
 		</>
 	);
 }
@@ -48,6 +47,7 @@ export default function App() {
 			{currentView === "exchange" ? <ExchangePage /> : null}
 			{currentView === "profile" ? <ProfilePage /> : null}
 			{currentView === "evidence" ? <EvidencePage /> : null}
+			<CourseEvidenceFooter currentView={currentView} />
 		</main>
 	);
 }

@@ -1,45 +1,41 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
-const [workflow, rootPackage, productionEnv] = await Promise.all([
-	readFile(".github/workflows/pages.yml", "utf8"),
+const [manifest, verifier, workflowNames, rootPackage, productionEnv] =
+	await Promise.all([
+		readFile(".github/baby2b-publish.yml", "utf8"),
+		readFile(".github/workflows/verify-baby2b-project.yml", "utf8"),
+		readdir(".github/workflows"),
 	readFile("package.json", "utf8"),
 	readFile("web/.env.production", "utf8"),
 ]);
 
+assert.ok(!workflowNames.includes("pages.yml"), "GitHub Pages publisher must be removed.");
 for (const fragment of [
-	"name: BabySteps GitHub Pages",
-	"branches:",
-	"- main",
-	"pages: write",
-	"id-token: write",
-	"pnpm check",
-	"pnpm test",
-	"pnpm typecheck",
-	"pnpm build",
-	"pnpm validate:public-artifact",
-	"actions/upload-pages-artifact@v4",
-	"path: web/dist",
-	"actions/deploy-pages@v4",
-	"pnpm install --frozen-lockfile",
-	"node-version: 22",
-	"version: 11.17.0",
+	"production-branch: main",
+	"build-command: pnpm --filter @babysteps/web build",
+	"output-directory: web/dist",
+	"pages-project: babysteps",
+	"production-url: https://babysteps.baby2b.online/",
+	"evidence-url: https://evidence.baby2b.online/babysteps/",
 ]) {
-	assert.ok(workflow.includes(fragment), `Missing Pages workflow contract: ${fragment}`);
+	assert.ok(manifest.includes(fragment), `Missing Cloudflare publishing contract: ${fragment}`);
 }
 
-const topLevelPermissions = workflow.match(/^permissions:\n(?:  .+\n)+/m)?.[0] ?? "";
-const buildJob = workflow.match(/  build:[\s\S]*?(?=\n  deploy:)/)?.[0] ?? "";
-const deployJob = workflow.match(/  deploy:[\s\S]*/)?.[0] ?? "";
-
-assert.doesNotMatch(topLevelPermissions, /pages: write|id-token: write/);
-assert.match(buildJob, /permissions:\n      contents: read/);
-assert.match(deployJob, /permissions:\n      pages: write\n      id-token: write/);
-assert.match(deployJob, /needs: build/);
+assert.match(verifier, /permissions:\n  contents: read/);
+assert.match(
+	verifier,
+	/Tiancheng-Xu\/.github\/.github\/workflows\/verify-project\.yml@main/,
+);
 assert.doesNotMatch(
-	workflow,
+	verifier,
+	/actions\/deploy-pages|wrangler pages deploy|pages: write/,
+	"GitHub Actions verifies but must not publish the Cloudflare production site.",
+);
+assert.doesNotMatch(
+	verifier,
 	/(?:SEPOLIAPRIVATEKEY|ETHERSCANAPIKEY|SEPOLIARPCURL|VITE_(?:ONCHAIN_NOTEBOOK|BABY_COIN|GROWTH_ACTIVITIES|GROWTH_CERTIFICATE|TASK_MARKETPLACE)_ADDRESS)/,
-	"The Pages build must not receive contract-deployment credentials.",
+	"The shared verification workflow must not receive deployment credentials.",
 );
 assert.doesNotMatch(
 	rootPackage,
@@ -67,4 +63,4 @@ for (const variable of [
 	);
 }
 
-console.log("GitHub Pages workflow validation passed.");
+console.log("Cloudflare Git Integration publishing contract validation passed.");

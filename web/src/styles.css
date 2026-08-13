@@ -656,6 +656,10 @@ li {
 }
 
 .metric-tile {
+	display: grid;
+	min-width: 0;
+	align-content: start;
+	gap: 8px;
 	padding: 18px;
 	border: 2px solid rgba(23, 59, 77, 0.14);
 	border-radius: 22px;
@@ -667,6 +671,7 @@ li {
 }
 
 .metric-tile__label {
+	margin: 0;
 	font-size: 0.94rem;
 	font-weight: 800;
 	line-height: 1.4;
@@ -674,10 +679,39 @@ li {
 }
 
 .metric-tile__value {
-	margin-top: 6px;
+	display: flex;
+	min-width: 0;
+	align-items: baseline;
+	gap: 8px;
+	margin: 0;
 	font-family: "Noto Serif SC", Georgia, serif;
-	font-size: clamp(1.8rem, 3vw, 2.6rem);
-	line-height: 1.15;
+	line-height: 1;
+}
+
+.metric-tile__number {
+	min-width: 0;
+	font-size: clamp(2rem, 3.2vw, 3rem);
+	font-variant-numeric: tabular-nums;
+	font-weight: 800;
+	letter-spacing: -0.04em;
+	overflow-wrap: anywhere;
+}
+
+.metric-tile__unit {
+	flex: 0 0 auto;
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+	font-size: 0.76rem;
+	font-weight: 900;
+	letter-spacing: 0.08em;
+	color: var(--ink-soft);
+}
+
+.metric-tile__note {
+	margin: 0;
+	font-size: 0.82rem;
+	font-weight: 700;
+	line-height: 1.55;
+	color: var(--ink-soft);
 }
 
 .metric-tile__value--compact {
@@ -921,6 +955,45 @@ textarea[aria-invalid="true"] {
 	font-size: 1rem;
 	line-height: 1.72;
 	color: var(--ink-soft);
+}
+
+.site-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 20px clamp(20px, 4vw, 34px);
+	border: 2px solid rgba(23, 59, 77, 0.18);
+	border-radius: 22px;
+	background: rgba(255, 255, 255, 0.72);
+}
+
+.site-footer__navigation {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 18px;
+}
+
+.site-footer a {
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	font-weight: 800;
+	color: var(--ink);
+}
+
+.site-footer a[aria-current="page"] {
+	text-decoration: underline;
+	text-decoration-thickness: 3px;
+	text-underline-offset: 6px;
+}
+
+.site-footer .site-footer__evidence-link {
+	padding-inline: 18px;
+	border-radius: 999px;
+	background: var(--ink);
+	color: var(--paper-strong);
+	text-align: center;
 }
 
 .star-buddy {
@@ -1279,8 +1352,23 @@ textarea[aria-invalid="true"] {
 }
 
 .marketplace-task-card__balance {
+	display: flex;
+	min-width: 0;
+	align-items: baseline;
+	gap: 6px;
+	font-variant-numeric: tabular-nums;
 	font-weight: 800;
 	color: var(--sage);
+}
+
+.marketplace-task-card__balance strong {
+	font-size: 1.08rem;
+	overflow-wrap: anywhere;
+}
+
+.marketplace-task-card__balance span:last-of-type {
+	font-size: 0.76rem;
+	letter-spacing: 0.06em;
 }
 
 .marketplace-task-card dl {
@@ -1431,12 +1519,34 @@ textarea[aria-invalid="true"] {
 
 .exchange-quote {
 	display: flex;
+	min-width: 0;
+	gap: 14px;
 	align-items: center;
 	justify-content: space-between;
 	padding: 16px;
 	border: 2px dashed var(--ink);
 	border-radius: 16px;
 	background: var(--sage-soft);
+}
+
+.exchange-quote strong {
+	display: inline-flex;
+	min-width: 0;
+	align-items: baseline;
+	gap: 6px;
+	text-align: right;
+}
+
+.exchange-quote__number {
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
+}
+
+.exchange-quote__unit {
+	flex: 0 0 auto;
+	font-size: 0.76rem;
+	letter-spacing: 0.06em;
+	color: var(--ink-soft);
 }
 
 .identity-status-grid {
@@ -1551,6 +1661,110 @@ textarea[aria-invalid="true"] {
 	margin-top: 16px;
 	line-height: 1.7;
 	color: var(--ink-soft);
+}
+
+.evidence-diagrams {
+	display: grid;
+	gap: 28px;
+	margin-bottom: 28px;
+}
+
+.evidence-diagram-card {
+	display: grid;
+	min-width: 0;
+	gap: 18px;
+	padding: 28px;
+	border: 2px solid var(--ink);
+	border-radius: 26px;
+	background: rgba(255, 253, 247, 0.9);
+	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+}
+
+.evidence-diagram-card__header {
+	display: flex;
+	gap: 18px;
+	align-items: flex-start;
+	justify-content: space-between;
+}
+
+.evidence-diagram-card__header h2 {
+	margin-top: 4px;
+}
+
+.evidence-diagram-card__status {
+	flex: 0 0 auto;
+	padding: 8px 13px;
+	border: 2px solid var(--ink);
+	border-radius: 999px;
+	background: var(--sage-soft);
+	font-size: 0.82rem;
+	font-weight: 800;
+}
+
+.evidence-diagram-card .architecture-figure {
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.evidence-diagram-frame {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	overflow-x: auto;
+	border: 2px solid var(--ink);
+	border-radius: 18px;
+	background: var(--paper);
+	overscroll-behavior-inline: contain;
+	scrollbar-gutter: stable;
+}
+
+.evidence-diagram-frame img {
+	display: block;
+	width: 100%;
+	min-width: 920px;
+	height: auto;
+	border: 0;
+	border-radius: 0;
+}
+
+.evidence-diagram-walkthrough {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.evidence-diagram-walkthrough p {
+	display: grid;
+	gap: 7px;
+	margin: 0;
+	padding: 16px;
+	border: 2px solid var(--line);
+	border-radius: 16px;
+	background: rgba(220, 233, 200, 0.38);
+	line-height: 1.65;
+}
+
+.evidence-diagram-walkthrough strong {
+	color: var(--ink);
+}
+
+.evidence-diagram-link {
+	justify-self: start;
+	padding: 10px 15px;
+	border: 2px solid var(--ink);
+	border-radius: 999px;
+	background: var(--paper-strong);
+	box-shadow: 3px 4px 0 rgba(23, 59, 77, 0.82);
+	font-weight: 800;
+	text-decoration: none;
+}
+
+.evidence-grid--summary {
+	grid-template-columns: 1fr;
 }
 
 .contract-evidence ul {
@@ -1683,6 +1897,28 @@ textarea[aria-invalid="true"] {
 		max-width: 100%;
 	}
 
+	.evidence-diagram-card {
+		padding: 20px;
+		border-radius: 22px;
+	}
+
+	.evidence-diagram-card__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.evidence-diagram-card__status {
+		align-self: flex-start;
+	}
+
+	.evidence-diagram-frame img {
+		min-width: 840px;
+	}
+
+	.evidence-diagram-walkthrough {
+		grid-template-columns: 1fr;
+	}
+
 	.provider-form-card,
 	.provider-lifecycle,
 	.architecture-figure,
@@ -1704,6 +1940,19 @@ textarea[aria-invalid="true"] {
 	.course-evidence__shell,
 	.safety-card {
 		padding: 20px;
+	}
+
+	.site-footer {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.site-footer__navigation {
+		justify-content: space-between;
+	}
+
+	.site-footer .site-footer__evidence-link {
+		justify-content: center;
 	}
 
 	.hero-panel__value,
