@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
@@ -46,4 +47,38 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 	const packageJson = JSON.parse(await readFile("aws/package.json", "utf8"));
 	assert.equal(packageJson.devDependencies.esbuild, "0.28.1");
 	assert.match(packageJson.scripts["build:performance:cleaner"], /^esbuild /);
+});
+
+test("the production cleaner bundle boots under Node without an ESM dynamic-require crash", async () => {
+	const packageJson = JSON.parse(await readFile("aws/package.json", "utf8"));
+	const buildScript = packageJson.scripts["build:performance:cleaner"];
+	const output = buildScript.match(/--outfile=([^\s]+)/)?.[1];
+	assert.ok(output, "cleaner build must declare an output file");
+
+	execFileSync("pnpm", ["--filter", "@babysteps/aws", "build:performance:cleaner"], {
+		stdio: "pipe",
+	});
+	const boot = spawnSync(process.execPath, [`aws/${output}`], {
+		encoding: "utf8",
+		env: { PATH: process.env.PATH },
+	});
+
+	assert.doesNotMatch(boot.stderr, /Dynamic require of "node:https" is not supported/);
+	assert.match(boot.stderr, /MISSING_QUEUE_URL/);
+});
+
+test("a manual OIDC recovery gate can remove only an exact failed performance stack", async () => {
+	const recovery = await readFile(
+		".github/workflows/aws-performance-recovery.yml",
+		"utf8",
+	).catch(() => "");
+	assert.doesNotThrow(() => parse(recovery));
+	assert.match(recovery, /workflow_dispatch:/);
+	assert.match(recovery, /environment: aws-performance/);
+	assert.match(recovery, /id-token: write/);
+	assert.match(recovery, /\^babysteps-performance-\[0-9\]\+\$/);
+	assert.match(recovery, /delete-stack --stack-name "\$STACK_NAME"/);
+	assert.match(recovery, /stack-delete-complete/);
+	assert.match(recovery, /remainingProjectResources.*0/);
+	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });
