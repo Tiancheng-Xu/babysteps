@@ -8,7 +8,6 @@
 		"vrfCallbackGasLimit": 500000
 	},
 	"StarBuddyKeepsakesSepoliaModule": {
-		"onchainNotebookAddress": "0x0000000000000000000000000000000000000000",
 		"metadataBaseUri": "https://babysteps.baby2b.online/metadata/keepsakes/",
 		"vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
 		"vrfSubscriptionId": "0",

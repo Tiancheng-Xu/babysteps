@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2100" viewBox="0 0 2400 2100" role="img" aria-labelledby="title desc">
   <title id="title">BabySteps × StarBuddy Web3 六阶段完整业务时序</title>
-  <desc id="desc">六段完整闭环依次为登录会话、Uniswap 获得 BABY、Provider 上架与 Owner 审核、家长购买结算、成长任务完成与证书、纪念卡抽取与融合。纪念卡合约本地已验证、Sepolia 待部署。</desc>
+  <desc id="desc">六段完整闭环依次为登录会话、Uniswap 获得 BABY、Provider 上架与 Owner 审核、家长购买结算、成长任务完成与证书、纪念卡抽取与融合。纪念卡已完成 Sepolia 真实 VRF 抽卡与锁定 SBT #1；真实融合等待自然积累匹配卡。</desc>
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="0.55" stop-color="#f7f0df"/><stop offset="1" stop-color="#e8f0e5"/></linearGradient>
     <linearGradient id="header" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#163f4a"/><stop offset="1" stop-color="#244f57"/></linearGradient>
@@ -116,7 +116,7 @@
 
   <!-- phase 6 -->
   <rect x="44" y="1584" width="2312" height="290" rx="24" fill="#f0ebf6" stroke="#806f8c" stroke-width="2"/>
-  <rect x="58" y="1598" width="130" height="262" rx="18" fill="#e5dded"/><text x="78" y="1636" class="phase">06 纪念卡</text><text x="78" y="1663" class="phase">抽取融合</text><text x="78" y="1696" class="phaseSub">本地已验证</text><text x="78" y="1719" class="phaseSub">Sepolia 待部署</text>
+  <rect x="58" y="1598" width="130" height="262" rx="18" fill="#e5dded"/><text x="78" y="1636" class="phase">06 纪念卡</text><text x="78" y="1663" class="phase">抽取融合</text><text x="78" y="1696" class="phaseSub">链上已验证</text><text x="78" y="1719" class="phaseSub">抽卡 SBT #1</text>
   <circle cx="216" cy="1621" r="16" fill="#806f8c"/><text x="216" y="1627" text-anchor="middle" class="status" style="fill:#fff">6</text>
   <path class="chain" d="M330 1621H1438"/><text x="884" y="1609" text-anchor="middle" class="step">06A requestDraw · 固定 spendTransferable(12) · 不减少 lifetimeEarned</text>
   <path class="event" d="M1450 1659H1998"/><text x="1724" y="1647" text-anchor="middle" class="step">06B Chainlink VRF · 稀有度 70/22/7/1 + 四阶段独立随机</text>
@@ -126,12 +126,12 @@
   <path class="return" d="M2010 1811H622"/><text x="1316" y="1799" text-anchor="middle" class="small">06F 24h recover：抽卡退款 / 融合解锁；迟到 VRF 回调忽略</text>
   <g transform="translate(330,1826)"><rect width="650" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="325" y="21" text-anchor="middle" class="tiny">余额不足 / 非同款 / Collector 再融合：交易 revert，不扣星、不锁卡</text></g>
   <g transform="translate(1000,1826)"><rect width="620" height="32" rx="12" fill="#fff3ef" stroke="#b46d72" stroke-width="2"/><text x="310" y="21" text-anchor="middle" class="tiny">VRF pending：等待；达到恢复时间才可 recoverRequest</text></g>
-  <g transform="translate(1640,1826)"><rect width="630" height="32" rx="12" fill="#ffe6b2" stroke="#c57c2d" stroke-width="2"/><text x="315" y="21" text-anchor="middle" class="tiny">新合约地址 / consumer / tx：待 Sepolia 部署，不伪造 Evidence</text></g>
+  <g transform="translate(1640,1826)"><rect width="630" height="32" rx="12" fill="#ffe6b2" stroke="#c57c2d" stroke-width="2"/><text x="315" y="21" text-anchor="middle" class="tiny">真实融合等待自然积累三张匹配卡，不使用管理员捷径</text></g>
 
   <!-- evidence and legend footer -->
   <rect x="58" y="1890" width="2284" height="158" rx="22" fill="#173d46"/>
   <text x="86" y="1928" class="step" style="fill:#ffe0a2">可核验链路</text>
-  <text x="86" y="1958" class="small" style="fill:#dfece7">原有任务平台：Sepolia Task #1 · Purchase #1 · Certificate #1；纪念卡：合约 / Web / 1440 与 390px 本地已验证</text>
+  <text x="86" y="1958" class="small" style="fill:#dfece7">任务平台：Sepolia Task #1 · Purchase #1 · Certificate #1；纪念卡：真实 VRF 抽卡 · SBT #1 locked</text>
   <text x="86" y="1985" class="small" style="fill:#dfece7">事实优先级：链上状态 / receipt ＞ 三 RPC 对照 ＞ Graph 索引 ＞ D1 富内容；测试资产无真实价值</text>
   <g transform="translate(90,2018)"><path class="request" d="M0 0H75"/><text x="88" y="6" class="status" style="fill:#fffaf0">请求 / 链下数据</text><path class="chain" d="M295 0H370"/><text x="383" y="6" class="status" style="fill:#fffaf0">用户签名交易</text><path class="event" d="M590 0H665"/><text x="678" y="6" class="status" style="fill:#fffaf0">异步事件 / 回调</text><path class="return" d="M925 0H1000"/><text x="1013" y="6" class="status" style="fill:#fffaf0">验证 / 读回</text><text x="1270" y="6" class="status" style="fill:#ffdda0">失败时：停止、回退或有界重试；从不伪造成功</text></g>
 </svg>

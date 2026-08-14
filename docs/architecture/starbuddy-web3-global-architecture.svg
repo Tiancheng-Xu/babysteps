@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1880" viewBox="0 0 2400 1880" role="img" aria-labelledby="title desc">
   <title id="title">BabySteps 与 StarBuddy Web3 展开版全局架构</title>
-  <desc id="desc">以六列责任边界展示用户、React Web、Cloudflare、Ethereum Sepolia、Web3 外部依赖、交付与 AWS。四条数据带是用户运行与认证、任务内容与事实所有权、代币购买随机与证书、CI/CD 安全可观测与清理。七条编号流覆盖 01 登录会话流、02 兑换获币流、03 上架激活流、04 购买结算流、05 成长任务完成证书流、06 交付回滚流、07 纪念卡抽取融合流。纪念卡链上闭环为本地已验证、Sepolia 待部署。</desc>
+  <desc id="desc">以六列责任边界展示用户、React Web、Cloudflare、Ethereum Sepolia、Web3 外部依赖、交付与 AWS。四条数据带是用户运行与认证、任务内容与事实所有权、代币购买随机与证书、CI/CD 安全可观测与清理。七条编号流覆盖 01 登录会话流、02 兑换获币流、03 上架激活流、04 购买结算流、05 成长任务完成证书流、06 交付回滚流、07 纪念卡抽取融合流。纪念卡已完成 Sepolia VRF 真实抽卡与锁定 SBT #1，真实融合等待自然积累匹配卡。</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fffaf0"/>
@@ -198,7 +198,7 @@
     <rect x="68" y="1714" width="2264" height="66" rx="14" fill="#f0ebf6" stroke="#806f8c" stroke-width="1.5"/>
     <circle cx="91" cy="1731" r="13" fill="#806f8c"/><text x="91" y="1736" text-anchor="middle" class="status" fill="#fff">07</text>
     <text x="114" y="1737" class="status">纪念卡抽取融合流</text><path class="chain" d="M270 1731H1595"/><path class="event" d="M1595 1731H1945"/><path class="data" d="M1945 1731H2295"/>
-    <text x="415" y="1725" text-anchor="middle" class="tiny">固定扣 12 成长星</text><text x="765" y="1725" text-anchor="middle" class="tiny">抽卡 / 三卡融合 UI</text><text x="1115" y="1725" text-anchor="middle" class="tiny">不写 D1 私有数据</text><text x="1465" y="1725" text-anchor="middle" class="tiny">Keepsakes + ERC-5192</text><text x="1815" y="1725" text-anchor="middle" class="tiny">VRF 稀有度 / 阶段 / 成败</text><text x="2165" y="1725" text-anchor="middle" class="tiny">本地 Evidence · Sepolia 待部署</text>
+    <text x="415" y="1725" text-anchor="middle" class="tiny">固定扣 12 成长星</text><text x="765" y="1725" text-anchor="middle" class="tiny">抽卡 / 三卡融合 UI</text><text x="1115" y="1725" text-anchor="middle" class="tiny">不写 D1 私有数据</text><text x="1465" y="1725" text-anchor="middle" class="tiny">Keepsakes + ERC-5192</text><text x="1815" y="1725" text-anchor="middle" class="tiny">VRF 稀有度 / 阶段 / 成败</text><text x="2165" y="1725" text-anchor="middle" class="tiny">真实 VRF 抽卡 · SBT #1</text>
     <text x="415" y="1762" text-anchor="middle" class="tiny">24h 可恢复</text><text x="765" y="1762" text-anchor="middle" class="tiny">失败烧 1 / 解锁 2</text><text x="1115" y="1762" text-anchor="middle" class="tiny">迟到回调忽略</text><text x="1465" y="1762" text-anchor="middle" class="tiny">spend / refund 边界</text><text x="1815" y="1762" text-anchor="middle" class="tiny">Chainlink VRF v2.5</text><text x="2165" y="1762" text-anchor="middle" class="tiny">已实现待验证</text>
   </g>
   <text x="1660" y="1456" class="protocol">02：Quote → Approve → Router → Pool → BABY</text>
