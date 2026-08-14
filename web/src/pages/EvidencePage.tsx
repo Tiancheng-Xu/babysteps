@@ -151,17 +151,72 @@ export function EvidencePage() {
 				<header className="evidence-feature-proof__header">
 					<div>
 						<p className="section-kicker">
-							ASSIGNMENT 8 · OBSERVABILITY PIPELINE
+							PERFORMANCE DELIVERY · OBSERVABILITY PIPELINE
 						</p>
 						<h2 id="performance-proof-title">性能观测架构图</h2>
 					</div>
-					<span className="evidence-diagram-card__status">AWS 云端待验证</span>
+					<span className="evidence-diagram-card__status">AWS 闭环已验证</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
-					清洗、共享数据库和真实统计拆成独立信任边界；本地代码、测试、SAM 与预算
-					Gate 已通过，云端资源和清理证据必须由 Actions 实际运行后补齐。
+					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
+					31765573258 已用一条受控事件验证完整闭环，并在取证后自动删除临时资源。
 				</p>
+				<section
+					className="evidence-requirement-map"
+					aria-labelledby="performance-requirement-map-title"
+				>
+					<h3 id="performance-requirement-map-title">要求、实现与证据映射</h3>
+					<div>
+						<article>
+							<strong>交付要求</strong>
+							<span>浏览器性能 SDK</span>
+							<strong>实现功能</strong>
+							<span>五项 Web Vitals、错误、自定义耗时、批量与安全降级</span>
+							<strong>代码位置</strong>
+							<code>packages/performance-sdk/src</code>
+							<strong>验证证据</strong>
+							<span>SDK 单元测试与 Web 构建通过</span>
+							<strong>当前状态</strong>
+							<span>已实现并验证</span>
+						</article>
+						<article>
+							<strong>交付要求</strong>
+							<span>AWS 接收、队列与 ECS 清洗</span>
+							<strong>实现功能</strong>
+							<span>Worker 代理、HTTP API、SQS/DLQ、一次性 ECS Cleaner</span>
+							<strong>代码位置</strong>
+							<code>aws/src/performance · aws/performance-template.yaml</code>
+							<strong>验证证据</strong>
+							<a
+								href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258"
+								target="_blank"
+								rel="noreferrer"
+							>
+								Run 31765573258
+							</a>
+							<strong>当前状态</strong>
+							<span>已实现并验证</span>
+						</article>
+						<article>
+							<strong>交付要求</strong>
+							<span>真实统计页面与可回收云资源</span>
+							<strong>实现功能</strong>
+							<span>PostgreSQL 聚合查询、p50/p75/p95、项目级自动清理</span>
+							<strong>代码位置</strong>
+							<code>
+								web/src/pages/PerformancePage.tsx ·
+								.github/workflows/performance-aws-closed-loop.yml
+							</code>
+							<strong>验证证据</strong>
+							<span>
+								sampleCount=1，p50=p75=p95=321；九类项目运行资源均为 0
+							</span>
+							<strong>当前状态</strong>
+							<span>已实现并验证</span>
+						</article>
+					</div>
+				</section>
 				<section
 					className="evidence-identity"
 					aria-labelledby="performance-identity-title"
@@ -173,10 +228,10 @@ export function EvidencePage() {
 						</h3>
 					</header>
 					<p>
-						这部分只证明身份底座已就绪，不代表性能 Stack
-						已部署或业务验收完成。GitHub Actions 以短期 OIDC 身份进入 deploy
-						role，再把精确项目 Stack 交给 CloudFormation execution
-						role；浏览器、构建日志和仓库均不保存长期 AWS Key。
+						身份底座已参与最终闭环验证。GitHub Actions 以短期 OIDC 身份进入
+						deploy role，再把精确项目 Stack 交给 CloudFormation execution
+						role；浏览器、构建日志和仓库均不保存长期 AWS Key，临时 Stack
+						在证据生成后删除。
 					</p>
 					<ol className="evidence-trust-flow" aria-label="AWS 信任链">
 						<li>
@@ -225,9 +280,9 @@ export function EvidencePage() {
 						<article>
 							<h4>生命周期与清理边界</h4>
 							<p>
-								项目清理只删除 exact Stack 与 babysteps-performance-*；共享
+								最终 Run 已删除 exact Stack 与 babysteps-performance-*；共享
 								NAT、RDS、ALB、OIDC 和 Foundation 删除为
-								explicitDeny。失败运行也必须先留脱敏证据，再做九类资源零残留盘点。
+								explicitDeny。清理后九类项目运行资源均为 0。
 							</p>
 						</article>
 						<article>
@@ -244,7 +299,7 @@ export function EvidencePage() {
 						aria-labelledby="performance-runtime-timeline-title"
 					>
 						<h4 id="performance-runtime-timeline-title">
-							真实云端排障与恢复时间线
+							真实云端验证与恢复时间线
 						</h4>
 						<ol>
 							<li>
@@ -269,6 +324,29 @@ export function EvidencePage() {
 								</a>
 								：短期 OIDC
 								身份只删除上述精确失败栈，并以九类项目资源归零作为完成条件。
+							</li>
+							<li>
+								<a
+									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31763815468"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Run 31763815468
+								</a>
+								：PostgreSQL 报 42P18，定位到 format 参数缺少显式 text
+								类型；修复后由 Recovery 31764528855 删除失败栈并再次验证零残留。
+							</li>
+							<li>
+								<a
+									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Run 31765573258
+								</a>
+								：commit 485999c 的最终闭环成功，ECS Cleaner exitCode=0，
+								sampleCount=1，p50=p75=p95=321；Schema、Stack
+								与九类项目资源均完成清理。
 							</li>
 						</ol>
 					</section>
@@ -392,7 +470,8 @@ export function EvidencePage() {
 							视口内筛选器与状态提示保持单列可读。
 							<br />
 							<strong>证明什么：</strong>
-							手机端没有根级横向溢出；该截图只证明本地 UI，不代表 AWS 已部署。
+							手机端没有根级横向溢出；该截图证明 UI，最终云端结果由 Run
+							31765573258 的工件与清理盘点证明。
 						</figcaption>
 					</figure>
 				</div>

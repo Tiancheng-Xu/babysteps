@@ -37,7 +37,7 @@ AWS 工作流仅允许 `workflow_dispatch`。只有 main、`start_services=true`
 
 本次已用不可变提交 ZIP 直接启动同一 CodeBuild 项目并完成云端闭环；GitHub main 的 OIDC workflow 端到端触发仍待分支合并/推送后验证。RDS 已自动停止，但仍收存储费；永久删除 CloudFormation Stack 前仍需按精确 Region、Stack 和资源列表再次确认。真实证据见 [`docs/evidence/deployment/2026-08-11-aws-pausable.md`](evidence/deployment/2026-08-11-aws-pausable.md)。
 
-## 性能观测链路（本地已验证，AWS 云端待验证）
+## 性能观测链路（AWS 闭环已验证）
 
 展开版图片见 [`starbuddy-performance-global-architecture.svg`](architecture/starbuddy-performance-global-architecture.svg)，六阶段时序见 [`starbuddy-performance-pipeline-sequence.svg`](architecture/starbuddy-performance-pipeline-sequence.svg)。
 
@@ -54,3 +54,5 @@ flowchart LR
 ```
 
 部署只允许手动触发、GitHub Environment 审批与 OIDC 短期身份。项目栈拥有 API、队列、ECR、无 Service 的 ECS Cluster/Task、Lambda、日志和独立数据库 schema；验证后先 `DROP SCHEMA`，再 `delete-stack`。共享 VPC、子网、单 NAT、RDS 引擎、OIDC 和 Artifact Bucket 受保护，不进入项目清理。
+
+最终 Run [`31765573258`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258) 在 commit `485999c99225a6211d6e967fd72f83cfe0ed6c17` 上完成：受控 `LCP=321` 事件被接收并由 ECS Cleaner 以 `exitCode=0` 清洗，PostgreSQL 回读 `sampleCount=1`、`p50=p75=p95=321`、`errorRate=0`。取证后项目 schema 与精确 Stack 删除，Stack、ECS、ECR、SQS、Lambda、API、日志、Secrets 和 active task definitions 九类盘点均为 0；共享底座未进入清理。

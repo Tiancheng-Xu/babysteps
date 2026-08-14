@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "status": "verified",
+  "workflow": {
+    "runId": 31765573258,
+    "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+    "commit": "485999c99225a6211d6e967fd72f83cfe0ed6c17",
+    "region": "us-east-1",
+    "mode": "manual temporary validation"
+  },
+  "controlledEvent": {
+    "schemaVersion": 1,
+    "type": "metric",
+    "name": "LCP",
+    "value": 321,
+    "unit": "ms",
+    "route": "/performance",
+    "environment": "evidence",
+    "accepted": 1
+  },
+  "pipeline": [
+    "Browser-shaped event",
+    "Cloudflare Worker proxy",
+    "API Gateway and ingest Lambda",
+    "SQS with DLQ",
+    "on-demand ECS Fargate cleaner",
+    "project PostgreSQL schema",
+    "query Lambda",
+    "sanitized workflow artifact"
+  ],
+  "cleanerTask": {
+    "lastStatus": "STOPPED",
+    "stopCode": "EssentialContainerExited",
+    "container": "cleaner",
+    "exitCode": 0
+  },
+  "aggregate": {
+    "window": "1h",
+    "metric": "LCP",
+    "sampleCount": 1,
+    "p50": 321,
+    "p75": 321,
+    "p95": 321,
+    "errorRate": 0,
+    "route": "/performance"
+  },
+  "cleanup": {
+    "schemaDeleted": true,
+    "schemaCleanupAttempt": 1,
+    "projectStackDeleted": true,
+    "sharedFoundationProtected": true,
+    "postRunInventory": {
+      "cloudFormationStacks": 0,
+      "ecsClusters": 0,
+      "ecrRepositories": 0,
+      "sqsQueues": 0,
+      "lambdaFunctions": 0,
+      "httpApis": 0,
+      "logGroups": 0,
+      "secrets": 0,
+      "activeTaskDefinitions": 0
+    }
+  },
+  "security": {
+    "browserAwsCredentials": false,
+    "longLivedAwsAccessKey": false,
+    "githubIdentity": "short-lived OIDC session",
+    "ecsServiceLinkedRole": "account-level AWS-managed role",
+    "publishedSecrets": false
+  },
+  "limitations": [
+    "The run proves one controlled event and the complete lifecycle, not production traffic scale.",
+    "The temporary AWS stack and project database schema were intentionally deleted after validation, so the public dashboard does not claim a continuously running AWS backend."
+  ]
+}
