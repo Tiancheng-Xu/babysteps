@@ -31,6 +31,11 @@ describe("performance database least privilege", () => {
 		expect(calls.map(({ text }) => text).join("\n")).not.toContain(
 			"private-password",
 		);
+		for (const { text } of calls.filter(({ text }) =>
+			text.includes("SELECT format"),
+		)) {
+			expect(text).toMatch(/\$\d+::text/);
+		}
 	});
 
 	it("drops both project schema and exact generated role during cleanup", async () => {
@@ -52,5 +57,8 @@ describe("performance database least privilege", () => {
 		expect(calls.flatMap(({ values }) => values ?? [])).toContain(
 			"bs_perf_e123",
 		);
+		expect(
+			calls.find(({ text }) => text.includes("SELECT format"))?.text,
+		).toMatch(/\$1::text/);
 	});
 });
