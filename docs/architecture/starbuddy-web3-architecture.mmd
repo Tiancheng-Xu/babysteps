@@ -237,6 +237,74 @@ Cloudflare Pages 的 feature/PR 构建只能作为预览，必须在合并前验
 
 AWS 当前没有自动创建每 PR 重资源。可暂停 Stack 仅能通过人工批准的 `workflow_dispatch` 和费用 Gate 启动；RDS 由 EventBridge 自动停止，但存储仍会计费。最终删除 Stack 属于破坏性操作，必须重新只读盘点账号、Region、Stack 和受保护共享资源后获得明确授权。任何清理失败都应停止并记录，而不是扩大删除范围。
 
+## 边缘 SSR、水合与 CSR 降级
+
+BabySteps 不再用 HashRouter 模拟页面，而是以真实 URL 和 History API 建立九条产品路由。最终组合是 `Cloudflare Edge SSR + React hydration + 客户端交互激活 + 纯 CSR fallback`，不是把 Vite CSR 冒充 SSR，也不把前端 SSR 复制到 AWS。
+
+- 可服务端渲染：公开首页、公开路由骨架、Evidence 说明、导航、页脚与不依赖钱包的确定性内容。
+- 只能客户端执行：Privy、wagmi、钱包余额、链上交易、个人资料、用户会话和性能 SDK。
+- 不能序列化：钱包地址对应的私有资料、身份令牌、Cookie、Authorization、交易签名与请求正文。
+- 本地已验证：双端生产构建、公开页 SSR、client-shell SSR、真实 404、静态资源直通、SSR 异常/超时 fallback、致命水合失败最多一次 CSR 重挂载。
+- 待验证：Cloudflare preview URL、TLS、真实浏览器水合和生产别名。本节不把待验证项目写成已上线。
+- 费用：本次渲染优化没有 AWS 写操作或新资源，AWS 增量成本为 `$0`；既有共享 VPC/NAT/RDS/OIDC 仍受保护。
+
+```mermaid
+flowchart LR
+    browserR["浏览器<br/>真实 URL / History API"] --> edgeR["Cloudflare Pages Edge<br/>请求分类"]
+    edgeR -->|"HTML GET / HEAD"| ssrR["React Web Streams SSR<br/>StaticRouter + ServerRouteShell"]
+    edgeR -->|"assets / API / mutation"| assetsR["ASSETS.fetch<br/>静态资源直通"]
+    ssrR --> stateR["安全状态白名单<br/>mode / pathname / version"]
+    stateR --> hydrateR["BrowserRouter + hydrateRoot<br/>SSR 标记 / 路径 / 版本一致"]
+    hydrateR --> clientR["客户端激活<br/>Privy / wagmi / Web3 / SDK"]
+    ssrR -. "超时 / 异常" .-> fallbackR["静态 index.html<br/>纯 CSR createRoot"]
+    hydrateR -. "致命失败" .-> fallbackR
+    actionsR["GitHub Actions<br/>双端构建 + route manifest Gate"] --> edgeR
+    clientR --> perfR["既有性能链路<br/>Worker → AWS；本次无 AWS 写入"]
+```
+
+```mermaid
+sequenceDiagram
+    participant B as 浏览器
+    participant E as Pages Edge
+    participant P as Request Policy
+    participant R as React SSR
+    participant A as 静态 Assets
+    participant C as Client App
+
+    B->>E: GET /tasks + Accept:text/html
+    E->>P: 分类请求与路由状态
+    P->>R: pathname + render policy
+    R-->>E: 完整读流后返回 HTML + 安全状态
+    E-->>B: 200/404 + render-mode:ssr
+    B->>C: SSR 标记、路径、版本一致后 hydrateRoot
+    C->>C: 激活 Privy/wagmi/性能 SDK
+
+    alt SSR 超时或异常
+        R--xE: abort / render error
+        E->>A: 读取静态 index.html
+        A-->>B: csr-fallback + no-store
+        B->>C: createRoot 启动纯 CSR
+    else 水合致命失败
+        C->>C: unmount + 清空 root
+        C->>C: 最多一次 CSR 重挂载
+    end
+```
+
+### 应反向优化的共享能力
+
+以下检测是 BabySteps 真实实现后可泛化的能力，适合反馈到 shared standard、TC Flow 本地 Gate 与 GitHub Actions 远端 Gate；项目专属的 Privy、wagmi、StarBuddy 路由名称不得写入通用规则。
+
+1. route manifest 与实际路由、深链和 404 状态码一致；
+2. SSR 声明必须有非空服务端产物、真实 SSR 响应标记和资源直通证明；
+3. 服务端状态只能使用显式白名单，序列化必须防止 HTML/script 注入；
+4. 水合只允许在 SSR 标记、请求路径与构建版本匹配时发生；React 报告可恢复 DOM 差异，致命失败最多一次 CSR 重挂载；
+5. 服务端 bundle 不得包含浏览器钱包/身份 SDK 的运行时代码；
+6. Gate 必须直接执行构建后的 Worker，覆盖 canonical 路由、尾斜杠、真实 404、API 直通和 client-shell 缓存策略；
+7. 交付 `base` 检查必须由 delivery contract 决定：Pages Advanced Worker + History Router 使用 `/`，明确 static-only 的项目才允许 `./`；
+8. Dashboard 的准确标签为：`rendering: edge-ssr`、`client activation: hydration`、`fallback: pure-csr`、`wallet/identity: client-only`、`cloud preview: pending`。
+
+反馈闭环状态：BabySteps 的“项目发现 → 泛化判断”已完成并本地验证；回写共享 standard、检测脚本、TC Flow、GitHub Actions 和旧项目回归由共享方案任务接续，未完成前不得标记为已发布。
+
 ## StarBuddy 纪念卡抽取、融合与恢复时序
 
 本段是产品增强，不属于老师七项课程平台硬性要求。Sepolia 三合约、VRF consumer、固定 12 星真实抽卡和锁定 SBT #1 已验证；真实融合仍等待自然积累三张同系列、同稀有度卡，图中不把本地融合测试冒充链上交易。

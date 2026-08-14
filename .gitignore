@@ -5,6 +5,8 @@
 node_modules/
 .pnpm-store/
 dist/
+web/dist-client/
+web/dist-worker/
 aws/build.toml
 coverage/
 *.log

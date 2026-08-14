@@ -1,7 +1,7 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { StrictMode, useEffect, useRef, useState } from "react";
 
 import App from "./App";
+import { bootstrapClient, readRenderStateFromDocument } from "./bootstrap";
 import { Providers } from "./config/providers";
 import { publicAppConfig } from "./contracts/web3Contracts";
 import { performanceEventsEndpoint } from "./performance/api";
@@ -12,25 +12,55 @@ import "./styles.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element is missing.");
 
-createRoot(root).render(
-	<StrictMode>
-		<Providers>
-			<App />
-		</Providers>
-	</StrictMode>,
-);
+const performanceClient = createPerformanceClient({
+	endpoint: performanceEventsEndpoint(publicAppConfig.apiUrl),
+	environment: import.meta.env.MODE,
+	version: import.meta.env.VITE_APP_VERSION ?? "local",
+	sampleRate: Number(import.meta.env.VITE_PERFORMANCE_SAMPLE_RATE ?? "1"),
+	route: () => globalThis.location?.pathname ?? "/",
+});
+setPerformanceClient(performanceClient);
+performanceClient.start();
 
-queueMicrotask(() => {
-	const performanceClient = createPerformanceClient({
-		endpoint: performanceEventsEndpoint(publicAppConfig.apiUrl),
-		environment: import.meta.env.MODE,
-		version: import.meta.env.VITE_APP_VERSION ?? "local",
-		sampleRate: Number(import.meta.env.VITE_PERFORMANCE_SAMPLE_RATE ?? "1"),
-		route: () =>
-			document.documentElement.dataset.currentView
-				? `/${document.documentElement.dataset.currentView}`
-				: "/",
-	});
-	setPerformanceClient(performanceClient);
-	performanceClient.start();
+const hydrationStartedAt = performance.now();
+const buildVersion = import.meta.env.VITE_APP_VERSION ?? "unknown";
+
+function ClientApplication({
+	initialInteractive,
+}: {
+	initialInteractive: boolean;
+}) {
+	const [interactive, setInteractive] = useState(initialInteractive);
+	const reported = useRef(false);
+	useEffect(() => {
+		if (!reported.current && !initialInteractive) {
+			reported.current = true;
+			performanceClient.record({
+				type: "custom",
+				name: "hydration.duration",
+				value: performance.now() - hydrationStartedAt,
+				unit: "ms",
+			});
+		}
+		setInteractive(true);
+	}, [initialInteractive]);
+
+	return (
+		<StrictMode>
+			<Providers>
+				<App interactive={interactive} />
+			</Providers>
+		</StrictMode>
+	);
+}
+
+bootstrapClient({
+	root,
+	state: readRenderStateFromDocument(),
+	currentPathname: globalThis.location.pathname,
+	buildVersion,
+	buildApplication: (interactive) => (
+		<ClientApplication initialInteractive={interactive} />
+	),
+	record: (event) => performanceClient.record(event),
 });

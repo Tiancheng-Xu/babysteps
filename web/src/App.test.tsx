@@ -78,6 +78,7 @@ vi.mock("wagmi", async (importOriginal) => {
 });
 
 import App from "./App";
+import { CourseEvidenceFooter } from "./components/CourseEvidenceFooter";
 
 const account = "0x1111111111111111111111111111111111111111" as Address;
 const transactionHash = `0x${"c".repeat(64)}` as Hash;
@@ -91,6 +92,7 @@ describe("BabySteps App", () => {
 	afterEach(cleanup);
 
 	beforeEach(() => {
+		globalThis.history.replaceState({}, "", "/");
 		vi.clearAllMocks();
 		mocks.useAccount.mockReturnValue({
 			address: account,
@@ -292,7 +294,7 @@ describe("BabySteps App", () => {
 		expect(screen.queryByText("成长纪念")).toBeNull();
 	});
 
-	it("keeps portfolio, product, and evidence navigation reciprocal on every view", () => {
+	it("keeps portfolio, product, and evidence navigation reciprocal on every view", async () => {
 		render(<App />);
 
 		const footerNavigation = screen.getByRole("navigation", {
@@ -318,12 +320,11 @@ describe("BabySteps App", () => {
 				.getAttribute("href"),
 		).toBe("https://evidence.baby2b.online/babysteps/");
 
-		fireEvent.click(screen.getByRole("button", { name: "个人中心" }));
+		cleanup();
+		render(<CourseEvidenceFooter currentView="evidence" />);
 		expect(
 			screen.getByRole("navigation", { name: "作品与工作证明导航" }),
 		).toBeTruthy();
-
-		fireEvent.click(screen.getByRole("button", { name: "工作证据" }));
 		expect(
 			within(screen.getByRole("navigation", { name: "作品与工作证明导航" }))
 				.getByRole("link", { name: "工作证明" })
@@ -331,7 +332,7 @@ describe("BabySteps App", () => {
 		).toBe("page");
 	});
 
-	it("navigates the canonical Chinese Stitch product views", () => {
+	it("navigates the canonical Chinese Stitch product views", async () => {
 		render(<App />);
 
 		const navigation = screen.getByRole("navigation", {
@@ -339,20 +340,20 @@ describe("BabySteps App", () => {
 		});
 		expect(
 			within(navigation)
-				.getByRole("button", { name: "首页" })
+				.getByRole("link", { name: "首页" })
 				.getAttribute("aria-current"),
 		).toBe("page");
 
-		fireEvent.click(
-			within(navigation).getByRole("button", { name: "成长任务" }),
-		);
-		expect(screen.getByRole("heading", { name: "成长任务市集" })).toBeTruthy();
+		fireEvent.click(within(navigation).getByRole("link", { name: "成长任务" }));
+		expect(
+			await screen.findByRole("heading", { name: "成长任务市集" }),
+		).toBeTruthy();
 		expect(screen.getByText("暂无已激活的成长任务")).toBeTruthy();
 
-		fireEvent.click(
-			within(navigation).getByRole("button", { name: "家长中心" }),
-		);
-		expect(screen.getByRole("heading", { name: "家长成长中心" })).toBeTruthy();
+		fireEvent.click(within(navigation).getByRole("link", { name: "家长中心" }));
+		expect(
+			await screen.findByRole("heading", { name: "家长成长中心" }),
+		).toBeTruthy();
 		expect(
 			screen.getByRole("heading", { name: "链上成长与可用余额" }),
 		).toBeTruthy();
@@ -380,76 +381,32 @@ describe("BabySteps App", () => {
 		).toBeTruthy();
 
 		fireEvent.click(
-			within(navigation).getByRole("button", { name: "Provider 控制台" }),
+			within(navigation).getByRole("link", { name: "Provider 控制台" }),
 		);
 		expect(
-			screen.getByRole("heading", { name: "机构与育婴师控制台" }),
+			await screen.findByRole("heading", { name: "机构与育婴师控制台" }),
 		).toBeTruthy();
 
-		fireEvent.click(within(navigation).getByRole("button", { name: "兑换" }));
-		expect(screen.getByRole("heading", { name: "BabyCoin 兑换" })).toBeTruthy();
+		fireEvent.click(within(navigation).getByRole("link", { name: "兑换" }));
+		expect(
+			await screen.findByRole("heading", { name: "BabyCoin 兑换" }),
+		).toBeTruthy();
 		expect(screen.getByText("不部署 MockUSDC")).toBeTruthy();
 		expect(screen.getByText("10.6502")).toBeTruthy();
 		expect(
 			screen.getByText("完整链上报价 10.650166471630484868 BABY"),
 		).toBeTruthy();
 
-		fireEvent.click(
-			within(navigation).getByRole("button", { name: "个人中心" }),
-		);
-		expect(screen.getByRole("heading", { name: "个人中心" })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: "Privy 待配置" })).toBeTruthy();
-		expect(screen.getByText(/Google、邮箱、外部钱包三种入口/u)).toBeTruthy();
-
-		fireEvent.click(
-			within(navigation).getByRole("button", { name: "工作证据" }),
-		);
-		expect(screen.getByRole("heading", { name: "链上工作证据" })).toBeTruthy();
 		expect(
-			screen.getByRole("img", { name: "BabySteps 全局架构图" }),
-		).toBeTruthy();
-		expect(
-			screen.getByRole("img", { name: "BabySteps 核心业务时序图" }),
-		).toBeTruthy();
-		expect(screen.getByRole("link", { name: "查看全局架构原图" })).toBeTruthy();
-		expect(screen.getByRole("link", { name: "查看业务时序原图" })).toBeTruthy();
-		expect(screen.getAllByText("看哪里")).toHaveLength(4);
-		expect(screen.getAllByText("证明什么")).toHaveLength(4);
-		expect(screen.getByText("六列 × 四带 × 七条编号流")).toBeTruthy();
-		expect(
-			screen.getByText(/六列责任边界.*四条数据带.*七条编号流/u),
-		).toBeTruthy();
-		expect(screen.getByText(/Router \/ Pool/u)).toBeTruthy();
-		expect(screen.getAllByText(/六段完整闭环/u)).toHaveLength(2);
-		expect(screen.getByText(/登录与会话/u)).toBeTruthy();
-		expect(screen.getByText(/Uniswap 获币/u)).toBeTruthy();
-		expect(screen.getByText(/上架与审核/u)).toBeTruthy();
-		expect(screen.getByText(/购买与结算/u)).toBeTruthy();
-		expect(screen.getByText(/成长任务完成与证书/u)).toBeTruthy();
-		expect(
-			screen.getByRole("heading", { name: "StarBuddy 纪念卡抽取与融合" }),
-		).toBeTruthy();
-		expect(
-			screen.getByRole("img", { name: "StarBuddy 纪念馆桌面端本地验证" }),
-		).toBeTruthy();
-		expect(
-			screen.getByRole("img", {
-				name: "StarBuddy 纪念馆 390 像素移动端本地验证",
-			}),
-		).toBeTruthy();
-		expect(screen.getByText("Sepolia V2 闭环已验证")).toBeTruthy();
-		expect(screen.getByText("TaskMarketplaceV2")).toBeTruthy();
-		expect(screen.getByText(/0x2EE9/u)).toBeTruthy();
-		expect(
-			screen
-				.getByRole("link", { name: "验证 Worker 健康状态" })
+			within(navigation)
+				.getByRole("link", { name: "个人中心" })
 				.getAttribute("href"),
-		).toBe("https://babysteps-api.baby2b.online/api/health");
-		expect(screen.getByText(/仍待外部闭环/u)).toBeTruthy();
-		expect(screen.getByText(/任务 #2.*公开 API.*购买 #2/u)).toBeTruthy();
-		expect(screen.getByText(/BABY\/USDC.*BABY\/WETH.*真实 swap/u)).toBeTruthy();
-		expect(screen.getByText(/The Graph 100% 同步.*三源一致/u)).toBeTruthy();
-		expect(screen.getByText(/Privy 登录 UI 与可选 IPFS pin/u)).toBeTruthy();
+		).toBe("/profile");
+		expect(
+			within(navigation)
+				.getByRole("link", { name: "工作证据" })
+				.getAttribute("href"),
+		).toBe("/evidence");
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {

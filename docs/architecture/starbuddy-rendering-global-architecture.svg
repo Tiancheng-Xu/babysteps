@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1200" viewBox="0 0 2000 1200" role="img" aria-labelledby="title desc">
+  <title id="title">BabySteps 边缘渲染架构图</title>
+  <desc id="desc">Cloudflare Pages Edge 上的 React Web Streams SSR、浏览器水合、纯 CSR 降级、客户端钱包边界与既有 AWS 性能链路。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffaf0"/><stop offset="1" stop-color="#f5ead1"/></linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#173b50"/><stop offset="1" stop-color="#285c68"/></linearGradient>
+    <linearGradient id="sage" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dce9c8"/><stop offset="1" stop-color="#b9d39e"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5b3a29" flood-opacity=".16"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5L0 10z" fill="#496b63"/></marker>
+    <marker id="warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c16e4d"/></marker>
+    <style>
+      .title{font:700 48px system-ui,sans-serif;fill:#44291f}.subtitle{font:500 22px system-ui,sans-serif;fill:#6f5648}.h{font:700 25px system-ui,sans-serif;fill:#44291f}.t{font:500 19px system-ui,sans-serif;fill:#4f433c}.small{font:500 16px system-ui,sans-serif;fill:#6f5648}.white{fill:#fff}.label{font:700 17px system-ui,sans-serif;fill:#fff}.box{rx:24;stroke:#9a6548;stroke-width:2}.flow{fill:none;stroke:#496b63;stroke-width:4;marker-end:url(#arrow)}.fail{fill:none;stroke:#c16e4d;stroke-width:4;stroke-dasharray:10 8;marker-end:url(#warn)}
+    </style>
+  </defs>
+  <rect width="2000" height="1200" fill="url(#paper)"/>
+  <circle cx="104" cy="86" r="32" fill="#f7b267"/><path d="M83 88l17 15 27-38" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+  <text x="160" y="88" class="title">BabySteps · Static-First 边缘渲染架构</text>
+  <text x="160" y="125" class="subtitle">公开内容先可读，交互随后激活；失败时保留可访问的纯 CSR 路径</text>
+
+  <rect x="70" y="180" width="330" height="760" class="box" fill="#fff8e8" filter="url(#shadow)"/>
+  <text x="105" y="225" class="h">① 用户与浏览器</text>
+  <rect x="105" y="270" width="260" height="104" rx="18" fill="#fff" stroke="#d1aa78" stroke-width="2"/>
+  <text x="130" y="310" class="t">文档请求</text><text x="130" y="342" class="small">/ · /tasks · /evidence</text>
+  <rect x="105" y="410" width="260" height="126" rx="18" fill="url(#sage)" stroke="#78976d" stroke-width="2"/>
+  <text x="130" y="450" class="t">BrowserRouter + hydrateRoot</text><text x="130" y="482" class="small">服务端 HTML 精确匹配才水合</text><text x="130" y="510" class="small">真实 URL / History API</text>
+  <rect x="105" y="575" width="260" height="130" rx="18" fill="#fbe0c3" stroke="#c9865f" stroke-width="2"/>
+  <text x="130" y="615" class="t">纯 CSR 降级</text><text x="130" y="647" class="small">createRoot 最多一次重挂载</text><text x="130" y="675" class="small">SSR 失败仍可启动</text>
+  <rect x="105" y="745" width="260" height="145" rx="18" fill="#e7e7f5" stroke="#7b77a5" stroke-width="2"/>
+  <text x="130" y="785" class="t">Privy / wagmi client-only</text><text x="130" y="817" class="small">钱包、身份、用户状态</text><text x="130" y="845" class="small">不进入 SSR 序列化</text><text x="130" y="873" class="small">交互激活后加载</text>
+
+  <rect x="460" y="180" width="700" height="760" class="box" fill="#fff" filter="url(#shadow)"/>
+  <rect x="460" y="180" width="700" height="72" rx="24" fill="url(#navy)"/>
+  <text x="500" y="226" class="h white">② Cloudflare Pages Edge</text>
+  <rect x="500" y="290" width="285" height="142" rx="18" fill="#edf4e1" stroke="#78976d" stroke-width="2"/>
+  <text x="525" y="330" class="t">请求分类</text><text x="525" y="362" class="small">HTML GET / HEAD → SSR</text><text x="525" y="390" class="small">资源 / API / mutation → 直通</text>
+  <rect x="835" y="290" width="285" height="142" rx="18" fill="#e1eef0" stroke="#527d82" stroke-width="2"/>
+  <text x="860" y="330" class="t">静态资源直通</text><text x="860" y="362" class="small">ASSETS.fetch</text><text x="860" y="390" class="small">哈希 JS / CSS / 图片</text>
+  <rect x="500" y="485" width="620" height="190" rx="22" fill="#fff3d6" stroke="#d19a55" stroke-width="3"/>
+  <text x="535" y="532" class="h">React Web Streams SSR</text><text x="535" y="570" class="t">StaticRouter + ServerRouteShell</text><text x="535" y="604" class="small">公开页输出可读摘要壳；身份页输出确定性壳层</text><text x="535" y="636" class="small">创建或读流超时 / error → abort → 静态 index.html</text>
+  <rect x="500" y="720" width="292" height="160" rx="18" fill="#e9f3df" stroke="#78976d" stroke-width="2"/>
+  <text x="525" y="760" class="t">安全状态白名单</text><text x="525" y="792" class="small">mode / pathname / version</text><text x="525" y="822" class="small">转义 &lt; &gt; &amp; U+2028/2029</text><text x="525" y="850" class="small">拒绝额外用户字段</text>
+  <rect x="828" y="720" width="292" height="160" rx="18" fill="#f9e5d7" stroke="#c9865f" stroke-width="2"/>
+  <text x="853" y="760" class="t">状态与安全头</text><text x="853" y="792" class="small">404 保留 · CSP · no-store</text><text x="853" y="822" class="small">x-babysteps-render-mode</text><text x="853" y="850" class="small">结构化日志不含私有载荷</text>
+
+  <rect x="1220" y="180" width="710" height="760" class="box" fill="#fff9eb" filter="url(#shadow)"/>
+  <text x="1260" y="225" class="h">③ 构建、外部依赖与观测</text>
+  <rect x="1260" y="270" width="290" height="155" rx="18" fill="#e1eef0" stroke="#527d82" stroke-width="2"/>
+  <text x="1285" y="310" class="t">GitHub Actions / Pages</text><text x="1285" y="342" class="small">Vite client build</text><text x="1285" y="370" class="small">Vite SSR worker build</text><text x="1285" y="398" class="small">非空产物 + route manifest Gate</text>
+  <rect x="1590" y="270" width="300" height="155" rx="18" fill="#e9f3df" stroke="#78976d" stroke-width="2"/>
+  <text x="1615" y="310" class="t">既有业务依赖</text><text x="1615" y="342" class="small">Cloudflare Worker / D1</text><text x="1615" y="370" class="small">Ethereum Sepolia / RPC</text><text x="1615" y="398" class="small">The Graph / Privy</text>
+  <rect x="1260" y="475" width="630" height="165" rx="18" fill="#eeeafa" stroke="#7b77a5" stroke-width="2"/>
+  <text x="1285" y="515" class="t">性能观测（既有验证链路）</text><text x="1285" y="547" class="small">Browser SDK → Worker → AWS API / SQS / ECS → PostgreSQL</text><text x="1285" y="577" class="small">新增 hydration-duration 自定义指标；浏览器不持有 AWS 凭据</text><text x="1285" y="607" class="small">本次渲染改造不创建、不修改 AWS 资源</text>
+  <rect x="1260" y="690" width="300" height="160" rx="18" fill="#dce9c8" stroke="#78976d" stroke-width="2"/>
+  <text x="1285" y="730" class="t">本地双端构建已验证</text><text x="1285" y="762" class="small">SSR 200 / client shell 200</text><text x="1285" y="790" class="small">未知文档 404</text><text x="1285" y="818" class="small">失败注入 → CSR fallback</text>
+  <rect x="1590" y="690" width="300" height="160" rx="18" fill="#fff0c9" stroke="#d19a55" stroke-width="2"/>
+  <text x="1615" y="730" class="t">云端预览待验证</text><text x="1615" y="762" class="small">preview URL / TLS / 深链</text><text x="1615" y="790" class="small">production 未宣称完成</text><text x="1615" y="818" class="small">AWS 增量成本 $0</text>
+
+  <path class="flow" d="M365 322H500"/><path class="flow" d="M785 360H835"/><path class="flow" d="M643 432V485"/><path class="flow" d="M500 582H400V473"/><path class="fail" d="M500 625H420V640H365"/><path class="flow" d="M365 770H500V800"/><path class="flow" d="M1120 570H1185V347H1260"/><path class="flow" d="M1550 347H1590"/><path class="flow" d="M1120 800H1185V557H1260"/>
+
+  <rect x="70" y="995" width="1860" height="135" rx="24" fill="#173b50"/>
+  <text x="110" y="1040" class="label">已实现并本地验证</text><circle cx="110" cy="1080" r="10" fill="#b9d39e"/><text x="132" y="1087" class="white small">路由、SSR、严格水合、纯 CSR fallback、双端构建、404 与安全白名单</text>
+  <text x="1010" y="1040" class="label">边界</text><circle cx="1010" cy="1080" r="10" fill="#f7b267"/><text x="1032" y="1087" class="white small">Cloudflare preview / production 待验证；AWS 前端资源未新增，增量成本 $0</text>
+</svg>
