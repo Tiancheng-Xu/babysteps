@@ -8,7 +8,7 @@ async function formattedStatement(
 	values: readonly unknown[],
 ): Promise<string> {
 	const result = await database.query(
-		`SELECT format('${template}', ${values.map((_, index) => `$${index + 1}`).join(", ")}) AS statement`,
+		`SELECT format('${template}', ${values.map((_, index) => `$${index + 1}::text`).join(", ")}) AS statement`,
 		values,
 	);
 	const statement = result.rows[0]?.statement;
