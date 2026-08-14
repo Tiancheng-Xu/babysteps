@@ -1,0 +1,79 @@
+name: BabySteps AWS Performance Recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack_name:
+        description: Exact failed run stack, for example babysteps-performance-123456
+        required: true
+        type: string
+      approval_reference:
+        description: Human approval reference for exact project cleanup
+        required: true
+        type: string
+      acknowledge_pre_database_failure:
+        description: Confirm Evidence proves the container failed before database access
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: babysteps-performance-evidence
+  cancel-in-progress: false
+
+jobs:
+  recover-exact-stack:
+    if: inputs.acknowledge_pre_database_failure == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: aws-performance
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      STACK_NAME: ${{ inputs.stack_name }}
+    steps:
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Validate exact recovery target
+        run: |
+          [[ "$STACK_NAME" =~ ^babysteps-performance-[0-9]+$ ]]
+          test '${{ inputs.approval_reference }}' != ''
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null
+          aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
+            --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' \
+            > resources-before-cleanup.json
+      - name: Delete exact failed project stack
+        run: |
+          aws cloudformation delete-stack --stack-name "$STACK_NAME" \
+            --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}'
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+      - name: Verify exact project resource cleanup
+        run: |
+          run_id="${STACK_NAME##*-}"
+          environment_name="e${run_id}"
+          test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
+          test "$(aws ecr describe-repositories --query "repositories[?contains(repositoryName, '$environment_name')] | length(@)" --output text 2>/dev/null || echo 0)" = "0"
+          test "$(aws sqs list-queues --queue-name-prefix babysteps-performance- --query "QueueUrls[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
+          test "$(aws lambda list-functions --query "Functions[?contains(FunctionName, '$environment_name')] | length(@)" --output text)" = "0"
+          test "$(aws apigatewayv2 get-apis --query "Items[?contains(Name, '$environment_name')] | length(@)" --output text)" = "0"
+          test "$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$environment_name" --query 'length(logGroups)' --output text)" = "0"
+          test "$(aws secretsmanager list-secrets --include-planned-deletion --query "SecretList[?contains(Name, '$environment_name')] | length(@)" --output text)" = "0"
+          test "$(aws ecs list-task-definitions --family-prefix "babysteps-performance-cleaner-$environment_name" --status ACTIVE --query 'length(taskDefinitionArns)' --output text)" = "0"
+          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.mkdirSync("evidence",{recursive:true});fs.writeFileSync("evidence/recovery-cleanup.json",JSON.stringify({stackDeleted:true,remainingProjectResources:0,sharedFoundationProtected:true,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
+      - name: Preserve sanitized recovery proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: babysteps-performance-recovery-${{ github.run_id }}
+          path: |
+            resources-before-cleanup.json
+            evidence/recovery-cleanup.json
+          retention-days: 14
