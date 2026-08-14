@@ -87,6 +87,12 @@ jobs:
           pnpm --filter @babysteps/aws build:performance:sam
           pnpm --filter @babysteps/aws build:performance:cleaner
           cp -R aws/migrations aws/dist/performance/migrations
+      - name: Enable ARM64 container builds
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Configure isolated BuildKit builder
+        uses: docker/setup-buildx-action@v3
       - name: Deploy temporary project stack
         id: deploy
         run: |

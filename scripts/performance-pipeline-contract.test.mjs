@@ -9,6 +9,9 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /workflow_dispatch:/);
 	assert.match(source, /environment: aws-performance/);
 	assert.match(source, /id-token: write/);
+	assert.match(source, /docker\/setup-qemu-action@v3/);
+	assert.match(source, /platforms: arm64/);
+	assert.match(source, /docker\/setup-buildx-action@v3/);
 	assert.match(source, /delete-stack/);
 	assert.match(source, /concurrency:/);
 	assert.match(source, /github\.run_id/);

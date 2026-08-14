@@ -9,6 +9,8 @@ const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
 	[workflow, "environment: aws-performance", "approval environment is missing"],
 	[workflow, "id-token: write", "OIDC permission is missing"],
+	[workflow, "docker/setup-qemu-action@v3", "ARM64 emulation setup is missing"],
+	[workflow, "docker/setup-buildx-action@v3", "multi-platform builder setup is missing"],
 	[workflow, "aws-budget-guard", "budget gate is missing"],
 	[workflow, "describe-nat-gateways", "shared NAT readiness gate is missing"],
 	[workflow, "describe-db-instances", "shared database readiness gate is missing"],

@@ -27,3 +27,7 @@ Date: 2026-08-13
 The performance stack reuses the protected shared VPC, private app subnets, single NAT, PostgreSQL engine, artifact bucket and GitHub OIDC provider. The project stack creates its own generated database login secret and owns only `babysteps-performance-*` API/Lambda/SQS/DLQ/ECR/ECS/log/security-group resources plus the `babysteps_performance` schema/role. The privileged shared database secret is readable only by the short-lived schema initialize/cleanup task, not by the normal cleaner or query Lambda. The workflow records sanitized Evidence, runs an exact schema-cleanup task, deletes the exact project stack and verifies the project cluster count is zero.
 
 No cloud resource ID or successful cleanup result is claimed here until the GitHub Actions run exists.
+
+The meaningful AWS implementation timeline, least-privilege lifecycle and final
+proof contract are recorded separately in
+[`2026-08-13-performance-aws-implementation.md`](2026-08-13-performance-aws-implementation.md).
