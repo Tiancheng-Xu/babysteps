@@ -18,6 +18,15 @@ test("uses Cloudflare Git Integration as the only production publisher", () => {
 		verifier,
 		/Tiancheng-Xu\/.github\/.github\/workflows\/verify-project\.yml@main/,
 	);
+	for (const contract of [
+		"static-first-output: web/dist",
+		"static-first-mode: edge-ssr",
+		"static-first-rendering-manifest: web/public/rendering-manifest.json",
+		"static-first-server-artifact: web/dist/_worker.js",
+		"static-first-runtime-command: pnpm validate:rendering-runtime",
+	]) {
+		assert.ok(verifier.includes(contract), `Missing Static-First contract: ${contract}`);
+	}
 
 	const workflowText = [
 		readFileSync(".github/workflows/repository-policy.yml", "utf8"),

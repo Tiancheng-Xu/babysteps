@@ -27,6 +27,16 @@ assert.match(
 	verifier,
 	/Tiancheng-Xu\/.github\/.github\/workflows\/verify-project\.yml@main/,
 );
+for (const fragment of [
+	"static-first-output: web/dist",
+	"static-first-routes: /,/tasks,/keepsakes,/evidence,/parent,/provider,/exchange,/profile,/performance",
+	"static-first-mode: edge-ssr",
+	"static-first-rendering-manifest: web/public/rendering-manifest.json",
+	"static-first-server-artifact: web/dist/_worker.js",
+	"static-first-runtime-command: pnpm validate:rendering-runtime",
+]) {
+	assert.ok(verifier.includes(fragment), `Missing Static-First contract: ${fragment}`);
+}
 assert.doesNotMatch(
 	verifier,
 	/actions\/deploy-pages|wrangler pages deploy|pages: write/,

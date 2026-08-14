@@ -102,6 +102,18 @@ export function EvidencePage() {
 							<strong>当前状态</strong>
 							<span>AWS 增量成本 $0</span>
 						</article>
+						<article>
+							<strong>交付要求</strong>
+							<span>共享 Static-First Gate</span>
+							<strong>实现功能</strong>
+							<span>edge-ssr 契约、产物检查与 built Worker 运行矩阵</span>
+							<strong>代码位置</strong>
+							<code>.github/workflows/verify-baby2b-project.yml</code>
+							<strong>验证证据</strong>
+							<span>共享 main 0c9185f、68/68；BabySteps Run 31791893461</span>
+							<strong>当前状态</strong>
+							<span>共享远端已发布；BabySteps 远端 Gate 与 Preview 已验证</span>
+						</article>
 					</div>
 				</section>
 
@@ -111,9 +123,38 @@ export function EvidencePage() {
 						已验证两条通用规则：资源根路径必须按交付契约判断；渲染 Gate
 						必须直接执行构建后的 Worker，覆盖尾斜杠、真实 404、API
 						直通和客户端区域缓存。BabySteps
-						已完成项目发现与本地验证，共享标准、TC Flow、远端 Gate
-						和旧项目回归仍由共享任务接续，不把项目专属路由或钱包逻辑写入通用规则。
+						已完成项目发现与本地验证。共享任务已将规则回写到
+						standard、检测脚本、TC Flow 和 reusable workflow，并以 68/68
+						测试回归既有 SSG 项目，并通过 PR #14 发布到共享 main
+						<code>0c9185f</code>。BabySteps 已声明 edge-ssr、rendering
+						manifest、server artifact 与 built Worker 运行命令。PR #23 的
+						Repository Policy、共享项目验证与 Cloudflare Pages 三项 Gate
+						均成功；Run 31791893461 在构建后执行共享策略与 built Worker
+						矩阵，Preview deployment{" "}
+						<code>23e11aa6-5e04-4aa0-ba79-6fd3b66dc1f4</code>的
+						SSR、深链、404、静态资源和 TLS
+						已读回。项目专属路由或钱包逻辑不会进入通用规则。
 					</p>
+					<div className="evidence-diagram-card__actions">
+						<a
+							className="evidence-diagram-link"
+							href="https://github.com/Tiancheng-Xu/.github/pull/14"
+						>
+							查看共享 Gate PR
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31791893461"
+						>
+							查看 BabySteps Gate Run
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href="https://23e11aa6.babysteps-83x.pages.dev/evidence"
+						>
+							查看 BabySteps Preview
+						</a>
+					</div>
 				</article>
 
 				<article className="evidence-diagram-card">

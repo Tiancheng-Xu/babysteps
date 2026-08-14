@@ -20,6 +20,10 @@ test("other environments keep the complete ordered build", () => {
 test("the root build delegates to the routing entry point", async () => {
 	const pkg = JSON.parse(await readFile("package.json", "utf8"));
 	assert.equal(pkg.scripts.build, "node scripts/build.mjs");
+	assert.equal(
+		pkg.scripts["validate:rendering-runtime"],
+		"node web/scripts/validate-rendering-runtime.mjs web/dist/_worker.js",
+	);
 });
 
 test("the Web build produces one Cloudflare client and edge SSR artifact", async () => {
