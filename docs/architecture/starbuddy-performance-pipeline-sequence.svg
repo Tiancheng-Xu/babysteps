@@ -34,5 +34,5 @@
     <rect x="58" y="1285" width="2284" height="205" rx="22" fill="#eaf5ea" stroke="#2f7150"/><circle cx="92" cy="1321" r="22" fill="#2f7150"/><text x="92" y="1329" text-anchor="middle" class="actor">06</text><text x="130" y="1329" class="phase">06 Evidence 与清理</text>
     <path class="req" d="M2170 1360H850"/><text x="1510" y="1348" text-anchor="middle" class="body">OIDC → 临时栈 → 受控事件 LCP=321 → ECS exitCode=0 → stats sampleCount=1</text><path class="req" d="M2170 1410H1840"/><text x="2005" y="1398" text-anchor="middle" class="body">保存脱敏资源清单 / 统计 / commit / approval</text><path class="event" d="M2170 1450H1510"/><text x="1840" y="1438" text-anchor="middle" class="body">DROP SCHEMA → delete-stack → 复核项目 ECS Cluster=0</text>
   </g>
-  <rect x="58" y="1515" width="2284" height="44" rx="18" fill="#173d46"/><text x="84" y="1544" class="body" style="fill:#cce8cc">状态：本地代码、测试、SAM、预算与 Evidence Gate 已验证；AWS 真实 Run / Artifact / 清理结果待 GitHub Actions 验证。</text>
+  <rect x="58" y="1515" width="2284" height="44" rx="18" fill="#173d46"/><text x="84" y="1544" class="body" style="fill:#cce8cc">Run 31765573258 · commit 485999c · LCP=321 · sampleCount=1 · p50=p75=p95=321 · ECS exitCode=0 · DROP SCHEMA / delete-stack 已验证</text>
 </svg>

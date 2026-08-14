@@ -48,10 +48,9 @@ request-tag condition are enforced by regression tests and IAM simulation.
 | Task-definition cleanup | A failed run must not leave active ECS revisions or a stack in `DELETE_FAILED`. | The execution role can deregister the two run-scoped definitions; subsequent rollback completed instead of stalling. |
 | Cost cleanup gate | A failed step must still execute Evidence capture and exact-stack deletion. | Failed runs were followed by a nine-service inventory covering Stack, ECS, ECR, SQS, Lambda, API, logs, Secrets and task definitions; zero active project resources was required before retry. |
 
-This table records engineering decisions and verified failure boundaries. It is
-not a success claim for the final event pipeline. The authoritative successful
-run, metrics, ECS exit code, sanitized Artifact and post-run zero-residue audit
-will be added only after all six runtime stages complete.
+This table records engineering decisions and verified failure boundaries. The
+final six-stage cloud proof is recorded below; earlier failures are retained only
+where they explain a durable code, IAM or cleanup decision.
 
 ## Account-level ECS prerequisite
 
@@ -95,6 +94,12 @@ for bundled CommonJS AWS SDK internals. The test now boots the real artifact far
 enough to reach the expected `MISSING_QUEUE_URL` boundary rather than failing in
 the module loader.
 
+Run `31763815468` then reached PostgreSQL but failed with `42P18` because the
+dynamic `format(...)` values lacked an explicit parameter type. No project schema
+mutation was accepted. The query now casts each placeholder to `text`, a focused
+regression test reproduces the missing cast, and Recovery Run `31764528855`
+removed the exact failed stack before the final retry.
+
 ## Final runtime proof contract
 
 The accepted run must show all of the following together:
@@ -111,7 +116,19 @@ The accepted run must show all of the following together:
 
 ## Current status
 
-The local SDK, Worker, Lambda, ECS cleaner, storage, dashboard, SAM template and
-workflow gates are verified. The final successful cloud event and aggregate are
-still pending; the public status must remain **AWS cloud verification pending**
-until the proof contract above is satisfied.
+Run [`31765573258`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258)
+completed the proof contract on commit
+`485999c99225a6211d6e967fd72f83cfe0ed6c17`. The controlled event was accepted,
+the ECS cleaner stopped with `exitCode=0`, and PostgreSQL returned
+`sampleCount=1`, `p50=p75=p95=321`, and `errorRate=0` for `/performance`.
+
+The workflow then dropped the project schema, deleted the exact CloudFormation
+stack and performed a read-only inventory. Stack, ECS Cluster, ECR repository,
+both SQS queues, Lambda functions, HTTP APIs, log groups, Secrets and active task
+definitions all returned zero project resources. Shared VPC, NAT, RDS, OIDC and
+the Foundation stack remained protected. The sanitized machine-readable record
+is `docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json`.
+
+This is a controlled one-event delivery proof, not a claim of production traffic
+volume or long-running service availability. The temporary AWS analytics stack
+was intentionally removed after verification to avoid ongoing charges.

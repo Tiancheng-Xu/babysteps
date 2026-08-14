@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EvidencePage } from "./EvidencePage";
 
 describe("EvidencePage", () => {
-	it("explains the AWS identity foundation without claiming the runtime is complete", () => {
+	it("shows the verified AWS performance closed loop and exact cleanup proof", () => {
 		render(<EvidencePage />);
 
 		expect(
@@ -20,13 +20,18 @@ describe("EvidencePage", () => {
 			screen.getByText(/账户级复用、零长期密钥、角色本身不收费/u),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: "真实云端排障与恢复时间线" }),
+			screen.getByRole("heading", { name: "真实云端验证与恢复时间线" }),
 		).toBeTruthy();
 		expect(screen.getByText(/31760380214/u)).toBeTruthy();
 		expect(screen.getByText(/31761586956/u)).toBeTruthy();
+		expect(screen.getAllByText(/31765573258/u).length).toBeGreaterThan(0);
 		expect(
-			screen.getByText(/不代表性能 Stack 已部署或业务验收完成/u),
-		).toBeTruthy();
-		expect(screen.getByText("AWS 云端待验证")).toBeTruthy();
+			screen.getAllByText(/sampleCount=1，p50=p75=p95=321/u).length,
+		).toBeGreaterThan(0);
+		expect(
+			screen.getAllByText(/九类项目运行资源均为 0/u).length,
+		).toBeGreaterThan(0);
+		expect(screen.getByText("AWS 闭环已验证")).toBeTruthy();
+		expect(screen.queryByText("AWS 云端待验证")).toBeNull();
 	});
 });

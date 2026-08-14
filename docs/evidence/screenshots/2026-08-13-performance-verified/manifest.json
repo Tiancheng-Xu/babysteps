@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-08-13",
+  "source": "local production preview",
+  "route": "/evidence",
+  "files": [
+    {
+      "path": "evidence-page-desktop-1440.png",
+      "width": 1440,
+      "height": 12435,
+      "bytes": 1786673,
+      "sha256": "69c3696a5af23e8559120aaafe6e29778aace6b6d584b5b204913c1b6c197ed6",
+      "proves": "The complete Evidence page renders as one continuous desktop case study."
+    },
+    {
+      "path": "evidence-performance-desktop-1440.png",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 189917,
+      "sha256": "42661e53b7158cf035ff4458925551ae169b18f12601b1ca62fade568685a7f1",
+      "proves": "The verified performance mapping and OIDC trust boundary remain legible at desktop width."
+    },
+    {
+      "path": "evidence-performance-mobile-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59441,
+      "sha256": "aac6615259f16dc1f040466e8aca64f70e91354e9e51584e66f2f97e6ed4a6f3",
+      "proves": "The verified status and requirement mapping collapse to a readable single column at 390px."
+    }
+  ],
+  "responsiveAudit": {
+    "widths": [375, 390, 430, 1440],
+    "rootHorizontalOverflow": false,
+    "imagesLoaded": 8,
+    "brokenImages": 0
+  },
+  "boundary": "These screenshots prove rendering and responsive layout. The AWS runtime result is proven separately by Run 31765573258 and the sanitized closed-loop JSON."
+}

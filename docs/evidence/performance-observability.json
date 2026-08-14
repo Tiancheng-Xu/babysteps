@@ -1,11 +1,70 @@
 {
   "schemaVersion": 1,
-  "profile": "full",
-  "status": "planned",
-  "summary": "The complete performance observability pipeline is implemented and locally verified; the controlled AWS event, aggregate readback, and exact project cleanup are pending a successful GitHub Actions run.",
+  "profile": "compact",
+  "status": "verified",
+  "dataMode": "live",
+  "summary": "The complete performance observability pipeline was verified with one controlled AWS event, an on-demand ECS cleaner, a real PostgreSQL aggregate readback, and exact project cleanup.",
   "evidenceUrl": "https://babysteps.baby2b.online/evidence",
-  "limitations": [
-    "Cloud evidence is not marked verified until one controlled event reaches the ECS cleaner, the real aggregate is queried, and the exact project resources are confirmed deleted."
+  "workflow": {
+    "runId": 31765573258,
+    "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+    "commit": "485999c99225a6211d6e967fd72f83cfe0ed6c17",
+    "region": "us-east-1"
+  },
+  "metrics": ["LCP", "CLS", "INP", "FCP", "TTFB"],
+  "percentiles": ["p50", "p75", "p95"],
+  "dimensions": ["sample_count", "time_window", "route", "release", "environment", "version"],
+  "pipeline": ["browser-sdk", "worker-proxy", "api", "sqs-dlq", "ecs-cleaner", "storage", "postgresql", "query", "dashboard"],
+  "safety": ["schema-validation", "pii-redaction", "no-browser-aws-credentials", "sdk-failure-isolation", "oidc-only", "exact-project-cleanup"],
+  "filters": ["time_window", "environment", "release", "route", "metric"],
+  "views": ["trend", "error_rate", "route_comparison"],
+  "resilience": ["retry", "dlq", "idempotency"],
+  "result": {
+    "controlledEvent": "LCP=321ms",
+    "acceptedEvents": 1,
+    "cleanerExitCode": 0,
+    "sampleCount": 1,
+    "p50": 321,
+    "p75": 321,
+    "p95": 321,
+    "schemaDeleted": true,
+    "projectStackDeleted": true,
+    "remainingProjectRuntimeResources": 0
+  },
+  "proof": [
+    {
+      "kind": "live-event",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "A controlled LCP=321 event was accepted by the live AWS ingest path."
+    },
+    {
+      "kind": "queue",
+      "location": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+      "proves": "The accepted event completed the SQS stage before the cleaner ran."
+    },
+    {
+      "kind": "ecs-cleaner",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "The on-demand ECS cleaner reached STOPPED with exitCode=0."
+    },
+    {
+      "kind": "aggregate",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "PostgreSQL returned sampleCount=1 and exact p50=p75=p95=321."
+    },
+    {
+      "kind": "dashboard",
+      "location": "docs/evidence/screenshots/2026-08-13-performance-verified/manifest.json",
+      "proves": "The responsive Evidence and performance views publish real-source status without a mock fallback."
+    },
+    {
+      "kind": "failure-retry",
+      "location": "docs/evidence/testing/2026-08-13-performance-aws-implementation.md",
+      "proves": "Meaningful bundle and PostgreSQL failures were fixed, exact recovery removed failed stacks, and the final retry passed."
+    }
   ],
-  "nextStep": "Run the approved temporary AWS performance workflow, preserve its sanitized artifact, verify zero project resource residue, and then promote this contract to verified."
+  "limitations": [
+    "The controlled single-event run proves correctness and cleanup, not sustained production volume.",
+    "The temporary AWS stack was intentionally removed after validation to avoid idle charges; the public dashboard does not pretend that the AWS source remains continuously available."
+  ]
 }
