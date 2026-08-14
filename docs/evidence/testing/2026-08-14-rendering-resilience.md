@@ -4,7 +4,7 @@
 
 ## 结论
 
-BabySteps 已在本地完成并验证 `Cloudflare Edge SSR → React 精确水合 → 纯 CSR fallback` 的实现。它使用真实 URL 与 History API，不再用 hash 切换模拟页面；钱包、Privy、wagmi 和用户状态只在浏览器激活。本记录不宣称 Cloudflare preview 或 production 已上线。
+BabySteps 已完成并验证 `Cloudflare Edge SSR → React 精确水合 → 纯 CSR fallback`。它使用真实 URL 与 History API，不再用 hash 切换模拟页面；钱包、Privy、wagmi 和用户状态只在浏览器激活。PR #21 通过全部 Gate 后已合并到 main，生产 deployment、pages.dev、自定义域名、TLS、深链和真实 404 均已验收。
 
 ## 作业要求 → 实现功能 → 代码位置 → 验证证据 → 当前状态
 
@@ -15,7 +15,7 @@ BabySteps 已在本地完成并验证 `Cloudflare Edge SSR → React 精确水�
 | 安全水合 | 白名单 state + 严格匹配后 hydrateRoot | `web/src/bootstrap.tsx`、`web/src/ssr/renderState.ts` | bootstrap 与序列化测试 | 本地已验证 |
 | 失败降级 | SSR 异常/超时返回静态 HTML；致命水合失败最多一次 CSR | `web/src/pages-worker.ts`、`web/src/bootstrap.tsx` | error、timeout、one-shot fallback 测试 | 本地已验证 |
 | 双端交付 | client + `_worker.js` 双构建、route manifest | `web/scripts/build-pages.mjs`、`web/public/rendering-manifest.json` | 生产 build；产物非空检查 | 本地已验证 |
-| Cloudflare 预览 | deployment-specific URL、TLS、深链与浏览器水合 | 尚未执行外部发布 | 暂无云端 URL | 待验证 |
+| Cloudflare 发布 | deployment-specific、pages.dev、自定义域名、TLS、深链和 404 | PR #21；main `91dcc4c`；Run `31789478284`；deployment `5f4a39e0-0fc5-4bd2-87a2-25158fe2111b` | 三类 URL 与 TLS/响应头读回 | 已验证 |
 
 ## 本地验证事实
 
@@ -42,7 +42,7 @@ BabySteps 已在本地完成并验证 `Cloudflare Edge SSR → React 精确水�
 - 本节点没有 AWS 写操作，也没有创建 Lambda@Edge、CloudFront、API Gateway 或新数据库。
 - AWS 增量成本 `$0`。
 - 既有共享 VPC、NAT、RDS、OIDC、artifact bucket 和性能观测资源不属于本节点清理范围。
-- Cloudflare preview 与 production 发布均未在本记录生成时执行。
+- Cloudflare PR Preview 与 production 均已成功；本次没有使用 Direct Upload、部署 Token 或绕过 Gate。
 
 ## 应反向优化的共享能力
 
@@ -56,6 +56,18 @@ BabySteps 已在本地完成并验证 `Cloudflare Edge SSR → React 精确水�
 
 ## 限制与下一步
 
-下一步必须在真实 Cloudflare preview 验证：首页与深链返回正确状态码、静态资源直通、浏览器无 hydration mismatch、脚本禁用时公开内容仍可读、375/390/430/1440 响应式以及 TLS。完成前，Dashboard 标签必须保持 `cloud preview: pending`。
+## 生产发布证据
+
+- PR：[Tiancheng-Xu/babysteps#21](https://github.com/Tiancheng-Xu/babysteps/pull/21)，状态 MERGED。
+- main 合并提交：`91dcc4c83e8c789bc33a59b2c6a4b66299acb424`。
+- GitHub Actions：[Run 31789478284](https://github.com/Tiancheng-Xu/babysteps/actions/runs/31789478284)，结论 success。
+- Cloudflare deployment：`5f4a39e0-0fc5-4bd2-87a2-25158fe2111b`，check success。
+- `https://5f4a39e0.babysteps-83x.pages.dev/`、`https://babysteps-83x.pages.dev/`、`https://babysteps.baby2b.online/`、`/evidence` 与 `/profile/` 均返回 200；`/missing` 返回 404。
+- 根页与 Evidence 返回 `x-babysteps-render-mode: ssr`；`/profile/` 返回 `private, no-store`；TLS `ssl_verify_result=0`。
+- 项目与 `https://evidence.baby2b.online/babysteps/` 均为 200，双向导航 Gate 通过。
+
+## 后续限制
+
+生产发布已验证，但 Cloudflare 平台仍可能出现短时别名传播或第三方 Privy 可用性波动；每次未来 main 发布仍必须重复 deployment-specific → pages.dev → custom domain → 深链 → TLS 的顺序验收。
 
 本机 `127.0.0.1` 访问个人中心时，Privy iframe 会因该临时 origin 不在正式域名白名单而重试；它不影响 SSR、水合或深链，但 Privy 登录只能在已配置的正式/预览 origin 做最终验收。

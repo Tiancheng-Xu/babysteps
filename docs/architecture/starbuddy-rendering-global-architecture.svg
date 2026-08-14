@@ -53,7 +53,7 @@
   <rect x="1260" y="690" width="300" height="160" rx="18" fill="#dce9c8" stroke="#78976d" stroke-width="2"/>
   <text x="1285" y="730" class="t">本地双端构建已验证</text><text x="1285" y="762" class="small">SSR 200 / client shell 200</text><text x="1285" y="790" class="small">未知文档 404</text><text x="1285" y="818" class="small">失败注入 → CSR fallback</text>
   <rect x="1590" y="690" width="300" height="160" rx="18" fill="#fff0c9" stroke="#d19a55" stroke-width="2"/>
-  <text x="1615" y="730" class="t">云端预览待验证</text><text x="1615" y="762" class="small">preview URL / TLS / 深链</text><text x="1615" y="790" class="small">production 未宣称完成</text><text x="1615" y="818" class="small">AWS 增量成本 $0</text>
+  <text x="1615" y="730" class="t">生产部署已验证</text><text x="1615" y="762" class="small">deployment / pages.dev / TLS</text><text x="1615" y="790" class="small">custom domain / 深链 / 404</text><text x="1615" y="818" class="small">AWS 增量成本 $0</text>
 
   <path class="flow" d="M365 322H500"/><path class="flow" d="M785 360H835"/><path class="flow" d="M643 432V485"/><path class="flow" d="M500 582H400V473"/><path class="fail" d="M500 625H420V640H365"/><path class="flow" d="M365 770H500V800"/><path class="flow" d="M1120 570H1185V347H1260"/><path class="flow" d="M1550 347H1590"/><path class="flow" d="M1120 800H1185V557H1260"/>
 

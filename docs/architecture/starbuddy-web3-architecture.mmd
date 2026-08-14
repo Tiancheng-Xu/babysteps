@@ -245,7 +245,7 @@ BabySteps 不再用 HashRouter 模拟页面，而是以真实 URL 和 History AP
 - 只能客户端执行：Privy、wagmi、钱包余额、链上交易、个人资料、用户会话和性能 SDK。
 - 不能序列化：钱包地址对应的私有资料、身份令牌、Cookie、Authorization、交易签名与请求正文。
 - 本地已验证：双端生产构建、公开页 SSR、client-shell SSR、真实 404、静态资源直通、SSR 异常/超时 fallback、致命水合失败最多一次 CSR 重挂载。
-- 待验证：Cloudflare preview URL、TLS、真实浏览器水合和生产别名。本节不把待验证项目写成已上线。
+- 已验证：PR #21 预览、deployment-specific URL、pages.dev、自定义域名、TLS、真实深链、SSR 响应头与生产别名；main 合并提交 `91dcc4c`，GitHub Run `31789478284`，Cloudflare deployment `5f4a39e0-0fc5-4bd2-87a2-25158fe2111b`。
 - 费用：本次渲染优化没有 AWS 写操作或新资源，AWS 增量成本为 `$0`；既有共享 VPC/NAT/RDS/OIDC 仍受保护。
 
 ```mermaid
@@ -301,7 +301,7 @@ sequenceDiagram
 5. 服务端 bundle 不得包含浏览器钱包/身份 SDK 的运行时代码；
 6. Gate 必须直接执行构建后的 Worker，覆盖 canonical 路由、尾斜杠、真实 404、API 直通和 client-shell 缓存策略；
 7. 交付 `base` 检查必须由 delivery contract 决定：Pages Advanced Worker + History Router 使用 `/`，明确 static-only 的项目才允许 `./`；
-8. Dashboard 的准确标签为：`rendering: edge-ssr`、`client activation: hydration`、`fallback: pure-csr`、`wallet/identity: client-only`、`cloud preview: pending`。
+8. Dashboard 的准确标签为：`rendering: edge-ssr`、`client activation: hydration`、`fallback: pure-csr`、`wallet/identity: client-only`、`cloud production: verified`。
 
 反馈闭环状态：BabySteps 的“项目发现 → 泛化判断”已完成并本地验证；回写共享 standard、检测脚本、TC Flow、GitHub Actions 和旧项目回归由共享方案任务接续，未完成前不得标记为已发布。
 

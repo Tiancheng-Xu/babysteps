@@ -52,7 +52,7 @@ export function EvidencePage() {
 						<h2 id="rendering-resilience-title">边缘渲染与故障降级</h2>
 					</div>
 					<span className="evidence-diagram-card__status">
-						本地双端构建已验证 · 云端预览待验证
+						生产部署已验证 · 2026-08-14
 					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
@@ -88,7 +88,7 @@ export function EvidencePage() {
 							<strong>验证证据</strong>
 							<span>单元测试、双端生产构建与内置 Worker 读回</span>
 							<strong>当前状态</strong>
-							<span>本地已验证，Cloudflare 预览待验证</span>
+							<span>本地与 Cloudflare production 均已验证</span>
 						</article>
 						<article>
 							<strong>交付要求</strong>
@@ -114,6 +114,41 @@ export function EvidencePage() {
 						已完成项目发现与本地验证，共享标准、TC Flow、远端 Gate
 						和旧项目回归仍由共享任务接续，不把项目专属路由或钱包逻辑写入通用规则。
 					</p>
+				</article>
+
+				<article className="evidence-diagram-card">
+					<h3>生产发布闭环</h3>
+					<p>
+						PR #21 经 Repository Policy、项目验证和 Cloudflare Pages 预览三项
+						Gate 通过后合并；main 合并提交为 <code>91dcc4c</code>，验证记录为
+						Run 31789478284，Cloudflare deployment
+						<code>5f4a39e0-0fc5-4bd2-87a2-25158fe2111b</code> 均成功。
+					</p>
+					<p>
+						deployment-specific、pages.dev、自定义域名、Evidence
+						与个人中心深链均返回 200；未知路由返回真实 404；TLS 校验结果为
+						0。公开页保持 SSR 响应，个人区域为 <code>private, no-store</code>。
+					</p>
+					<div className="evidence-diagram-card__actions">
+						<a
+							className="evidence-diagram-link"
+							href="https://github.com/Tiancheng-Xu/babysteps/pull/21"
+						>
+							查看合并 PR
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31789478284"
+						>
+							查看主分支验证 Run
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href="https://5f4a39e0.babysteps-83x.pages.dev/"
+						>
+							查看本次部署 URL
+						</a>
+					</div>
 				</article>
 
 				<section className="evidence-diagrams" aria-label="渲染架构与降级时序">

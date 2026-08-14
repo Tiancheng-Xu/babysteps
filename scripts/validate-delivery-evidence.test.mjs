@@ -62,7 +62,8 @@ import renderingMobile from "../../../docs/evidence/screenshots/2026-08-14-rende
 <section>
   <h2>边缘渲染与故障降级</h2>
   <p>边缘 SSR → 精确水合 → 纯 CSR 降级</p>
-  <p>本地双端构建已验证 · 云端预览待验证</p>
+  <p>生产部署已验证 · 2026-08-14</p>
+  <p>生产发布闭环 · Run 31789478284 · 5f4a39e0-0fc5-4bd2-87a2-25158fe2111b</p>
   <a href={renderingArchitecture}>查看渲染架构原图</a>
   <img src={renderingArchitecture} alt="BabySteps 边缘渲染架构图" />
   <a href={renderingSequence}>查看渲染时序原图</a>
@@ -137,7 +138,7 @@ const validAssetFacts = [
 			<text>Cloudflare Pages Edge</text><text>React Web Streams SSR</text>
 			<text>BrowserRouter + hydrateRoot</text><text>Privy / wagmi client-only</text>
 			<text>纯 CSR 降级</text><text>静态资源直通</text><text>安全状态白名单</text>
-			<text>本地双端构建已验证</text><text>云端预览待验证</text><text>AWS 增量成本 $0</text>
+			<text>本地双端构建已验证</text><text>生产部署已验证</text><text>AWS 增量成本 $0</text>
 		</svg>`,
 	},
 	{
@@ -150,7 +151,7 @@ const validAssetFacts = [
 			<text>01 文档请求</text><text>02 Edge SSR</text><text>03 精确水合</text>
 			<text>04 客户端激活</text><text>05 SSR 超时 / 异常</text><text>06 水合致命失败</text>
 			<text>最多一次 CSR 重挂载</text><text>404 保留状态码</text>
-			<text>不序列化钱包 / 用户状态</text><text>云端预览待验证</text>
+			<text>不序列化钱包 / 用户状态</text><text>production / TLS / 深链通过</text>
 		</svg>`,
 	},
 	{
