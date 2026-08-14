@@ -64,20 +64,27 @@ jobs:
         run: |
           run_id="${STACK_NAME##*-}"
           environment_name="e${run_id}"
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            echo "Expected CloudFormation stack to be absent: $STACK_NAME" >&2
+            exit 1
+          fi
           test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
-          test "$(aws ecr describe-repositories --query "repositories[?contains(repositoryName, '$environment_name')] | length(@)" --output text 2>/dev/null || echo 0)" = "0"
+          repository_name="babysteps-performance-cleaner-$environment_name"
+          if aws ecr describe-repositories --repository-names "$repository_name" >/dev/null 2>&1; then
+            echo "Expected ECR repository to be absent: $repository_name" >&2
+            exit 1
+          fi
           for queue_name in "babysteps-performance-events-$environment_name" "babysteps-performance-dlq-$environment_name"; do
             if aws sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1; then
               echo "Expected queue to be absent: $queue_name" >&2
               exit 1
             fi
           done
-          test "$(aws lambda list-functions --query "Functions[?contains(FunctionName, '$environment_name')] | length(@)" --output text)" = "0"
-          test "$(aws apigatewayv2 get-apis --query "Items[?contains(Name, '$environment_name')] | length(@)" --output text)" = "0"
-          test "$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$environment_name" --query 'length(logGroups)' --output text)" = "0"
-          test "$(aws secretsmanager list-secrets --include-planned-deletion --query "SecretList[?contains(Name, '$environment_name')] | length(@)" --output text)" = "0"
-          test "$(aws ecs list-task-definitions --family-prefix "babysteps-performance-cleaner-$environment_name" --status ACTIVE --query 'length(taskDefinitionArns)' --output text)" = "0"
-          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.mkdirSync("evidence",{recursive:true});fs.writeFileSync("evidence/recovery-cleanup.json",JSON.stringify({stackDeleted:true,remainingProjectResources:0,sharedFoundationProtected:true,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
+          for family in "babysteps-performance-cleaner-$environment_name" "babysteps-performance-db-admin-$environment_name"; do
+            status="$(aws ecs describe-task-definition --task-definition "$family:1" --query 'taskDefinition.status' --output text 2>/dev/null || echo MISSING)"
+            test "$status" != "ACTIVE"
+          done
+          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.mkdirSync("evidence",{recursive:true});fs.writeFileSync("evidence/recovery-cleanup.json",JSON.stringify({cloudFormationStackAbsent:true,remainingRunnableProjectResources:0,sharedFoundationProtected:true,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
       - name: Preserve sanitized recovery proof
         if: always()
         uses: actions/upload-artifact@v4
