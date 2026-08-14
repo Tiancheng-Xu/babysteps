@@ -1,4 +1,4 @@
-import type { ProductView } from "./ProductNavigation";
+import type { ProductView } from "../routing/routeDefinitions";
 
 const EVIDENCE_POINTS = [
 	"React + wagmi 连接 MetaMask，并把合约作为数据后端。",
@@ -14,7 +14,7 @@ const EVIDENCE_URL = "https://evidence.baby2b.online/babysteps/";
 export function CourseEvidenceFooter({
 	currentView,
 }: {
-	currentView: ProductView;
+	currentView: ProductView | "not-found";
 }) {
 	const isEvidenceView = currentView === "evidence";
 

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1300" viewBox="0 0 2000 1300" role="img" aria-labelledby="title desc">
+  <title id="title">BabySteps SSR、水合与 CSR 降级时序图</title>
+  <desc id="desc">展示正常 SSR 水合、SSR 超时异常降级、致命水合失败一次性 CSR 重挂载以及资源直通和 404。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffaf0"/><stop offset="1" stop-color="#f3e7d0"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#563b31" flood-opacity=".15"/></filter>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#496b63"/></marker>
+    <marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c16e4d"/></marker>
+    <style>.title{font:700 46px system-ui,sans-serif;fill:#44291f}.sub{font:500 21px system-ui,sans-serif;fill:#6f5648}.actor{font:700 21px system-ui,sans-serif;fill:#fff}.phase{font:700 22px system-ui,sans-serif;fill:#44291f}.t{font:500 17px system-ui,sans-serif;fill:#4f433c}.tiny{font:500 15px system-ui,sans-serif;fill:#6f5648}.life{stroke:#9b806f;stroke-width:2;stroke-dasharray:7 8}.ok{stroke:#496b63;stroke-width:3;fill:none;marker-end:url(#a)}.fail{stroke:#c16e4d;stroke-width:3;stroke-dasharray:9 7;fill:none;marker-end:url(#w)}.note{rx:14;stroke-width:2}</style>
+  </defs>
+  <rect width="2000" height="1300" fill="url(#bg)"/>
+  <text x="70" y="75" class="title">BabySteps · SSR → 水合 → CSR 降级时序</text>
+  <text x="70" y="112" class="sub">同一份路由契约，三种受控结果；失败不无限重试，也不把钱包或用户状态塞进 HTML</text>
+
+  <g filter="url(#shadow)"><rect x="70" y="155" width="250" height="66" rx="18" fill="#173b50"/><rect x="390" y="155" width="250" height="66" rx="18" fill="#285c68"/><rect x="710" y="155" width="250" height="66" rx="18" fill="#496b63"/><rect x="1030" y="155" width="250" height="66" rx="18" fill="#78976d"/><rect x="1350" y="155" width="250" height="66" rx="18" fill="#9a6548"/><rect x="1670" y="155" width="250" height="66" rx="18" fill="#7b77a5"/></g>
+  <text x="195" y="196" text-anchor="middle" class="actor">浏览器</text><text x="515" y="196" text-anchor="middle" class="actor">Pages Edge</text><text x="835" y="196" text-anchor="middle" class="actor">Request Policy</text><text x="1155" y="196" text-anchor="middle" class="actor">React SSR</text><text x="1475" y="196" text-anchor="middle" class="actor">静态 ASSETS</text><text x="1795" y="196" text-anchor="middle" class="actor">Client App</text>
+  <line x1="195" y1="221" x2="195" y2="1180" class="life"/><line x1="515" y1="221" x2="515" y2="1180" class="life"/><line x1="835" y1="221" x2="835" y2="1180" class="life"/><line x1="1155" y1="221" x2="1155" y2="1180" class="life"/><line x1="1475" y1="221" x2="1475" y2="1180" class="life"/><line x1="1795" y1="221" x2="1795" y2="1180" class="life"/>
+
+  <rect x="45" y="260" width="1910" height="225" rx="20" fill="#edf4e1" stroke="#78976d" stroke-width="2"/>
+  <text x="75" y="300" class="phase">01 文档请求 · 02 Edge SSR · 03 精确水合 · 04 客户端激活</text>
+  <path class="ok" d="M195 335H515"/><text x="220" y="326" class="t">GET /tasks · Accept: text/html</text>
+  <path class="ok" d="M515 370H835"/><text x="550" y="361" class="t">分类：HTML document</text>
+  <path class="ok" d="M835 405H1155"/><text x="865" y="396" class="t">pathname + public/client-shell policy</text>
+  <path class="ok" d="M1155 440H515"/><text x="665" y="431" class="t">ReadableStream HTML + 安全状态白名单</text>
+  <path class="ok" d="M515 468H195"/><text x="228" y="459" class="t">200 / 404 + x-babysteps-render-mode:ssr</text>
+  <path class="ok" d="M195 455H1795"/><text x="1230" y="446" class="t">SSR 标记 + 路径 + 版本一致 → hydrateRoot → 激活 Providers</text>
+
+  <rect x="45" y="515" width="1910" height="205" rx="20" fill="#fff0cf" stroke="#d19a55" stroke-width="2"/>
+  <text x="75" y="555" class="phase">05 SSR 超时 / 异常 → 纯 CSR fallback</text>
+  <path class="ok" d="M195 590H515"/><text x="220" y="581" class="t">GET /profile</text>
+  <path class="ok" d="M515 625H1155"/><text x="650" y="616" class="t">开始 renderToReadableStream</text>
+  <path class="fail" d="M1155 660H515"/><text x="660" y="651" class="t">timeout / render error → abort</text>
+  <path class="ok" d="M515 690H1475"/><text x="845" y="681" class="t">读取静态 index.html，根节点保持空</text>
+  <path class="ok" d="M1475 710H195"/><text x="560" y="701" class="t">csr-fallback + no-store；浏览器 createRoot 启动完整应用</text>
+
+  <rect x="45" y="750" width="1910" height="205" rx="20" fill="#f7dfd5" stroke="#c16e4d" stroke-width="2"/>
+  <text x="75" y="790" class="phase">06 水合致命失败 → 最多一次 CSR 重挂载</text>
+  <path class="ok" d="M195 825H1795"/><text x="560" y="816" class="t">收到 SSR HTML，hydrateRoot 开始</text>
+  <path class="fail" d="M1795 865H195"/><text x="685" y="856" class="t">onUncaughtError → unmount → 清空 root</text>
+  <path class="ok" d="M195 905H1795"/><text x="650" y="896" class="t">createRoot 一次；恢复后不再循环重挂载</text>
+  <rect x="1330" y="800" width="540" height="130" class="note" fill="#fff" stroke="#c16e4d"/>
+  <text x="1360" y="835" class="t">隐私约束</text><text x="1360" y="865" class="tiny">不序列化钱包 / 用户状态</text><text x="1360" y="892" class="tiny">不输出 token / cookie / request body</text><text x="1360" y="919" class="tiny">recoverable mismatch 仅记录，不立刻重挂载</text>
+
+  <rect x="45" y="985" width="1910" height="165" rx="20" fill="#e7eef2" stroke="#527d82" stroke-width="2"/>
+  <text x="75" y="1025" class="phase">资源与状态边界</text>
+  <path class="ok" d="M195 1060H515"/><text x="215" y="1051" class="t">GET /assets/app.hash.js</text>
+  <path class="ok" d="M515 1092H1475"/><text x="760" y="1083" class="t">静态资源直通，不进入 SSR</text>
+  <path class="ok" d="M1475 1122H195"/><text x="660" y="1113" class="t">哈希缓存资源；未知文档由 SSR 返回真正 404</text>
+
+  <rect x="70" y="1190" width="1860" height="72" rx="18" fill="#173b50"/>
+  <text x="105" y="1234" class="actor">本地已验证：正常 SSR、client shell、404 保留状态码、error fallback、timeout abort、one-shot CSR · 云端预览待验证</text>
+</svg>

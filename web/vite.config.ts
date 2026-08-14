@@ -22,16 +22,18 @@ export default defineConfig(({ command, mode }) => {
 	const notebookAddress =
 		process.env.VITE_ONCHAIN_NOTEBOOK_ADDRESS ??
 		loadedEnv.VITE_ONCHAIN_NOTEBOOK_ADDRESS;
-	const base = process.env.VITE_BASE_PATH ?? loadedEnv.VITE_BASE_PATH ?? "./";
+	const base = process.env.VITE_BASE_PATH ?? loadedEnv.VITE_BASE_PATH ?? "/";
 
 	if (command === "build") {
 		assertProductionNotebookAddress(notebookAddress);
 	}
 
 	return {
-		// Relative assets work at both Tiancheng-Xu.github.io/babysteps/ and
-		// babysteps.baby2b.online without maintaining two production builds.
 		base,
+		build: {
+			outDir: "dist-client",
+			emptyOutDir: true,
+		},
 		plugins: [react()],
 		test: {
 			environment: "jsdom",

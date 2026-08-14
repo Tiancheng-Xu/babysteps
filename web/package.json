@@ -7,7 +7,7 @@
 		"check": "biome check src vite.config.ts",
 		"test": "vitest run",
 		"typecheck": "tsc -b",
-		"build": "tsc -b && vite build"
+		"build": "tsc -b && node scripts/build-pages.mjs"
 	},
 	"dependencies": {
 		"@privy-io/react-auth": "3.37.0",
@@ -16,6 +16,7 @@
 		"permissionless": "0.2.57",
 		"react": "catalog:",
 		"react-dom": "catalog:",
+		"react-router-dom": "7.18.2",
 		"viem": "2.55.10",
 		"wagmi": "3.7.5",
 		"web-vitals": "5.1.0"

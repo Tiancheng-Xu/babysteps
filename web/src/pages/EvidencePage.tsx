@@ -1,9 +1,13 @@
 import performanceArchitectureImage from "../../../docs/architecture/starbuddy-performance-global-architecture.svg";
 import performanceSequenceImage from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
+import renderingArchitectureImage from "../../../docs/architecture/starbuddy-rendering-global-architecture.svg";
+import renderingSequenceImage from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import performanceDashboardDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceDashboardMobileImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
+import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
+import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 
@@ -37,6 +41,189 @@ export function EvidencePage() {
 				</div>
 				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
+
+			<section
+				className="evidence-feature-proof"
+				aria-labelledby="rendering-resilience-title"
+			>
+				<header className="evidence-feature-proof__header">
+					<div>
+						<p className="section-kicker">STATIC-FIRST · EDGE RENDERING</p>
+						<h2 id="rendering-resilience-title">边缘渲染与故障降级</h2>
+					</div>
+					<span className="evidence-diagram-card__status">
+						本地双端构建已验证 · 云端预览待验证
+					</span>
+				</header>
+				<p className="evidence-feature-proof__lead">
+					边缘 SSR → 精确水合 → 纯 CSR 降级。公开页面先由 Cloudflare Edge
+					输出可读摘要壳；浏览器只在服务端标记、当前路径和构建版本
+					一致时启动水合，并记录 React 发现的可恢复 DOM
+					差异。钱包与身份只在客户端激活，SSR
+					超时、异常或致命水合失败时最多一次切回纯 CSR。
+				</p>
+
+				<section className="evidence-requirement-map" aria-label="渲染实现映射">
+					<h3>要求、实现与证据映射</h3>
+					<div>
+						<article>
+							<strong>交付要求</strong>
+							<span>真实 URL 与深链</span>
+							<strong>实现功能</strong>
+							<span>BrowserRouter、九条路由、404 状态保留</span>
+							<strong>代码位置</strong>
+							<code>web/src/routing</code>
+							<strong>验证证据</strong>
+							<span>路由单测与 Worker 路由矩阵通过</span>
+							<strong>当前状态</strong>
+							<span>本地已验证</span>
+						</article>
+						<article>
+							<strong>交付要求</strong>
+							<span>SSR、水合与故障降级</span>
+							<strong>实现功能</strong>
+							<span>Web Streams SSR、严格水合、最多一次 CSR 重挂载</span>
+							<strong>代码位置</strong>
+							<code>web/src/entry-server.tsx · web/src/bootstrap.tsx</code>
+							<strong>验证证据</strong>
+							<span>单元测试、双端生产构建与内置 Worker 读回</span>
+							<strong>当前状态</strong>
+							<span>本地已验证，Cloudflare 预览待验证</span>
+						</article>
+						<article>
+							<strong>交付要求</strong>
+							<span>成本与安全边界</span>
+							<strong>实现功能</strong>
+							<span>Edge 承担前端渲染；不序列化钱包、用户或令牌</span>
+							<strong>代码位置</strong>
+							<code>web/src/pages-worker.ts · web/src/ssr/renderState.ts</code>
+							<strong>验证证据</strong>
+							<span>AWS 无写操作；安全状态白名单测试通过</span>
+							<strong>当前状态</strong>
+							<span>AWS 增量成本 $0</span>
+						</article>
+					</div>
+				</section>
+
+				<article className="evidence-diagram-card">
+					<h3>应反向优化的共享能力</h3>
+					<p>
+						已验证两条通用规则：资源根路径必须按交付契约判断；渲染 Gate
+						必须直接执行构建后的 Worker，覆盖尾斜杠、真实 404、API
+						直通和客户端区域缓存。BabySteps
+						已完成项目发现与本地验证，共享标准、TC Flow、远端 Gate
+						和旧项目回归仍由共享任务接续，不把项目专属路由或钱包逻辑写入通用规则。
+					</p>
+				</article>
+
+				<section className="evidence-diagrams" aria-label="渲染架构与降级时序">
+					<article className="evidence-diagram-card">
+						<h3>边缘渲染运行架构</h3>
+						<figure className="architecture-figure">
+							<div className="evidence-diagram-frame">
+								<img
+									src={renderingArchitectureImage}
+									alt="BabySteps 边缘渲染架构图"
+									width="2000"
+									height="1200"
+									loading="lazy"
+									decoding="async"
+								/>
+							</div>
+							<figcaption>
+								静态资源、HTML 文档、客户端身份与性能上报各走独立边界。
+							</figcaption>
+						</figure>
+						<div className="evidence-diagram-walkthrough">
+							<p>
+								<strong>看哪里</strong>：从请求分类开始，沿
+								SSR、浏览器水合和客户端 Provider 三层阅读。
+							</p>
+							<p>
+								<strong>证明什么</strong>：钱包与身份只在客户端激活；前端 SSR
+								不复制到 AWS，因此 AWS 增量成本 $0。
+							</p>
+						</div>
+						<a
+							className="evidence-diagram-link"
+							href={renderingArchitectureImage}
+							target="_blank"
+							rel="noreferrer"
+						>
+							查看渲染架构原图
+						</a>
+					</article>
+
+					<article className="evidence-diagram-card">
+						<h3>SSR、水合与 CSR 降级时序</h3>
+						<figure className="architecture-figure">
+							<div className="evidence-diagram-frame">
+								<img
+									src={renderingSequenceImage}
+									alt="BabySteps SSR、水合与 CSR 降级时序图"
+									width="2000"
+									height="1300"
+									loading="lazy"
+									decoding="async"
+								/>
+							</div>
+							<figcaption>
+								正常路径和两条降级路径并列，失败不会无限重试或输出私有状态。
+							</figcaption>
+						</figure>
+						<div className="evidence-diagram-walkthrough">
+							<p>
+								<strong>看哪里</strong>：绿色是正常 SSR/水合，杏色是 SSR
+								fallback，红色是水合致命失败。
+							</p>
+							<p>
+								<strong>证明什么</strong>：404 保留状态码；SSR
+								失败仍返回可启动的 HTML；水合失败最多一次 CSR 重挂载。
+							</p>
+						</div>
+						<a
+							className="evidence-diagram-link"
+							href={renderingSequenceImage}
+							target="_blank"
+							rel="noreferrer"
+						>
+							查看渲染时序原图
+						</a>
+					</article>
+				</section>
+
+				<section
+					className="evidence-screenshot-grid"
+					aria-label="渲染响应式截图"
+				>
+					<figure>
+						<img
+							src={renderingDesktopImage}
+							alt="本地 SSR 水合桌面端验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里</strong>：1440
+							像素下状态、三列映射与架构图连续可读。
+							<br />
+							<strong>证明什么</strong>：本地产物以 SSR
+							标记进入浏览器并完成水合。
+						</figcaption>
+					</figure>
+					<figure>
+						<img
+							src={renderingMobileImage}
+							alt="本地 SSR 水合 390 像素手机端验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里</strong>：390 像素下卡片单列、长路径自动换行。
+							<br />
+							<strong>证明什么</strong>：375 / 390 / 430 / 1440 均无横向溢出。
+						</figcaption>
+					</figure>
+				</section>
+			</section>
 
 			<section className="evidence-diagrams" aria-label="架构与关键业务流程">
 				<article

@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"application": "babysteps",
+	"delivery": "cloudflare-pages-advanced-worker",
+	"rendering": "edge-ssr-hydration-csr-fallback",
+	"routes": [
+		{ "path": "/", "server": "public-content", "client": "hydrate" },
+		{ "path": "/tasks", "server": "public-shell", "client": "hydrate-and-activate" },
+		{ "path": "/keepsakes", "server": "public-shell", "client": "hydrate-and-activate" },
+		{ "path": "/evidence", "server": "public-shell", "client": "hydrate-and-activate" },
+		{ "path": "/parent", "server": "safe-shell", "client": "wallet-only" },
+		{ "path": "/provider", "server": "safe-shell", "client": "wallet-only" },
+		{ "path": "/exchange", "server": "safe-shell", "client": "wallet-only" },
+		{ "path": "/profile", "server": "safe-shell", "client": "identity-only" },
+		{ "path": "/performance", "server": "safe-shell", "client": "live-query" }
+	],
+	"fallback": {
+		"trigger": ["ssr-timeout", "ssr-error", "fatal-hydration-error"],
+		"mode": "pure-csr",
+		"maximumClientRemounts": 1
+	},
+	"privacy": {
+		"serverExcludes": ["wallet", "balance", "identity", "token", "cookie", "authorization"],
+		"personalizedHtmlCache": false
+	}
+}

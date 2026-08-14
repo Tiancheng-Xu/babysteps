@@ -1,90 +1,109 @@
-# BabySteps 浏览器路由与渲染设计
+# BabySteps 浏览器路由、边缘 SSR、水合与 CSR 降级设计
 
 ## 目标
 
-把目前依赖内存状态的“页面切换”改为真实、可分享的浏览器 URL，同时减少首屏加载的非当前页面 JavaScript。继续使用现有 Cloudflare Pages 部署，钱包和链上状态仍在浏览器端运行。
+把当前依赖 React 内存状态的“页面切换”改为真实、可分享的浏览器 URL，并在同一套 Cloudflare Pages 产物中实现三级渲染：
 
-## 本次范围
+1. Cloudflare 边缘 SSR 先返回可阅读的 HTML；
+2. 浏览器对完全一致的 HTML 执行水合并接管交互；
+3. SSR 或水合发生致命错误时，只降级一次到纯 CSR。
 
-本次实现包括：
+这项优化直接吸收 `04-Serverless` 中“服务端完整 HTML 才能水合、骨架失败要走纯 CSR、流式渲染必须有超时和失败边界”和 `05-aws` 中“边缘平台负责前端渲染、AWS 保留后端与数据职责、不要重复建设”的课程结论。实现后的设计、代码位置、测试、预览响应头、桌面/手机截图和限制必须进入项目 Evidence，不能把计划写成完成。
 
-- 使用 `BrowserRouter` 和浏览器 History API 管理路由。
-- 使用路由级懒加载，并提供简洁、无障碍的加载提示。
-- 显式配置 Cloudflare Pages 单页应用深链回退。
-- 性能 SDK 直接使用真实 URL 路径记录页面指标。
-- 增加导航、深链、构建产物和响应式自动化验证。
+## 已确认现状
 
-本次不包括：
+- `App.tsx` 通过 `useState` 切换九个页面，没有浏览器路由；刷新、收藏和分享无法保留当前页面。
+- `main.tsx` 只调用 `createRoot`；`index.html` 没有服务端 React HTML，所以当前没有水合。
+- Cloudflare Pages 是唯一前端发布平台，AWS 性能链路只承担观测，不承担页面 SSR。
+- Privy、Wagmi、钱包、余额和交易依赖浏览器与当前用户，不能在服务端读取或缓存。
 
-- 全站 SSR 或常驻的服务端渲染服务。
-- 在服务端 HTML 中水合钱包、Privy 或实时链上状态。
-- 新增第二套部署平台或重复的生产构建。
-- 修改智能合约、Worker API、Cloudflare DNS 或 AWS 资源。
+## 路由契约
 
-## 路由约定
+| 路径 | 产品区域 | 服务端输出 |
+| --- | --- | --- |
+| `/` | 首页 | 完整匿名内容 |
+| `/tasks` | 成长任务市场 | 可读匿名摘要壳 |
+| `/keepsakes` | 星宝纪念馆 | 可读公共摘要壳 |
+| `/evidence` | 项目 Evidence | 可读证据摘要壳；完整交互内容由客户端激活 |
+| `/parent` | 家长中心 | 不含账户数据的稳定外壳 |
+| `/provider` | Provider 控制台 | 不含权限数据的稳定外壳 |
+| `/exchange` | BABY 兑换 | 不含余额和报价的稳定外壳 |
+| `/profile` | 个人中心 | 不含身份数据的稳定外壳 |
+| `/performance` | 性能观测 | 不含实时查询结果的稳定外壳 |
 
-| 路径 | 产品区域 |
-| --- | --- |
-| `/` | 首页 |
-| `/tasks` | 成长任务市场 |
-| `/parent` | 家长中心 |
-| `/keepsakes` | 星宝纪念馆 |
-| `/provider` | Provider 控制台 |
-| `/exchange` | BABY 兑换 |
-| `/profile` | 个人中心 |
-| `/performance` | 性能观测 |
-| `/evidence` | 项目 Evidence 走读 |
+未知路径返回真实 HTTP 404 和友好的 React 页面，不能静默回首页。导航使用真实链接并通过 `aria-current="page"` 标记当前位置。浏览器前进、后退、刷新、收藏和分享必须保持页面。
 
-访问未知路径时展示友好的“页面不存在”页面，并提供返回首页的链接。顶部导航使用真实链接，当前页面通过 `aria-current="page"` 标记。浏览器前进、后退、刷新、收藏和分享链接后，都必须保留正确页面。
+## 三层渲染架构
 
-## 运行架构
+### 1. Cloudflare 边缘 SSR
 
-`main.tsx` 挂载一棵客户端 React 组件树，并继续提供现有全局 Provider。`App.tsx` 负责公共页面外壳和路由表。除首页外的产品页面使用静态 `React.lazy` 导入，让 Vite 可以生成相互独立、可缓存的页面分包。首页是默认入口，因此保持直接加载。
+生产构建生成两类产物：浏览器资产和适用于 Web Worker 的 SSR bundle。Pages advanced mode 的 `_worker.js` 接管请求：
 
-性能 SDK 不再读取人为写入 DOM 的页面名称，而是直接读取 `window.location.pathname`。这样，性能数据中的页面路径与用户实际访问、测试人员能够复现的 URL 完全一致。
+- 静态资产、metadata、favicon 和 manifest 交给 `env.ASSETS.fetch`；缺失资产保持真实 404。
+- 只有明确允许的 HTML `GET`/`HEAD` 路由进入 SSR；不把 API、错误响应或任意路径重写成 200 HTML。
+- 使用 React Web Streams 生成 HTML，并把“创建流 + 读完整条流”共同纳入硬超时和中止信号；完成后才返回响应，确保还能安全降级。
+- SSR 成功返回 `x-babysteps-render-mode: ssr`；未知页面返回相同渲染模式但状态码 404。
+- SSR 抛错、超时或流创建失败时，显式读取静态 `index.html`，返回 `x-babysteps-render-mode: csr-fallback`、`Cache-Control: no-store` 和原请求路径可恢复的 CSR 外壳。
 
-## 托管与静态资源路径
+Cloudflare advanced mode 不提供可依赖的 `passThroughOnException()`，因此降级必须是可测试的显式 `try/catch`，不能依赖平台猜测。
 
-Cloudflare Pages 仍是唯一发布平台。`web/public/_redirects` 必须包含：
+### 2. 浏览器水合
 
-```text
-/* /index.html 200
-```
+服务端与浏览器共用同一套路由定义和确定性页面外壳。HTML 通过安全 JSON script 标记渲染模式、请求路径和公开构建版本；序列化必须转义 `<`、`>`、`&`、U+2028 和 U+2029，不注入 Token、Cookie、钱包地址、余额或用户资料。
 
-这样，直接请求 `/keepsakes` 等路径时，Cloudflare 会返回单页应用入口文件，再由浏览器路由渲染正确页面。
+客户端启动规则：
 
-Vite 默认资源根路径改为 `/`。仍保留 `VITE_BASE_PATH`，只用于明确指定的非根路径预览。已经停用的 GitHub Pages 发布不再是保留相对路径 `./` 的理由。需要非根路径构建时，`BrowserRouter` 的 `basename` 必须与规范化后的构建根路径保持一致。
+- 根节点标记为 SSR、已有服务端内容、请求路径与构建版本均一致时调用 `hydrateRoot`。
+- 使用 `onRecoverableError` 记录可恢复的不匹配，但不因此重复挂载。
+- 水合启动发生致命错误时，清空根节点并仅调用一次 `createRoot`，转为纯 CSR。
+- 根节点没有 SSR 标记时直接 `createRoot`，用于静态回退、本地 CSR 和平台故障恢复。
+- CSR 本身的渲染错误交给顶层 Error Boundary，显示可操作的恢复提示；不宣称 CSR 能挽救所有代码错误。
 
-## 渲染与水合边界
+### 3. 浏览器交互边界
 
-当前应用属于纯 CSR：`index.html` 只有空的 React 根节点，`createRoot` 在浏览器中生成整个页面。没有服务端预先生成的 React HTML，因此直接把 `createRoot` 换成 `hydrateRoot` 没有可水合的内容，也不会带来性能收益。
+服务端应用不加载 Privy、Wagmi 或浏览器钱包 Provider。客户端水合后才挂载这些 Provider，并激活账户、余额、签名、链上读取和交易交互。用户态页面的服务端外壳在首个浏览器渲染时保持结构一致，避免把“加载中”错误地水合成真实账户数据。
 
-后续可以作为单独阶段，对公开首页和公开任务目录做静态预渲染。但钱包登录、账户余额、链上读取、授权、购买和 Provider 操作依赖当前用户与浏览器钱包，必须继续作为客户端交互区域运行。只有先证明预渲染能显著改善首屏或公开内容可发现性，才引入额外渲染运行时。
+## 路由分包与性能
 
-## 失败处理
+- 首页保持直接入口；其他页面使用静态 `React.lazy` 路由分包。
+- 性能 SDK 直接记录 `window.location.pathname`，不再读取人工写入的页面状态。
+- 新增 `ssr.shell`、`hydration.duration`、`hydration.recoverable_error`、`csr.fallback` 等不含用户数据的自定义指标；SDK 失败仍不得影响宿主应用。
+- 响应头与结构化边缘日志记录渲染模式、路由、耗时和匿名错误分类，不记录 Cookie、Authorization、请求正文或 PII。
 
-- 懒加载页面下载期间显示可被辅助技术识别的加载状态。
-- 未知路径显示“页面不存在”，不能悄悄回到首页。
-- Cloudflare 只把页面深链回退到 `index.html`；缺失的静态资源仍应返回真实 404，应用代码不能掩盖资源错误。
-- 钱包、交易和 API 错误继续由各自功能模块处理，不在路由层重复实现。
+## 缓存、安全与失败边界
 
-## 验证方式
+- 首阶段不缓存个性化 HTML。账户、钱包、带认证头或查询参数的请求统一 `private, no-store`。
+- 公开匿名 HTML 可在后续证明内容一致性后加入短 TTL Cache API；本次不把模块内 LRU 当跨实例缓存，也不把未验证缓存写进完成证据。
+- SSR 只接受本项目路由，不根据用户输入请求任意上游，避免 SSRF。
+- 设置 CSP、`X-Content-Type-Options`、`Referrer-Policy` 和明确的 HTML content type。
+- 超时、渲染异常和资产读取失败各自保留准确状态；静态资源错误不能被 CSR 回退掩盖。
 
-- 组件测试覆盖：直接打开深链、导航跳转、当前链接状态、浏览器前进/后退、未知路径和性能路径记录。
-- 构建验证器确认生产产物中存在 `_redirects`，且内容必须为约定的回退规则。
-- 类型检查和生产构建确认所有懒加载导入有效，并生成独立路由分包。
-- 响应式检查覆盖 375、390、430 和 1440 像素，页面不得横向溢出。
-- Cloudflare 预览环境分别直接打开 `/`、`/keepsakes`、`/performance` 和 `/evidence`，同时确认 HTTP 200 和预期页面标题，才允许进入生产发布确认。
+## 部署与 AWS 边界
 
-## 完成标准
+继续使用现有 Cloudflare Pages 项目 `babysteps`，同一 GitHub Actions 构建同时产出浏览器资产和 `_worker.js`。不新增 Lambda、Lambda@Edge、CloudFront、API Gateway、NAT、RDS、ECS 或 OIDC。
 
-以下条件全部满足才算完成：
+现有 AWS 共享 VPC、NAT、RDS、OIDC 和 Foundation 均为受保护资源，本次只在 Evidence 复用矩阵中说明“未修改”。性能采集若启用，仍通过现有 Worker API 与已验证的 AWS 性能流水线契约；渲染优化的增量 AWS 费用为 0 美元。
 
-- 所有产品页面都有稳定、清晰的 URL。
-- 刷新、收藏、分享以及浏览器前进和后退均正常。
-- 未访问页面从首屏入口分包中拆出。
-- 本地和 Cloudflare 预览环境的深链验证通过。
-- 现有项目 Gate 全部保持绿色。
-- Evidence 如实说明当前 CSR、浏览器路由和未来预渲染边界。
+## Evidence 记录契约
 
-本阶段不要求实现全站 SSR 或水合。
+Evidence 不复制聊天原文，而是整理为可复核的工程记录：
+
+1. 原问题：内存切页、纯 CSR 首屏和不可分享深链；
+2. 方案比较：纯 CSR、AWS SSR、Cloudflare 边缘 SSR；
+3. 决策：Cloudflare SSR → 水合 → 单次纯 CSR 降级；
+4. 代码映射：路由、服务端入口、客户端启动、序列化、超时、指标和 Gate；
+5. 验证：单测、类型检查、双端生产构建、响应头、404、故障注入、375/390/430/1440 响应式与预览截图；
+6. 限制：钱包和个性化状态不做 SSR，公开 HTML 缓存未验证前不启用，生产发布需单独确认。
+
+架构图和关键时序图必须更新，明确展示 Cloudflare CDN/Worker、SSR 流、静态资产、浏览器水合、Privy/Wagmi 客户端边界、CSR 降级、性能事件和 GitHub Actions 发布/回滚。
+
+## 验证与完成标准
+
+- 路由测试：深链、导航、当前链接、前进/后退、未知路径。
+- 客户端启动测试：SSR 水合、无标记 CSR、水合致命错误仅降级一次、可恢复错误只记录。
+- Worker 测试：HTML SSR、静态资产透传、404、HEAD、SSR 异常和超时 CSR 回退、安全响应头。
+- 构建 Gate：浏览器产物非空且有 `index.html`；SSR 产物为 webworker bundle；最终目录含 `_worker.js`；静态资源路径为根路径。
+- 质量 Gate：全仓相关测试、类型检查、生产构建、公开内容扫描、链接检查全部通过。
+- 视觉 Gate：375、390、430、1440 像素无根级横向溢出，SSR 与水合后主内容一致。
+- 预览 Gate：`/`、`/keepsakes`、`/performance`、`/evidence` 和未知路径的状态码、标题、渲染响应头正确；SSR 故障注入能够回到可用 CSR。
+- Evidence 完成：决策、架构、时序、代码位置、真实预览截图和限制一致后，才允许请求生产发布确认。
