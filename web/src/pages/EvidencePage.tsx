@@ -230,7 +230,48 @@ export function EvidencePage() {
 								explicitDeny。失败运行也必须先留脱敏证据，再做九类资源零残留盘点。
 							</p>
 						</article>
+						<article>
+							<h4>ECS 官方服务角色</h4>
+							<p>
+								AWSServiceRoleForECS 由 ECS 服务信任并只挂 AWS 官方托管策略；
+								账户级复用、零长期密钥、角色本身不收费。它只让 ECS
+								管理任务所需网络资源，不授予浏览器或 GitHub 数据库凭据。
+							</p>
+						</article>
 					</div>
+					<section
+						className="evidence-runtime-timeline"
+						aria-labelledby="performance-runtime-timeline-title"
+					>
+						<h4 id="performance-runtime-timeline-title">
+							真实云端排障与恢复时间线
+						</h4>
+						<ol>
+							<li>
+								<a
+									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31760380214"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Run 31760380214
+								</a>
+								：ECS 任务已实际启动；旧 Cleaner bundle
+								在模块加载期退出，尚未读取 Secret
+								或连接数据库，因此不把它算成业务成功。
+							</li>
+							<li>
+								<a
+									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31761586956"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Recovery 31761586956
+								</a>
+								：短期 OIDC
+								身份只删除上述精确失败栈，并以九类项目资源归零作为完成条件。
+							</li>
+						</ol>
+					</section>
 				</section>
 				<div className="evidence-diagrams evidence-diagrams--performance">
 					<article className="evidence-diagram-card">

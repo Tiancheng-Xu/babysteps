@@ -2100,6 +2100,31 @@ textarea[aria-invalid="true"] {
 	gap: 12px;
 }
 
+.evidence-runtime-timeline {
+	margin-top: 14px;
+	padding: 16px;
+	border: 1px dashed rgba(14, 118, 121, 0.46);
+	border-radius: 16px;
+	background: rgba(229, 248, 245, 0.56);
+}
+
+.evidence-runtime-timeline ol {
+	display: grid;
+	gap: 10px;
+	margin: 10px 0 0;
+	padding-left: 22px;
+}
+
+.evidence-runtime-timeline li {
+	color: var(--ink-soft);
+	line-height: 1.65;
+}
+
+.evidence-runtime-timeline a {
+	color: var(--teal);
+	font-weight: 800;
+}
+
 .evidence-proof-gallery {
 	display: grid;
 	grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);

@@ -15,6 +15,15 @@ describe("EvidencePage", () => {
 		expect(screen.getByText("创建期二阶段权限")).toBeTruthy();
 		expect(screen.getByText("线上验证")).toBeTruthy();
 		expect(screen.getByText("生命周期与清理边界")).toBeTruthy();
+		expect(screen.getByText("ECS 官方服务角色")).toBeTruthy();
+		expect(
+			screen.getByText(/账户级复用、零长期密钥、角色本身不收费/u),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "真实云端排障与恢复时间线" }),
+		).toBeTruthy();
+		expect(screen.getByText(/31760380214/u)).toBeTruthy();
+		expect(screen.getByText(/31761586956/u)).toBeTruthy();
 		expect(
 			screen.getByText(/不代表性能 Stack 已部署或业务验收完成/u),
 		).toBeTruthy();

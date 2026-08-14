@@ -77,8 +77,11 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(recovery, /environment: aws-performance/);
 	assert.match(recovery, /id-token: write/);
 	assert.match(recovery, /\^babysteps-performance-\[0-9\]\+\$/);
+	assert.match(recovery, /if aws cloudformation describe-stacks/);
 	assert.match(recovery, /delete-stack --stack-name "\$STACK_NAME"/);
 	assert.match(recovery, /stack-delete-complete/);
+	assert.match(recovery, /sqs get-queue-url --queue-name/);
+	assert.doesNotMatch(recovery, /sqs list-queues/);
 	assert.match(recovery, /remainingProjectResources.*0/);
 	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });
