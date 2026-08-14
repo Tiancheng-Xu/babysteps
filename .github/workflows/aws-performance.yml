@@ -41,7 +41,10 @@ jobs:
     if: github.ref == 'refs/heads/main' && inputs.run_cloud_validation == true
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # VPC Lambda deletion can spend ~20 minutes waiting for AWS-managed
+    # Hyperplane ENIs to drain. Keep the cleanup gate alive long enough to
+    # prove zero residue instead of abandoning an in-progress stack deletion.
+    timeout-minutes: 50
     environment: aws-performance
     permissions:
       contents: read
