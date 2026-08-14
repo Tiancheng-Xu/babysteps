@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "profile": "full",
+  "profile": "compact",
   "status": "verified",
+  "dataMode": "live",
   "summary": "The complete performance observability pipeline was verified with one controlled AWS event, an on-demand ECS cleaner, a real PostgreSQL aggregate readback, and exact project cleanup.",
   "evidenceUrl": "https://babysteps.baby2b.online/evidence",
   "workflow": {
@@ -12,10 +13,13 @@
   },
   "metrics": ["LCP", "CLS", "INP", "FCP", "TTFB"],
   "percentiles": ["p50", "p75", "p95"],
-  "dimensions": ["sample_count", "time_window", "route", "environment", "version"],
-  "pipeline": ["browser-sdk", "worker-proxy", "api", "sqs-dlq", "ecs-cleaner", "postgresql", "query", "dashboard"],
+  "dimensions": ["sample_count", "time_window", "route", "release", "environment", "version"],
+  "pipeline": ["browser-sdk", "worker-proxy", "api", "sqs-dlq", "ecs-cleaner", "storage", "postgresql", "query", "dashboard"],
   "safety": ["schema-validation", "pii-redaction", "no-browser-aws-credentials", "sdk-failure-isolation", "oidc-only", "exact-project-cleanup"],
-  "proof": {
+  "filters": ["time_window", "environment", "release", "route", "metric"],
+  "views": ["trend", "error_rate", "route_comparison"],
+  "resilience": ["retry", "dlq", "idempotency"],
+  "result": {
     "controlledEvent": "LCP=321ms",
     "acceptedEvents": 1,
     "cleanerExitCode": 0,
@@ -27,6 +31,38 @@
     "projectStackDeleted": true,
     "remainingProjectRuntimeResources": 0
   },
+  "proof": [
+    {
+      "kind": "live-event",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "A controlled LCP=321 event was accepted by the live AWS ingest path."
+    },
+    {
+      "kind": "queue",
+      "location": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+      "proves": "The accepted event completed the SQS stage before the cleaner ran."
+    },
+    {
+      "kind": "ecs-cleaner",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "The on-demand ECS cleaner reached STOPPED with exitCode=0."
+    },
+    {
+      "kind": "aggregate",
+      "location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+      "proves": "PostgreSQL returned sampleCount=1 and exact p50=p75=p95=321."
+    },
+    {
+      "kind": "dashboard",
+      "location": "docs/evidence/screenshots/2026-08-13-performance-verified/manifest.json",
+      "proves": "The responsive Evidence and performance views publish real-source status without a mock fallback."
+    },
+    {
+      "kind": "failure-retry",
+      "location": "docs/evidence/testing/2026-08-13-performance-aws-implementation.md",
+      "proves": "Meaningful bundle and PostgreSQL failures were fixed, exact recovery removed failed stacks, and the final retry passed."
+    }
+  ],
   "limitations": [
     "The controlled single-event run proves correctness and cleanup, not sustained production volume.",
     "The temporary AWS stack was intentionally removed after validation to avoid idle charges; the public dashboard does not pretend that the AWS source remains continuously available."
