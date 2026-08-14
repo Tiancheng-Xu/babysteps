@@ -12,9 +12,9 @@ describe("EvidencePage", () => {
 			screen.getByRole("heading", { name: "边缘渲染与故障降级" }),
 		).toBeTruthy();
 		expect(screen.getByText(/边缘 SSR → 精确水合 → 纯 CSR 降级/u)).toBeTruthy();
-		expect(
-			screen.getByText("本地双端构建已验证 · 云端预览待验证"),
-		).toBeTruthy();
+		expect(screen.getByText("生产部署已验证 · 2026-08-14")).toBeTruthy();
+		expect(screen.getByText("生产发布闭环")).toBeTruthy();
+		expect(screen.getByText(/31789478284/u)).toBeTruthy();
 		expect(screen.getAllByText(/AWS 增量成本 \$0/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByText(/钱包与身份只在客户端激活/u).length,

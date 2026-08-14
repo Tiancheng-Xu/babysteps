@@ -48,5 +48,5 @@
   <path class="ok" d="M1475 1122H195"/><text x="660" y="1113" class="t">哈希缓存资源；未知文档由 SSR 返回真正 404</text>
 
   <rect x="70" y="1190" width="1860" height="72" rx="18" fill="#173b50"/>
-  <text x="105" y="1234" class="actor">本地已验证：正常 SSR、client shell、404 保留状态码、error fallback、timeout abort、one-shot CSR · 云端预览待验证</text>
+  <text x="105" y="1234" class="actor">已验证：正常 SSR、client shell、404 保留状态码、error fallback、timeout abort、one-shot CSR · production / TLS / 深链通过</text>
 </svg>

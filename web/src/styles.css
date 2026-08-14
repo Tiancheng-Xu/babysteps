@@ -1999,6 +1999,12 @@ textarea[aria-invalid="true"] {
 	text-decoration: none;
 }
 
+.evidence-diagram-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
 .evidence-grid--summary {
 	grid-template-columns: 1fr;
 }

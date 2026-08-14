@@ -1,5 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -38,7 +38,7 @@ const expectedDiagramAssets = [
 			"静态资源直通",
 			"安全状态白名单",
 			"本地双端构建已验证",
-			"云端预览待验证",
+			"生产部署已验证",
 			"AWS 增量成本 $0",
 		],
 	},
@@ -57,7 +57,7 @@ const expectedDiagramAssets = [
 			"最多一次 CSR 重挂载",
 			"404 保留状态码",
 			"不序列化钱包 / 用户状态",
-			"云端预览待验证",
+			"production / TLS / 深链通过",
 		],
 	},
 	{
@@ -251,7 +251,10 @@ const expectedDiagramAssets = [
 const evidencePageMarkers = [
 	"边缘渲染与故障降级",
 	"边缘 SSR → 精确水合 → 纯 CSR 降级",
-	"本地双端构建已验证 · 云端预览待验证",
+	"生产部署已验证 · 2026-08-14",
+	"生产发布闭环",
+	"31789478284",
+	"5f4a39e0-0fc5-4bd2-87a2-25158fe2111b",
 	"查看渲染架构原图",
 	"查看渲染时序原图",
 	"BabySteps 边缘渲染架构图",
