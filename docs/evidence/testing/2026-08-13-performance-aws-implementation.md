@@ -53,6 +53,48 @@ not a success claim for the final event pipeline. The authoritative successful
 run, metrics, ECS exit code, sanitized Artifact and post-run zero-residue audit
 will be added only after all six runtime stages complete.
 
+## Account-level ECS prerequisite
+
+Run `31758788485` crossed stack creation and the immutable ARM64 image build but
+CloudTrail showed that `ecs:RunTask` returned `InvalidParameterException` before
+creating a task: the account did not yet have the AWS-managed ECS service-linked
+role. The shared Identity stack now retains `AWSServiceRoleForECS` with the
+official `/aws-service-role/ecs.amazonaws.com/` path, trust limited to
+`ecs.amazonaws.com`, and only `AmazonECSServiceRolePolicy` attached.
+
+This role is intentionally shared at account level: ECS needs it to manage task
+network interfaces, creating one per project would be both impossible and the
+wrong trust model. The role is not an IAM user, has no access keys, costs
+nothing by itself, and does not grant GitHub or browser code access to database
+secrets. The Identity stack reached `UPDATE_COMPLETE` and drift `IN_SYNC`; shared
+VPC, NAT, RDS, OIDC and the Foundation stack were not modified.
+
+## Real startup failure and exact recovery
+
+Run `31760380214` proved that the account prerequisite was fixed: the database
+admin Fargate task was created and reached `STOPPED`. Its exit code was `1`, and
+the sanitized project log showed `Dynamic require of "node:https" is not
+supported` while the bundled module was still loading. The failure occurred
+before environment validation, Secret retrieval or database connection, so no
+project Schema or role was created.
+
+The same error also prevented the cleanup container from starting. The main
+workflow therefore refused to delete the stack automatically instead of
+guessing that database cleanup had succeeded. A separate manual recovery gate
+was added for this narrow pre-database state: it accepts only an exact
+`babysteps-performance-<run-id>` name, the protected `aws-performance`
+Environment, a human approval reference and an explicit pre-database-failure
+acknowledgement. Recovery Run `31761586956` deletes only that stack and must
+prove the run-scoped ECS, ECR, SQS, Lambda, API, log, Secret and active task
+definitions are all absent. The shared Foundation remains protected.
+
+The Cleaner build now has an executable production-bundle regression test. It
+first reproduced the cloud stack trace locally, then retained ESM/top-level
+await while adding Node's `createRequire(import.meta.url)` compatibility bridge
+for bundled CommonJS AWS SDK internals. The test now boots the real artifact far
+enough to reach the expected `MISSING_QUEUE_URL` boundary rather than failing in
+the module loader.
+
 ## Final runtime proof contract
 
 The accepted run must show all of the following together:

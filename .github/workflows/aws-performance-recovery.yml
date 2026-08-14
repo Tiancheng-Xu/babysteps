@@ -46,22 +46,32 @@ jobs:
         run: |
           [[ "$STACK_NAME" =~ ^babysteps-performance-[0-9]+$ ]]
           test '${{ inputs.approval_reference }}' != ''
-          aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null
-          aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
-            --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' \
-            > resources-before-cleanup.json
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
+              --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' \
+              > resources-before-cleanup.json
+          else
+            printf '[]\n' > resources-before-cleanup.json
+          fi
       - name: Delete exact failed project stack
         run: |
-          aws cloudformation delete-stack --stack-name "$STACK_NAME" \
-            --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}'
-          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME" \
+              --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}'
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
       - name: Verify exact project resource cleanup
         run: |
           run_id="${STACK_NAME##*-}"
           environment_name="e${run_id}"
           test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
           test "$(aws ecr describe-repositories --query "repositories[?contains(repositoryName, '$environment_name')] | length(@)" --output text 2>/dev/null || echo 0)" = "0"
-          test "$(aws sqs list-queues --queue-name-prefix babysteps-performance- --query "QueueUrls[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
+          for queue_name in "babysteps-performance-events-$environment_name" "babysteps-performance-dlq-$environment_name"; do
+            if aws sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1; then
+              echo "Expected queue to be absent: $queue_name" >&2
+              exit 1
+            fi
+          done
           test "$(aws lambda list-functions --query "Functions[?contains(FunctionName, '$environment_name')] | length(@)" --output text)" = "0"
           test "$(aws apigatewayv2 get-apis --query "Items[?contains(Name, '$environment_name')] | length(@)" --output text)" = "0"
           test "$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$environment_name" --query 'length(logGroups)' --output text)" = "0"
