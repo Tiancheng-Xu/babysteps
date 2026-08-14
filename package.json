@@ -19,6 +19,7 @@
 		"validate:delivery-evidence": "node scripts/validate-delivery-evidence.mjs",
 		"validate:performance-pipeline": "node scripts/validate-performance-pipeline.mjs",
 		"validate:performance-budget": "node scripts/validate-performance-budget.mjs",
+		"validate:rendering-runtime": "node web/scripts/validate-rendering-runtime.mjs web/dist/_worker.js",
 		"prepare:ipfs": "node scripts/prepare-ipfs-metadata.mjs"
 	},
 	"devDependencies": {

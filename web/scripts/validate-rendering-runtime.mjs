@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const template =
@@ -59,4 +60,16 @@ export async function validateBuiltRenderingRuntime(workerPath) {
 		}
 	}
 	return { cases: cases.length };
+}
+
+const isCli =
+	process.argv[1] &&
+	import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isCli) {
+	const workerPath = resolve(process.argv[2] ?? "web/dist/_worker.js");
+	const result = await validateBuiltRenderingRuntime(workerPath);
+	console.log(
+		`Built Worker runtime matrix passed: ${result.cases} request scenarios.`,
+	);
 }

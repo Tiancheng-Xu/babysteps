@@ -15,6 +15,7 @@ BabySteps 已完成并验证 `Cloudflare Edge SSR → React 精确水合 → 纯
 | 安全水合 | 白名单 state + 严格匹配后 hydrateRoot | `web/src/bootstrap.tsx`、`web/src/ssr/renderState.ts` | bootstrap 与序列化测试 | 本地已验证 |
 | 失败降级 | SSR 异常/超时返回静态 HTML；致命水合失败最多一次 CSR | `web/src/pages-worker.ts`、`web/src/bootstrap.tsx` | error、timeout、one-shot fallback 测试 | 本地已验证 |
 | 双端交付 | client + `_worker.js` 双构建、route manifest | `web/scripts/build-pages.mjs`、`web/public/rendering-manifest.json` | 生产 build；产物非空检查 | 本地已验证 |
+| 共享 Static-First Gate | edge-ssr 模式、rendering manifest、server artifact 与独立运行矩阵命令 | `.github/workflows/verify-baby2b-project.yml`、`web/scripts/validate-rendering-runtime.mjs` | 共享 main `0c9185f`、PR #14、Run `31791228753`、68/68；BabySteps 本地策略无 violation；built Worker 4/4 | 共享远端已发布；BabySteps PR/Preview 待验证 |
 | Cloudflare 发布 | deployment-specific、pages.dev、自定义域名、TLS、深链和 404 | PR #21；main `91dcc4c`；Run `31789478284`；deployment `5f4a39e0-0fc5-4bd2-87a2-25158fe2111b` | 三类 URL 与 TLS/响应头读回 | 已验证 |
 
 ## 本地验证事实
@@ -46,7 +47,11 @@ BabySteps 已完成并验证 `Cloudflare Edge SSR → React 精确水合 → 纯
 
 ## 应反向优化的共享能力
 
-本项目已真实发现并验证两项可泛化规则：一是 History Router 的资源根路径必须由交付契约决定，不能对所有项目强制 `./`；二是渲染 Gate 必须执行构建后的 Worker，覆盖尾斜杠、真实 404、API 直通、client-shell 缓存与服务端 bundle 的浏览器 SDK 隔离。BabySteps 已完成“项目发现 → 泛化判断”并在本地 Gate 落地；共享 standard、TC Flow、本地/远端共享 Gate 与旧项目回归由共享方案任务接续，尚未发布前不标记为完成。项目专属的 Privy、wagmi 和路由名称不会进入通用规则。
+本项目已真实发现并验证两项可泛化规则：一是 History Router 的资源根路径必须由交付契约决定，不能对所有项目强制 `./`；二是渲染 Gate 必须执行构建后的 Worker，覆盖尾斜杠、真实 404、API 直通、client-shell 缓存与服务端 bundle 的浏览器 SDK 隔离。
+
+共享反馈闭环已发布：standard 区分 SSG 与 Edge SSR；检测脚本检查 delivery-aware base、rendering manifest、非空 server artifact、隐私白名单和 one-shot CSR；reusable workflow 要求 Edge SSR 提供运行矩阵命令；TC Flow N6 与个人技能副本同步；旧 Dashboard/Evidence SSG Gate 回归通过，共享策略 68/68。共享提交 `0c9185f` 经 PR #14 合并，远端 Run `31791228753` 成功。BabySteps 端已在 `.github/workflows/verify-baby2b-project.yml` 声明真实 edge-ssr 契约，并用 `pnpm validate:rendering-runtime` 独立执行构建后的 Worker。当前 BabySteps 的本地验证已通过，项目自己的 PR Gate 与 Cloudflare Preview 仍待执行，因此不提前标记为远端已验证。项目专属的 Privy、wagmi 和路由名称不会进入通用规则。
+
+这对应完整反馈链：`项目发现 → 泛化判断 → shared standard / 检测脚本 → TC Flow 本地 Gate → reusable GitHub Gate → 旧项目回归 → BabySteps Evidence`。共享层由共享任务维护，BabySteps 只消费契约，不反向修改共享仓库。
 
 ## 架构与时序
 

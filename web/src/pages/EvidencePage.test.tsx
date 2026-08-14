@@ -15,6 +15,10 @@ describe("EvidencePage", () => {
 		expect(screen.getByText("生产部署已验证 · 2026-08-14")).toBeTruthy();
 		expect(screen.getByText("生产发布闭环")).toBeTruthy();
 		expect(screen.getByText(/31789478284/u)).toBeTruthy();
+		expect(screen.getByText(/共享 main 0c9185f/u)).toBeTruthy();
+		expect(
+			screen.getAllByText(/BabySteps 远端验证待完成/u).length,
+		).toBeGreaterThan(0);
 		expect(screen.getAllByText(/AWS 增量成本 \$0/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByText(/钱包与身份只在客户端激活/u).length,

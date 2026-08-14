@@ -27,3 +27,9 @@ jobs:
       build-command: pnpm --filter @babysteps/web build
       evidence-command: pnpm validate:delivery-evidence && pnpm validate:public-copy && pnpm validate:project-naming
       publish-config-path: .github/baby2b-publish.yml
+      static-first-output: web/dist
+      static-first-routes: /,/tasks,/keepsakes,/evidence,/parent,/provider,/exchange,/profile,/performance
+      static-first-mode: edge-ssr
+      static-first-rendering-manifest: web/public/rendering-manifest.json
+      static-first-server-artifact: web/dist/_worker.js
+      static-first-runtime-command: pnpm validate:rendering-runtime

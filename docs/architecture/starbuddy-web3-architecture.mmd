@@ -246,6 +246,7 @@ BabySteps 不再用 HashRouter 模拟页面，而是以真实 URL 和 History AP
 - 不能序列化：钱包地址对应的私有资料、身份令牌、Cookie、Authorization、交易签名与请求正文。
 - 本地已验证：双端生产构建、公开页 SSR、client-shell SSR、真实 404、静态资源直通、SSR 异常/超时 fallback、致命水合失败最多一次 CSR 重挂载。
 - 已验证：PR #21 预览、deployment-specific URL、pages.dev、自定义域名、TLS、真实深链、SSR 响应头与生产别名；main 合并提交 `91dcc4c`，GitHub Run `31789478284`，Cloudflare deployment `5f4a39e0-0fc5-4bd2-87a2-25158fe2111b`。
+- 共享反馈：通用 standard、静态/Edge SSR 策略、TC Flow N6、reusable workflow 与旧 SSG 项目已完成 68/68 回归，并由共享提交 `0c9185f`、PR #14、Run `31791228753` 发布；BabySteps 已声明 edge-ssr、rendering manifest、非空 `_worker.js` 和独立 built Worker 运行矩阵。项目自己的 PR Gate 与 Cloudflare Preview 尚未验证前不标完成。
 - 费用：本次渲染优化没有 AWS 写操作或新资源，AWS 增量成本为 `$0`；既有共享 VPC/NAT/RDS/OIDC 仍受保护。
 
 ```mermaid
