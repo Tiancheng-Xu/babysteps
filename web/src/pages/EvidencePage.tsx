@@ -162,27 +162,74 @@ export function EvidencePage() {
 					清洗、共享数据库和真实统计拆成独立信任边界；本地代码、测试、SAM 与预算
 					Gate 已通过，云端资源和清理证据必须由 Actions 实际运行后补齐。
 				</p>
-				<section className="evidence-identity" aria-labelledby="performance-identity-title">
+				<section
+					className="evidence-identity"
+					aria-labelledby="performance-identity-title"
+				>
 					<header>
 						<p className="section-kicker">AWS IDENTITY FOUNDATION · VERIFIED</p>
-						<h3 id="performance-identity-title">OIDC 身份底座与最小权限生命周期</h3>
+						<h3 id="performance-identity-title">
+							OIDC 身份底座与最小权限生命周期
+						</h3>
 					</header>
 					<p>
-						这部分只证明身份底座已就绪，不代表性能 Stack 已部署或业务验收完成。GitHub
-						 Actions 以短期 OIDC 身份进入 deploy role，再把精确项目 Stack 交给
-						 CloudFormation execution role；浏览器、构建日志和仓库均不保存长期 AWS Key。
+						这部分只证明身份底座已就绪，不代表性能 Stack
+						已部署或业务验收完成。GitHub Actions 以短期 OIDC 身份进入 deploy
+						role，再把精确项目 Stack 交给 CloudFormation execution
+						role；浏览器、构建日志和仓库均不保存长期 AWS Key。
 					</p>
 					<ol className="evidence-trust-flow" aria-label="AWS 信任链">
-						<li><strong>GitHub OIDC</strong><span>只接受 BabySteps 的 aws-performance Environment</span></li>
-						<li><strong>Deploy role</strong><span>验证共享底座、推送精确 ECR、运行/停止临时任务</span></li>
-						<li><strong>CloudFormation role</strong><span>只管理 babysteps-performance-* 生命周期</span></li>
-						<li><strong>项目资源</strong><span>API / Lambda / SQS / ECS / ECR / Secret / Log / SG</span></li>
+						<li>
+							<strong>GitHub OIDC</strong>
+							<span>只接受 BabySteps 的 aws-performance Environment</span>
+						</li>
+						<li>
+							<strong>Deploy role</strong>
+							<span>验证共享底座、推送精确 ECR、运行/停止临时任务</span>
+						</li>
+						<li>
+							<strong>CloudFormation role</strong>
+							<span>只管理 babysteps-performance-* 生命周期</span>
+						</li>
+						<li>
+							<strong>项目资源</strong>
+							<span>API / Lambda / SQS / ECS / ECR / Secret / Log / SG</span>
+						</li>
 					</ol>
 					<div className="evidence-identity-grid">
-						<article><h4>Environment 与共享变量</h4><p>Environment 只保存 Role ARN、共享 VPC/私有子网、NAT、RDS、DB Security Group、共享 Secret ARN 和 Artifact Bucket 等脱敏定位信息；Secret 值不进入 GitHub deploy role。</p></article>
-						<article><h4>创建期二阶段权限</h4><p>SQS 允许 Set/Tag，ECR 允许 PutLifecyclePolicy/Tag，Secrets 允许 GetRandomPassword 与首次 Tag，Security Group 只可在共享 VPC 创建并带项目标签；稳定期删除仍要求项目 ResourceTag。</p></article>
-						<article><h4>线上验证</h4><p>共享 Identity Stack 为 UPDATE_COMPLETE、drift IN_SYNC；18/18 身份契约、CloudFormation validate、Budget Guard 通过。项目动作模拟 allowed，非项目前缀和 Secret GetSecretValue 保持 denied。</p></article>
-						<article><h4>生命周期与清理边界</h4><p>项目清理只删除 exact Stack 与 babysteps-performance-*；共享 NAT、RDS、ALB、OIDC 和 Foundation 删除为 explicitDeny。失败运行也必须先留脱敏证据，再做九类资源零残留盘点。</p></article>
+						<article>
+							<h4>Environment 与共享变量</h4>
+							<p>
+								Environment 只保存 Role ARN、共享 VPC/私有子网、NAT、RDS、DB
+								Security Group、共享 Secret ARN 和 Artifact Bucket
+								等脱敏定位信息；Secret 值不进入 GitHub deploy role。
+							</p>
+						</article>
+						<article>
+							<h4>创建期二阶段权限</h4>
+							<p>
+								SQS 允许 Set/Tag，ECR 允许 PutLifecyclePolicy/Tag，Secrets 允许
+								GetRandomPassword 与首次 Tag，Security Group 只可在共享 VPC
+								创建并带项目标签；稳定期删除仍要求项目 ResourceTag。
+							</p>
+						</article>
+						<article>
+							<h4>线上验证</h4>
+							<p>
+								共享 Identity Stack 为 UPDATE_COMPLETE、drift IN_SYNC；18/18
+								身份契约、CloudFormation validate、Budget Guard
+								通过。项目动作模拟 allowed，非项目前缀和 Secret GetSecretValue
+								保持 denied。
+							</p>
+						</article>
+						<article>
+							<h4>生命周期与清理边界</h4>
+							<p>
+								项目清理只删除 exact Stack 与 babysteps-performance-*；共享
+								NAT、RDS、ALB、OIDC 和 Foundation 删除为
+								explicitDeny。失败运行也必须先留脱敏证据，再做九类资源零残留盘点。
+							</p>
+						</article>
 					</div>
 				</section>
 				<div className="evidence-diagrams evidence-diagrams--performance">
