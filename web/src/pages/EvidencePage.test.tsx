@@ -17,8 +17,9 @@ describe("EvidencePage", () => {
 		expect(screen.getByText(/31789478284/u)).toBeTruthy();
 		expect(screen.getByText(/共享 main 0c9185f/u)).toBeTruthy();
 		expect(
-			screen.getAllByText(/BabySteps 远端验证待完成/u).length,
+			screen.getAllByText(/BabySteps 远端 Gate 与 Preview 已验证/u).length,
 		).toBeGreaterThan(0);
+		expect(screen.getAllByText(/31791893461/u).length).toBeGreaterThan(0);
 		expect(screen.getAllByText(/AWS 增量成本 \$0/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByText(/钱包与身份只在客户端激活/u).length,

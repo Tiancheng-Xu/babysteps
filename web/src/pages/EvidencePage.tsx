@@ -110,11 +110,9 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>.github/workflows/verify-baby2b-project.yml</code>
 							<strong>验证证据</strong>
-							<span>
-								共享 main 0c9185f、68/68；项目本地策略与四条运行场景通过
-							</span>
+							<span>共享 main 0c9185f、68/68；BabySteps Run 31791893461</span>
 							<strong>当前状态</strong>
-							<span>共享远端已发布；BabySteps 远端验证待完成</span>
+							<span>共享远端已发布；BabySteps 远端 Gate 与 Preview 已验证</span>
 						</article>
 					</div>
 				</section>
@@ -129,10 +127,13 @@ export function EvidencePage() {
 						standard、检测脚本、TC Flow 和 reusable workflow，并以 68/68
 						测试回归既有 SSG 项目，并通过 PR #14 发布到共享 main
 						<code>0c9185f</code>。BabySteps 已声明 edge-ssr、rendering
-						manifest、server artifact 与 built Worker
-						运行命令；当前仅确认共享发布完成。BabySteps 远端验证待完成，在真实
-						PR Gate 与 Cloudflare Preview
-						通过前不会提升状态。项目专属路由或钱包逻辑不会进入通用规则。
+						manifest、server artifact 与 built Worker 运行命令。PR #23 的
+						Repository Policy、共享项目验证与 Cloudflare Pages 三项 Gate
+						均成功；Run 31791893461 在构建后执行共享策略与 built Worker
+						矩阵，Preview deployment{" "}
+						<code>23e11aa6-5e04-4aa0-ba79-6fd3b66dc1f4</code>的
+						SSR、深链、404、静态资源和 TLS
+						已读回。项目专属路由或钱包逻辑不会进入通用规则。
 					</p>
 					<div className="evidence-diagram-card__actions">
 						<a
@@ -143,9 +144,15 @@ export function EvidencePage() {
 						</a>
 						<a
 							className="evidence-diagram-link"
-							href="https://github.com/Tiancheng-Xu/.github/actions/runs/31791228753"
+							href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31791893461"
 						>
-							查看共享 Gate Run
+							查看 BabySteps Gate Run
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href="https://23e11aa6.babysteps-83x.pages.dev/evidence"
+						>
+							查看 BabySteps Preview
 						</a>
 					</div>
 				</article>
