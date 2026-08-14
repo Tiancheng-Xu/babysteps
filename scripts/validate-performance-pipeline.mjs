@@ -9,9 +9,24 @@ const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
 	[workflow, "environment: aws-performance", "approval environment is missing"],
 	[workflow, "id-token: write", "OIDC permission is missing"],
+	[workflow, "docker/setup-qemu-action@v3", "ARM64 emulation setup is missing"],
+	[
+		workflow,
+		"docker/setup-buildx-action@v3",
+		"multi-platform builder setup is missing",
+	],
+	[
+		workflow,
+		"timeout-minutes: 50",
+		"cleanup timeout must cover VPC Lambda ENI release",
+	],
 	[workflow, "aws-budget-guard", "budget gate is missing"],
 	[workflow, "describe-nat-gateways", "shared NAT readiness gate is missing"],
-	[workflow, "describe-db-instances", "shared database readiness gate is missing"],
+	[
+		workflow,
+		"describe-db-instances",
+		"shared database readiness gate is missing",
+	],
 	[workflow, "run-task", "controlled ECS cleaner task is missing"],
 	[workflow, "wait tasks-stopped", "ECS task verification is missing"],
 	[workflow, "sampleCount", "real statistics assertion is missing"],
@@ -23,11 +38,21 @@ const required = [
 	[template, "maxReceiveCount: 3", "DLQ retry policy is missing"],
 ];
 
-const errors = required.flatMap(([source, fragment, message]) => source.includes(fragment) ? [] : [message]);
-if (/^\s*(?:push|schedule):/m.test(workflow)) errors.push("automatic paid deployment triggers are forbidden");
-if (!workflow.includes("concurrency:") || !workflow.includes("github.run_id")) errors.push("unique serialized cloud runs are required");
-if (/AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/.test(workflow)) errors.push("long-lived AWS credentials are forbidden");
-if (/AWS::(?:RDS::DBInstance|EC2::NatGateway|ElasticLoadBalancingV2::LoadBalancer)/.test(template)) errors.push("duplicate heavy foundation is forbidden");
+const errors = required.flatMap(([source, fragment, message]) =>
+	source.includes(fragment) ? [] : [message],
+);
+if (/^\s*(?:push|schedule):/m.test(workflow))
+	errors.push("automatic paid deployment triggers are forbidden");
+if (!workflow.includes("concurrency:") || !workflow.includes("github.run_id"))
+	errors.push("unique serialized cloud runs are required");
+if (/AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/.test(workflow))
+	errors.push("long-lived AWS credentials are forbidden");
+if (
+	/AWS::(?:RDS::DBInstance|EC2::NatGateway|ElasticLoadBalancingV2::LoadBalancer)/.test(
+		template,
+	)
+)
+	errors.push("duplicate heavy foundation is forbidden");
 
 if (errors.length) {
 	for (const error of errors) console.error(error);

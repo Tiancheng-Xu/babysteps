@@ -41,7 +41,10 @@ jobs:
     if: github.ref == 'refs/heads/main' && inputs.run_cloud_validation == true
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # VPC Lambda deletion can spend ~20 minutes waiting for AWS-managed
+    # Hyperplane ENIs to drain. Keep the cleanup gate alive long enough to
+    # prove zero residue instead of abandoning an in-progress stack deletion.
+    timeout-minutes: 50
     environment: aws-performance
     permissions:
       contents: read
@@ -87,6 +90,12 @@ jobs:
           pnpm --filter @babysteps/aws build:performance:sam
           pnpm --filter @babysteps/aws build:performance:cleaner
           cp -R aws/migrations aws/dist/performance/migrations
+      - name: Enable ARM64 container builds
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Configure isolated BuildKit builder
+        uses: docker/setup-buildx-action@v3
       - name: Deploy temporary project stack
         id: deploy
         run: |
