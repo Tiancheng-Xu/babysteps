@@ -43,25 +43,22 @@ describe("StarBuddy keepsake Ignition modules", () => {
 		);
 	});
 
-	it("attaches to a configured Sepolia notebook and deploys only keepsake contracts", () => {
+	it("deploys a fresh Sepolia notebook with the two keepsake contracts", () => {
 		assert.equal(
 			StarBuddyKeepsakesSepoliaModule.id,
 			"StarBuddyKeepsakesSepoliaModule",
 		);
 		const moduleFutures = futures(StarBuddyKeepsakesSepoliaModule);
-		assert.ok(
-			moduleFutures.some(
-				(future) =>
-					future.contractName === "OnchainNotebook" &&
-					future.type.includes("CONTRACT_AT"),
-			),
-		);
 		assert.deepEqual(
 			moduleFutures
 				.filter((future) => future.type.includes("CONTRACT_DEPLOYMENT"))
 				.map((future) => future.contractName)
 				.sort(),
-			["StarBuddyKeepsakeSBT", "StarBuddyKeepsakes"],
+			["OnchainNotebook", "StarBuddyKeepsakeSBT", "StarBuddyKeepsakes"],
+		);
+		assert.equal(
+			moduleFutures.some((future) => future.type.includes("CONTRACT_AT")),
+			false,
 		);
 	});
 
@@ -105,12 +102,30 @@ describe("StarBuddy keepsake Ignition modules", () => {
 		for (const script of [
 			"deploy:starbuddy:local",
 			"deploy:starbuddy:sepolia",
+			"verify:starbuddy:sepolia",
 		]) {
 			assert.ok(packageJson.scripts[script]);
 		}
 		assert.match(
 			packageJson.scripts["deploy:starbuddy:sepolia"] ?? "",
 			/--deployment-id babysteps-starbuddy-sepolia/u,
+		);
+		assert.match(
+			packageJson.scripts["verify:starbuddy:sepolia"] ?? "",
+			/runSepoliaStarBuddyClosedLoop\.ts --network sepoliaPublic/u,
+		);
+		const closedLoopScript = await readFile(
+			new URL("../scripts/runSepoliaStarBuddyClosedLoop.ts", import.meta.url),
+			"utf8",
+		);
+		assert.match(closedLoopScript, /addConsumer/u);
+		assert.match(closedLoopScript, /requestDraw/u);
+		assert.match(closedLoopScript, /readPreviousEvidence/u);
+		assert.match(closedLoopScript, /transferableBalanceBeforeDraw/u);
+		assert.match(closedLoopScript, /findIndex\(\(item\) => item\.hash/u);
+		assert.match(
+			closedLoopScript,
+			/2026-08-14-starbuddy-sepolia-closed-loop\.json/u,
 		);
 
 		const parameters = JSON.parse(
@@ -137,6 +152,30 @@ describe("StarBuddy keepsake Ignition modules", () => {
 			"VITE_STARBUDDY_KEEPSAKES_ADDRESS",
 		]) {
 			assert.match(envExample, new RegExp(`^${variable}=`, "m"));
+		}
+
+		for (let series = 0; series < 4; series += 1) {
+			for (let rarity = 0; rarity < 4; rarity += 1) {
+				const metadata = JSON.parse(
+					await readFile(
+						new URL(
+							`../../web/public/metadata/keepsakes/${series}-${rarity}.json`,
+							import.meta.url,
+						),
+						"utf8",
+					),
+				) as {
+					name?: string;
+					image?: string;
+					attributes?: Array<{ trait_type: string; value: string }>;
+				};
+				assert.match(metadata.name ?? "", /星宝/u);
+				assert.equal(
+					metadata.image,
+					"https://babysteps.baby2b.online/media/starbuddy-certificate.jpg",
+				);
+				assert.equal(metadata.attributes?.length, 3);
+			}
 		}
 	});
 });

@@ -49,8 +49,8 @@ Boundary: local only; no remote D1 or Worker deployment
 const validEvidencePage = `
 import globalArchitecture from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import businessSequence from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
-import keepsakeDesktop from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png";
-import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png";
+import keepsakeDesktop from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
+import keepsakeMobile from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 import performanceArchitecture from "../../../docs/architecture/starbuddy-performance-global-architecture.svg";
 import performanceSequence from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import performanceDesktop from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
@@ -85,7 +85,8 @@ import performanceMobile from "../../../docs/evidence/screenshots/2026-08-13-per
   <h2>StarBuddy 纪念卡抽取与融合</h2>
   <img src={keepsakeDesktop} alt="StarBuddy 纪念馆桌面端本地验证" />
   <img src={keepsakeMobile} alt="StarBuddy 纪念馆 390 像素移动端本地验证" />
-  <p>固定 12 成长星 · Sepolia 待部署 · 24 小时未回调可恢复</p>
+  <p>固定 12 成长星 · StarBuddy Sepolia 已验证 · 24 小时未回调可恢复</p>
+  <p>真实融合等待自然积累三张匹配卡</p>
 </section>
 `;
 
@@ -130,7 +131,7 @@ const validAssetFacts = [
 				<text>03 上架激活流</text><text>04 购买结算流</text>
 				<text>05 成长任务完成证书流</text><text>06 交付回滚流</text>
 				<text>07 纪念卡抽取融合流</text><text>固定扣 12 成长星</text>
-				<text>失败烧 1 / 解锁 2</text><text>Sepolia 待部署</text>
+				<text>失败烧 1 / 解锁 2</text><text>真实 VRF 抽卡 · SBT #1</text>
 				<text>用户与角色</text><text>React Web</text><text>Cloudflare</text>
 				<text>Ethereum Sepolia</text><text>Web3 外部依赖</text><text>交付与 AWS</text>
 				<text>用户运行与认证</text><text>任务内容与事实所有权</text>
@@ -172,22 +173,22 @@ const validAssetFacts = [
 			</svg>`,
 	},
 	{
-		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png",
+		path: "docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png",
 		exists: true,
-		bytes: 190032,
+		bytes: 182184,
 		width: 0,
 		height: 0,
 		text: "",
-		sha256: "43324f6b226e8c9e20a948f40cdda9e52517ca92e20e8e1a8f3b9fbae83622db",
+		sha256: "e2cfe48542ae367332ac73ef6c960014e69ee6f5f58eb053b2508f290771aa45",
 	},
 	{
-		path: "docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png",
+		path: "docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png",
 		exists: true,
-		bytes: 140715,
+		bytes: 137551,
 		width: 0,
 		height: 0,
 		text: "",
-		sha256: "46a49a68839d23858e9bf96faa5888f45f3a6a2aeb4323ec4d664cff4409eebe",
+		sha256: "5d40847d687edb07dc0157e71d7a0a96f67b50fe29cdd6ff4effb775f530a98b",
 	},
 	{
 		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png",
@@ -515,9 +516,13 @@ test("rejects Evidence that omits the locally verified keepsake flow or screensh
 	]);
 	const withoutKeepsakes = validEvidencePage
 		.replaceAll("StarBuddy 纪念卡抽取与融合", "普通展示")
-		.replaceAll("keepsake-gallery-desktop.png", "missing-desktop.png");
+		.replaceAll(
+			"keepsake-gallery-sepolia-desktop-1440.png",
+			"missing-desktop.png",
+		);
 	const assetsWithoutDesktop = validAssetFacts.filter(
-		(asset) => !asset.path.endsWith("keepsake-gallery-desktop.png"),
+		(asset) =>
+			!asset.path.endsWith("keepsake-gallery-sepolia-desktop-1440.png"),
 	);
 
 	const errors = validate(
@@ -542,7 +547,7 @@ test("rejects a screenshot whose recorded proof hash no longer matches", () => {
 		],
 	]);
 	const changedAssets = validAssetFacts.map((asset) =>
-		asset.path.endsWith("keepsake-gallery-desktop.png")
+		asset.path.endsWith("keepsake-gallery-sepolia-desktop-1440.png")
 			? { ...asset, sha256: "changed" }
 			: asset,
 	);

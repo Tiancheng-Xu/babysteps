@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-08-14",
+  "source": "local production preview built with verified Sepolia contract addresses",
+  "truthBoundary": "Screenshots prove the release-candidate UI, responsive layout, and removal of the pending-deployment state. On-chain draw proof remains the separate sanitized deployment JSON.",
+  "files": [
+    {
+      "file": "evidence-starbuddy-sepolia-desktop-1440.png",
+      "bytes": 1304301,
+      "sha256": "4117a907559784fae1654b240850d2b98f57db388f611b2ead82f73fc0f73148"
+    },
+    {
+      "file": "evidence-starbuddy-sepolia-mobile-390.png",
+      "bytes": 806469,
+      "sha256": "9d0c5db299b60284cd4c7e14bff8a9cd3cbe4ecf5286ca5a10e97365428e53cd"
+    },
+    {
+      "file": "keepsake-gallery-sepolia-desktop-1440.png",
+      "bytes": 182184,
+      "sha256": "e2cfe48542ae367332ac73ef6c960014e69ee6f5f58eb053b2508f290771aa45"
+    },
+    {
+      "file": "keepsake-gallery-sepolia-mobile-390.png",
+      "bytes": 137551,
+      "sha256": "5d40847d687edb07dc0157e71d7a0a96f67b50fe29cdd6ff4effb775f530a98b"
+    }
+  ]
+}

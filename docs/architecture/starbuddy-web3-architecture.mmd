@@ -59,11 +59,11 @@ flowchart LR
     kms["AWS KMS secp256k1 Relayer<br/>代码已验证；持续计费阶段延后"] -.-> marketV2
     marketV2 --> graph["The Graph Studio<br/>Sepolia v0.1.0；100% 同步；GraphQL 已读回"]
     marketV2 --> rpc["ethers 三 RPC<br/>Public + Infura + Alchemy<br/>同一交易事实对照一致"]
-    web --> keepsakes["StarBuddy 纪念馆<br/>抽卡 / 融合 / 恢复 UI<br/>本地已验证"]
-    keepsakes --> notebook["OnchainNotebook<br/>可转送成长星 spend / refund<br/>本地已验证，Sepolia 待部署"]
-    keepsakes --> keepsakeCoordinator["StarBuddyKeepsakes<br/>固定 12 星 / 三卡融合 / 24h recovery<br/>本地已验证，Sepolia 待部署"]
-    keepsakeCoordinator --> keepsakeVrf["Chainlink VRF v2.5<br/>稀有度 / 阶段 / 融合随机<br/>Sepolia 待验证"]
-    keepsakeCoordinator --> keepsakeSbt["StarBuddyKeepsakeSBT<br/>ERC-5192 · burn 仅限协调合约<br/>本地已验证，Sepolia 待部署"]
+    web --> keepsakes["StarBuddy 纪念馆<br/>抽卡 / 融合 / 恢复 UI<br/>本地与 Sepolia 抽卡已验证"]
+    keepsakes --> notebook["OnchainNotebook<br/>可转送成长星 spend / refund<br/>Sepolia：0xDA7A…CF91"]
+    keepsakes --> keepsakeCoordinator["StarBuddyKeepsakes<br/>固定 12 星 / 三卡融合 / 24h recovery<br/>Sepolia：0xb343…bF68"]
+    keepsakeCoordinator --> keepsakeVrf["Chainlink VRF v2.5<br/>稀有度 / 阶段 / 融合随机<br/>Sepolia 抽卡已验证"]
+    keepsakeCoordinator --> keepsakeSbt["StarBuddyKeepsakeSBT<br/>ERC-5192 · burn 仅限协调合约<br/>Sepolia：0xED65…E627 · SBT #1"]
 ```
 
 ## 链上与链下事实所有权
@@ -111,9 +111,9 @@ flowchart TB
         cert["ERC-5192<br/>0xF4ef…F654<br/>SBT #1 locked"]
         uni["Uniswap v3<br/>BABY/USDC + BABY/WETH 已注资并完成真实 swap"]
         chainlink["Chainlink VRF v2.5<br/>V1 + V2 真实履约证据"]
-        notebook2["OnchainNotebook V2<br/>transferable spend / refund<br/>本地已验证，Sepolia 待部署"]
-        keepsakeMarket["StarBuddyKeepsakes<br/>draw / fuse / recovery<br/>本地已验证，Sepolia 待部署"]
-        keepsakeToken["KeepsakeSBT<br/>series × rarity<br/>本地已验证，Sepolia 待部署"]
+        notebook2["OnchainNotebook V2<br/>transferable spend / refund<br/>Sepolia 真实扣除 12 星"]
+        keepsakeMarket["StarBuddyKeepsakes<br/>draw / fuse / recovery<br/>真实 VRF 抽卡已验证"]
+        keepsakeToken["KeepsakeSBT<br/>series × rarity<br/>SBT #1 locked 已读回"]
     end
     subgraph aws["AWS 当前允许边界（云端已验证，RDS 已 stopped）"]
         probe["Readiness Lambda<br/>直接 invoke 200 / ready"]
@@ -239,7 +239,7 @@ AWS 当前没有自动创建每 PR 重资源。可暂停 Stack 仅能通过人�
 
 ## StarBuddy 纪念卡抽取、融合与恢复时序
 
-本段是产品增强，不属于老师七项课程平台硬性要求。代码与本地测试已完成，尚无 Sepolia 新合约地址或交易，因此图中外部状态保持“待部署”。
+本段是产品增强，不属于老师七项课程平台硬性要求。Sepolia 三合约、VRF consumer、固定 12 星真实抽卡和锁定 SBT #1 已验证；真实融合仍等待自然积累三张同系列、同稀有度卡，图中不把本地融合测试冒充链上交易。
 
 ```mermaid
 sequenceDiagram

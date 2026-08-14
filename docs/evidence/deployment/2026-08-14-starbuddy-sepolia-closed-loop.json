@@ -1,0 +1,64 @@
+{
+	"status": "complete",
+	"phase": "verified",
+	"updatedAt": "2026-08-14T05:38:08.713Z",
+	"network": "Ethereum Sepolia",
+	"chainId": 11155111,
+	"operator": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+	"addresses": {
+		"onchainNotebook": "0xDA7Ab295E2e2AEc535A04F44A39AdE073dd9CF91",
+		"starBuddyKeepsakeSbt": "0xED658a6F2e562ce24B6121a5a3e9304d0192E627",
+		"starBuddyKeepsakes": "0xb343A0a62595d83d3Da55752DDB120a0744BfF68",
+		"vrfCoordinator": "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B"
+	},
+	"transactions": [
+		{
+			"action": "add StarBuddyKeepsakes as VRF consumer",
+			"hash": "0x24fb3eebaed422ae00b331ea117102728ec5a06976ea471a67620c2b278fecdd"
+		},
+		{
+			"action": "record activity 0",
+			"hash": "0xcef51a9ac181e21067c8a29bc6e91c6bba8b180f8ebf216e7183cedf6fc20d2d"
+		},
+		{
+			"action": "record activity 1",
+			"hash": "0xf716e5f90031eb94f506fbfa1a8fdc32402be46a9c03244bf91f48225ae92681"
+		},
+		{
+			"action": "record activity 2",
+			"hash": "0xf8dbd0f73f74cea5fa1b96406aa5f5c802dafbf749d1565c470ad9ba6a96e33f"
+		},
+		{
+			"action": "request one StarBuddy keepsake draw",
+			"hash": "0x2b8cf9cdb38adcfa55db561f00a259bbcd6f0f8c9baa0f373a24287d950c0a64"
+		}
+	],
+	"requestId": "21556819699894985189007538881789214622703899919613339686232435101559844498256",
+	"resultTokenId": "1",
+	"verification": {
+		"vrfSubscriptionId": "71373032545190242781617190213327705196443132403442427466313474597415853818930",
+		"vrfConsumerConfigured": true,
+		"vrfNativeBalanceBeforeWei": "499180663790076179",
+		"vrfNativeBalanceAfterWei": "499180663790076179",
+		"growthStarConsumerConfigured": true,
+		"minterRoleConfigured": true,
+		"burnerRoleConfigured": true,
+		"drawCost": "12",
+		"initialTransferableBalance": "0",
+		"transferableBalanceBeforeDraw": "15",
+		"transferableBalanceAfter": "3",
+		"lifetimeGrowth": "15",
+		"requestKind": 1,
+		"requestStatus": 2,
+		"series": 3,
+		"rarity": 2,
+		"tokenOwner": "0x4D9Df519AbCBE51C0098649bCd0e17ac1548Fa88",
+		"tokenLocked": true,
+		"tokenUri": "https://babysteps.baby2b.online/metadata/keepsakes/3-2.json"
+	},
+	"fusionBoundary": "Fusion is deployed and locally verified. A live fusion transaction requires three naturally acquired cards with the same series and rarity; no admin mint or synthetic inventory is used.",
+	"contractRoleIds": {
+		"minter": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+		"burner": "0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848"
+	}
+}

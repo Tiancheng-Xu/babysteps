@@ -34,4 +34,15 @@ describe("EvidencePage", () => {
 		expect(screen.getByText("AWS 闭环已验证")).toBeTruthy();
 		expect(screen.queryByText("AWS 云端待验证")).toBeNull();
 	});
+
+	it("shows the verified StarBuddy Sepolia draw without claiming a live fusion", () => {
+		render(<EvidencePage />);
+
+		expect(screen.getAllByText("StarBuddy Sepolia 已验证")).toHaveLength(2);
+		expect(screen.getAllByText(/SBT #1 · 星耀 · 闪耀星宝/u)).toHaveLength(2);
+		expect(screen.getAllByText(/真实融合等待自然积累三张匹配卡/u)).toHaveLength(
+			2,
+		);
+		expect(screen.queryByText("Sepolia 待部署")).toBeNull();
+	});
 });

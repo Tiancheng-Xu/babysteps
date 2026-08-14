@@ -16,6 +16,7 @@
 		"deploy:web3:v2:verify:sepolia": "hardhat ignition deploy --deployment-id babysteps-sepolia-v2 ignition/modules/BabyStepsWeb3V2.ts --network sepolia --parameters ignition/parameters/babysteps-web3-v2.sepolia.json --verify",
 		"deploy:starbuddy:local": "hardhat ignition deploy ignition/modules/StarBuddyKeepsakesLocal.ts",
 		"deploy:starbuddy:sepolia": "hardhat ignition deploy --deployment-id babysteps-starbuddy-sepolia ignition/modules/StarBuddyKeepsakesSepolia.ts --network sepolia --parameters ignition/parameters/babysteps-web3-v2.sepolia.json",
+		"verify:starbuddy:sepolia": "hardhat run scripts/runSepoliaStarBuddyClosedLoop.ts --network sepoliaPublic",
 		"finalize:web3:v2:sepolia": "hardhat run scripts/finalizeSepoliaV2.ts --network sepoliaPublic",
 		"inspect:sepolia": "hardhat run scripts/inspectSepolia.ts --network sepolia",
 		"prepare:vrf:sepolia": "hardhat run scripts/prepareSepoliaVrf.ts --network sepoliaPublic",

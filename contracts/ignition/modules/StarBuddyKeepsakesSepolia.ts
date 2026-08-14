@@ -6,7 +6,6 @@ const SEPOLIA_VRF_KEY_HASH =
 
 export default buildModule("StarBuddyKeepsakesSepoliaModule", (module) => {
 	const admin = module.getAccount(0);
-	const onchainNotebookAddress = module.getParameter("onchainNotebookAddress");
 	const metadataBaseUri = module.getParameter(
 		"metadataBaseUri",
 		"https://babysteps.baby2b.online/metadata/keepsakes/",
@@ -26,7 +25,7 @@ export default buildModule("StarBuddyKeepsakesSepoliaModule", (module) => {
 		500_000,
 	);
 
-	const notebook = module.contractAt("OnchainNotebook", onchainNotebookAddress);
+	const notebook = module.contract("OnchainNotebook");
 	const keepsakeToken = module.contract("StarBuddyKeepsakeSBT", [
 		admin,
 		metadataBaseUri,

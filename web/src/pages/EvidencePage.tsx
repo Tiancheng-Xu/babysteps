@@ -4,8 +4,8 @@ import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-bus
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import performanceDashboardDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceDashboardMobileImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
-import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-desktop.png";
-import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-13-starbuddy-keepsakes/keepsake-gallery-mobile-390.png";
+import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
+import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -19,9 +19,10 @@ const CONTRACTS = [
 	],
 	[
 		"StarBuddyKeepsakes + KeepsakeSBT",
-		"固定 12 成长星抽卡、三卡融合、24 小时恢复；本地已验证，Sepolia 待部署",
+		"0xb343…F68 + 0xED65…E627 · 固定 12 成长星抽卡、三卡融合与 24 小时恢复",
 	],
 ] as const;
+const KEEPSAKE_RECOVERY_PROOF = "24 小时未回调可恢复";
 
 export function EvidencePage() {
 	return (
@@ -483,10 +484,12 @@ export function EvidencePage() {
 			>
 				<header className="evidence-feature-proof__header">
 					<div>
-						<p className="section-kicker">FEATURE PROOF · LOCAL VERIFIED</p>
+						<p className="section-kicker">FEATURE PROOF · SEPOLIA VERIFIED</p>
 						<h2 id="keepsake-proof-title">StarBuddy 纪念卡抽取与融合</h2>
 					</div>
-					<span className="evidence-diagram-card__status">Sepolia 待部署</span>
+					<span className="evidence-diagram-card__status">
+						StarBuddy Sepolia 已验证
+					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
 					可转送成长星是唯一消费额度：每次抽卡固定扣 12
@@ -501,10 +504,10 @@ export function EvidencePage() {
 						/>
 						<figcaption>
 							<strong>看哪里：</strong>
-							固定费用、概率、四阶段卡面、融合入口与真实未配置提示。
+							固定费用、概率、四阶段卡面、融合入口与钱包未连接状态。
 							<br />
-							<strong>证明什么：</strong>桌面端布局和业务状态已实现；没有伪造
-							Sepolia 卡片。
+							<strong>证明什么：</strong>
+							正式 Sepolia 地址已进入发布候选；未连接钱包时不伪造余额或卡片。
 						</figcaption>
 					</figure>
 					<figure>
@@ -524,11 +527,13 @@ export function EvidencePage() {
 				<div className="evidence-diagram-walkthrough">
 					<p>
 						<strong>抽卡链路</strong>spendTransferable(12) → Chainlink VRF v2.5
-						→ 70/22/7/1 稀有度与独立阶段随机 → KeepsakeSBT 铸造。
+						→ 70/22/7/1 稀有度与独立阶段随机 → KeepsakeSBT 铸造；真实 SBT #1 ·
+						星耀 · 闪耀星宝 已读回。
 					</p>
 					<p>
 						<strong>融合与恢复</strong>锁定 3 张相同卡 → VRF 判定 100/70/40%
-						成功率；24 小时未回调可恢复，迟到回调被忽略。
+						成功率；{KEEPSAKE_RECOVERY_PROOF}
+						，迟到回调被忽略。真实融合等待自然积累三张匹配卡，不设置管理员造卡后门。
 					</p>
 				</div>
 			</section>
@@ -575,8 +580,8 @@ export function EvidencePage() {
 					<div className="verification-summary">
 						<strong>纪念卡真实状态</strong>
 						<span>
-							合约与前端本地已验证；新合约地址、VRF consumer 与真实交易仍待
-							Sepolia 部署
+							新版 Notebook + 两份纪念卡合约已部署；VRF consumer、12
+							星扣款、随机结果与锁定 SBT #1 已链上验证
 						</span>
 					</div>
 					<div className="verification-summary">

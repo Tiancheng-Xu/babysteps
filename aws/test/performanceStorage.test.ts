@@ -34,27 +34,30 @@ describe("performance PostgreSQL store", () => {
 
 	it("queries only bounded allowlisted filters", async () => {
 		const calls: Array<{ text: string; values?: readonly unknown[] }> = [];
-		const store = new PostgresPerformanceStore({
-			query: async (text, values) => {
-				calls.push({ text, values });
-				return {
-					rows: [
-						{
-							bucketStart: sample.timestamp,
-							type: sample.type,
-							name: sample.name,
-							unit: sample.unit,
-							route: sample.route,
-							environment: sample.environment,
-							version: sample.version,
-							timestamps: [sample.timestamp],
-							values: [sample.value],
-						},
-					],
-					rowCount: 1,
-				};
+		const store = new PostgresPerformanceStore(
+			{
+				query: async (text, values) => {
+					calls.push({ text, values });
+					return {
+						rows: [
+							{
+								bucketStart: sample.timestamp,
+								type: sample.type,
+								name: sample.name,
+								unit: sample.unit,
+								route: sample.route,
+								environment: sample.environment,
+								version: sample.version,
+								timestamps: [sample.timestamp],
+								values: [sample.value],
+							},
+						],
+						rowCount: 1,
+					};
+				},
 			},
-		});
+			() => sample.timestamp + 3_600_000,
+		);
 		const result = await store.query({
 			window: "24h",
 			route: "/",
@@ -74,24 +77,30 @@ describe("performance PostgreSQL store", () => {
 	});
 
 	it("fails closed instead of reporting percentiles from a truncated window", async () => {
-		const store = new PostgresPerformanceStore({
-			query: async () => ({
-				rows: [
-					{
-						bucketStart: sample.timestamp,
-						type: sample.type,
-						name: sample.name,
-						unit: sample.unit,
-						route: sample.route,
-						environment: sample.environment,
-						version: sample.version,
-						timestamps: Array.from({ length: 10_001 }, () => sample.timestamp),
-						values: Array.from({ length: 10_001 }, () => sample.value),
-					},
-				],
-				rowCount: 1,
-			}),
-		});
+		const store = new PostgresPerformanceStore(
+			{
+				query: async () => ({
+					rows: [
+						{
+							bucketStart: sample.timestamp,
+							type: sample.type,
+							name: sample.name,
+							unit: sample.unit,
+							route: sample.route,
+							environment: sample.environment,
+							version: sample.version,
+							timestamps: Array.from(
+								{ length: 10_001 },
+								() => sample.timestamp,
+							),
+							values: Array.from({ length: 10_001 }, () => sample.value),
+						},
+					],
+					rowCount: 1,
+				}),
+			},
+			() => sample.timestamp + 3_600_000,
+		);
 		await expect(store.query({ window: "24h", metric: "LCP" })).rejects.toThrow(
 			"STATISTICS_WINDOW_TOO_LARGE",
 		);
