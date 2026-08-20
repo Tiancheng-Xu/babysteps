@@ -1,5 +1,7 @@
+import { taskMarketplaceV2Address } from "../../contracts/web3Contracts";
 import { formatBabyCoinAmount } from "../babycoin/formatBabyCoinAmount";
 import type { MarketplaceTask } from "./marketplaceModel";
+import { TaskLearningPanel } from "./TaskLearningPanel";
 import { useTaskPurchase } from "./useTaskPurchase";
 
 const EXPLORER_TX_BASE = "https://sepolia.etherscan.io/tx/";
@@ -82,6 +84,11 @@ export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 	const actionHandler = "onClick" in action ? action.onClick : undefined;
 	const isError =
 		purchase.phase === "read-error" || purchase.phase === "write-error";
+	const hasPurchased =
+		purchase.phase === "purchased" || purchase.phase === "success";
+	const taskKey = taskMarketplaceV2Address
+		? `11155111:${taskMarketplaceV2Address.toLowerCase()}:${task.id}`
+		: undefined;
 
 	return (
 		<article className="marketplace-task-card">
@@ -159,6 +166,7 @@ export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 					</a>
 				) : null}
 			</div>
+			{hasPurchased && taskKey ? <TaskLearningPanel taskKey={taskKey} /> : null}
 		</article>
 	);
 }

@@ -80,6 +80,7 @@ describe("useProviderTaskCreation", () => {
 		act(() => {
 			result.current.setActivity("walk");
 			result.current.setMetadataUri("ipfs://task-1");
+			result.current.setMetadataHash(`0x${"1".repeat(64)}`);
 		});
 		expect(result.current.canSubmit).toBe(true);
 		await act(async () => result.current.createTask());
@@ -88,8 +89,8 @@ describe("useProviderTaskCreation", () => {
 			wagmiConfig,
 			expect.objectContaining({
 				address: marketplace,
-				functionName: "createTask",
-				args: [account, 1, "ipfs://task-1"],
+				functionName: "requestTask",
+				args: [account, 1, "ipfs://task-1", `0x${"1".repeat(64)}`],
 				account,
 				chainId: 11155111,
 			}),
@@ -106,7 +107,10 @@ describe("useProviderTaskCreation", () => {
 			refetch: mocks.roleRefetch,
 		});
 		const { result } = renderHook(() => useProviderTaskCreation(marketplace));
-		act(() => result.current.setMetadataUri("ipfs://task-1"));
+		act(() => {
+			result.current.setMetadataUri("ipfs://task-1");
+			result.current.setMetadataHash(`0x${"1".repeat(64)}`);
+		});
 
 		expect(result.current.hasProviderRole).toBe(false);
 		expect(result.current.canSubmit).toBe(false);
@@ -118,15 +122,19 @@ describe("useProviderTaskCreation", () => {
 		const { result, rerender } = renderHook(() =>
 			useProviderTaskCreation(marketplace),
 		);
-		act(() => result.current.setMetadataUri("ipfs://task-1"));
+		act(() => {
+			result.current.setMetadataUri("ipfs://task-1");
+			result.current.setMetadataHash(`0x${"1".repeat(64)}`);
+		});
 		await act(async () => result.current.createTask());
 
 		mocks.receipt.isSuccess = true;
 		rerender();
 		await waitFor(() => expect(result.current.phase).toBe("success"));
 		expect(result.current.message).toBe(
-			"任务创建已确认，正在等待 Chainlink VRF 激活。",
+			"任务申请已确认，正在等待 Owner 审核。",
 		);
 		expect(result.current.metadataUri).toBe("");
+		expect(result.current.metadataHash).toBe("");
 	});
 });

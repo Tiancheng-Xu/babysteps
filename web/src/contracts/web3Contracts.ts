@@ -153,9 +153,15 @@ export const taskMarketplaceAbi = parseAbi([
 ]);
 
 export const taskMarketplaceV2Abi = parseAbi([
+	"function hasRole(bytes32 role,address account) view returns (bool)",
 	"function nextTaskId() view returns (uint256)",
 	"function getTask(uint256 taskId) view returns ((address provider,address payee,uint8 activityType,string metadataUri,bytes32 metadataHash,bytes32 rejectionReasonHash,uint256 requestId,uint256 price,uint64 opensAt,uint64 closesAt,uint8 status,bool paused) task)",
 	"function purchaseIdForBuyer(uint256 taskId,address buyer) view returns (uint256 purchaseId)",
+	"function requestTask(address payee,uint8 activityType,string metadataUri,bytes32 metadataHash) returns (uint256 taskId)",
+	"function approveTask(uint256 taskId)",
+	"function rejectTask(uint256 taskId,bytes32 reasonHash)",
+	"function confirmCompletion(uint256 purchaseId,bytes32 evidenceHash,string certificateUri) returns (uint256 certificateTokenId)",
+	"function getPurchase(uint256 purchaseId) view returns ((address buyer,uint256 taskId,uint256 price,uint64 purchasedAt,bool completed,bytes32 evidenceHash,uint256 certificateTokenId) purchase)",
 	"function buy(uint256 taskId) returns (uint256 purchaseId)",
 ]);
 

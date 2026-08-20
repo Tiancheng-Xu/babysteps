@@ -28,6 +28,8 @@ const metadata = {
 
 class FakeMarketplaceReader implements MarketplaceReader {
 	hasRole = true;
+	purchaseId = 0n;
+	purchaseReadError: Error | null = null;
 	verificationError: Error | null = null;
 	metadataHashOverride: `0x${string}` | null = null;
 	lastBindingInput: BindingInput | null = null;
@@ -61,7 +63,8 @@ class FakeMarketplaceReader implements MarketplaceReader {
 	}
 
 	async purchaseIdForBuyer(): Promise<bigint> {
-		return 0n;
+		if (this.purchaseReadError) throw this.purchaseReadError;
+		return this.purchaseId;
 	}
 
 	private taskView(
@@ -202,14 +205,78 @@ describe("task drafts and verified chain binding", () => {
 
 		const detail = await request(`/api/tasks/${taskKey}`);
 		expect(detail.status).toBe(200);
-		await expect(detail.json()).resolves.toMatchObject({
+		const detailPayload = await detail.json();
+		expect(detailPayload).toMatchObject({
 			taskKey,
-			offchain: { title: "Bedtime Story", videoUrl: metadata.videoUrl },
+			offchain: {
+				title: "Bedtime Story",
+				description: metadata.description,
+				coverUrl: metadata.coverUrl,
+				activityType: "Read",
+			},
 			onchain: {
 				provider: provider.address.toLowerCase(),
 				payee,
 				status: "PendingReview",
 			},
+		});
+		expect(JSON.stringify(detailPayload)).not.toContain(metadata.videoUrl);
+	});
+
+	it("reveals learning content only to the signed-in on-chain buyer", async () => {
+		const provider = account();
+		reader.provider = provider.address.toLowerCase() as `0x${string}`;
+		const providerCookie = await login(provider);
+		const draft = await (await createDraft(providerCookie)).json<{
+			draftId: string;
+		}>();
+		await bindDraft(providerCookie, draft.draftId);
+		const taskKey = buildTaskKey(11155111, marketplace, 42n);
+
+		const unauthenticated = await request(`/api/tasks/${taskKey}/content`);
+		expect(unauthenticated.status).toBe(401);
+
+		const buyer = account();
+		const buyerCookie = await login(buyer);
+		const notPurchased = await request(`/api/tasks/${taskKey}/content`, {
+			headers: { cookie: buyerCookie },
+		});
+		expect(notPurchased.status).toBe(403);
+		await expect(notPurchased.json()).resolves.toMatchObject({
+			error: { code: "TASK_PURCHASE_REQUIRED" },
+		});
+
+		reader.purchaseId = 9n;
+		const purchased = await request(`/api/tasks/${taskKey}/content`, {
+			headers: { cookie: buyerCookie },
+		});
+		expect(purchased.status).toBe(200);
+		await expect(purchased.json()).resolves.toEqual({
+			taskKey,
+			purchaseId: "9",
+			videoUrl: metadata.videoUrl,
+			completionInstructions: metadata.completionInstructions,
+		});
+	});
+
+	it("fails closed when purchased-content ownership cannot be read", async () => {
+		const provider = account();
+		reader.provider = provider.address.toLowerCase() as `0x${string}`;
+		const providerCookie = await login(provider);
+		const draft = await (await createDraft(providerCookie)).json<{
+			draftId: string;
+		}>();
+		await bindDraft(providerCookie, draft.draftId);
+		const buyerCookie = await login(account());
+		reader.purchaseReadError = new Error("rpc unavailable");
+
+		const response = await request(
+			`/api/tasks/${buildTaskKey(11155111, marketplace, 42n)}/content`,
+			{ headers: { cookie: buyerCookie } },
+		);
+		expect(response.status).toBe(503);
+		await expect(response.json()).resolves.toMatchObject({
+			error: { code: "CHAIN_READ_UNAVAILABLE" },
 		});
 	});
 

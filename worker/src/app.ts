@@ -15,6 +15,7 @@ import {
 	createCommentRoutes,
 	type OwnerWalletFactory,
 } from "./routes/comments";
+import { createCompletionRoutes } from "./routes/completions";
 import { profileRoutes } from "./routes/profile";
 import { createTaskRoutes } from "./routes/tasks";
 
@@ -39,7 +40,7 @@ export function createApp(_dependencies: AppDependencies = {}) {
 				const allowedOrigin = new URL(readConfig(context.env).uri).origin;
 				return origin === allowedOrigin ? origin : null;
 			},
-			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: ["Content-Type"],
 			credentials: true,
 			maxAge: 86_400,
@@ -93,6 +94,10 @@ export function createApp(_dependencies: AppDependencies = {}) {
 	application.route(
 		"/api",
 		createCommentRoutes(marketplaceReaderFactory, ownerWalletFactory),
+	);
+	application.route(
+		"/api",
+		createCompletionRoutes(marketplaceReaderFactory, ownerWalletFactory),
 	);
 
 	application.onError((error, context) => {

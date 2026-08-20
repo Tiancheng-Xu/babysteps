@@ -71,6 +71,36 @@ function serializeChainTask(
 	};
 }
 
+function publicTaskMetadata(metadataJson: string) {
+	const metadata = JSON.parse(metadataJson) as {
+		title: string;
+		description: string;
+		coverUrl: string;
+		videoUrl: string;
+		completionInstructions: string;
+		activityType: string;
+	};
+	return {
+		title: metadata.title,
+		description: metadata.description,
+		coverUrl: metadata.coverUrl,
+		activityType: metadata.activityType,
+	};
+}
+
+function normalizeTaskKey(rawKey: string): TaskKey {
+	try {
+		const parsedKey = parseTaskKey(rawKey);
+		return buildTaskKey(
+			parsedKey.chainId,
+			parsedKey.marketplaceAddress,
+			parsedKey.taskId,
+		);
+	} catch {
+		throw new AppError(400, "TASK_IDENTITY_INVALID", "Task key is invalid");
+	}
+}
+
 export function createTaskRoutes(readerFactory: MarketplaceReaderFactory) {
 	const routes = new Hono<WorkerApp>();
 
@@ -261,17 +291,7 @@ export function createTaskRoutes(readerFactory: MarketplaceReaderFactory) {
 	});
 
 	routes.get("/tasks/:taskKey", async (context) => {
-		let taskKey: TaskKey;
-		try {
-			const parsedKey = parseTaskKey(context.req.param("taskKey"));
-			taskKey = buildTaskKey(
-				parsedKey.chainId,
-				parsedKey.marketplaceAddress,
-				parsedKey.taskId,
-			);
-		} catch {
-			throw new AppError(400, "TASK_IDENTITY_INVALID", "Task key is invalid");
-		}
+		const taskKey = normalizeTaskKey(context.req.param("taskKey"));
 		const published = await new TaskRepository(context.env.DB).findPublished(
 			taskKey,
 		);
@@ -308,8 +328,56 @@ export function createTaskRoutes(readerFactory: MarketplaceReaderFactory) {
 
 		return context.json({
 			taskKey,
-			offchain: JSON.parse(draft.metadata_json),
+			offchain: publicTaskMetadata(draft.metadata_json),
 			onchain: serializeChainTask(chainTask),
+		});
+	});
+
+	routes.get("/tasks/:taskKey/content", requireSession, async (context) => {
+		const taskKey = normalizeTaskKey(context.req.param("taskKey"));
+		const repository = new TaskRepository(context.env.DB);
+		const published = await repository.findPublished(taskKey);
+		if (!published) {
+			throw new AppError(404, "TASK_NOT_FOUND", "Published task was not found");
+		}
+		const wallet = context.get("wallet") as `0x${string}`;
+		let purchaseId: bigint;
+		try {
+			purchaseId = await readerFactory(context.env).purchaseIdForBuyer(
+				taskKey,
+				wallet,
+			);
+		} catch {
+			throw new AppError(
+				503,
+				"CHAIN_READ_UNAVAILABLE",
+				"Purchase status could not be verified",
+			);
+		}
+		if (purchaseId === 0n) {
+			throw new AppError(
+				403,
+				"TASK_PURCHASE_REQUIRED",
+				"An on-chain purchase is required to unlock task content",
+			);
+		}
+		const draft = await repository.findDraft(published.draft_id);
+		if (!draft) {
+			throw new AppError(
+				500,
+				"TASK_CONTENT_MISSING",
+				"Published task content is missing",
+			);
+		}
+		const metadata = JSON.parse(draft.metadata_json) as {
+			videoUrl: string;
+			completionInstructions: string;
+		};
+		return context.json({
+			taskKey,
+			purchaseId: purchaseId.toString(),
+			videoUrl: metadata.videoUrl,
+			completionInstructions: metadata.completionInstructions,
 		});
 	});
 

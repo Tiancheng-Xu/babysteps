@@ -12,8 +12,8 @@ import { sepolia } from "wagmi/chains";
 
 import { wagmiConfig } from "../../config/wagmi";
 import {
-	taskMarketplaceAbi,
-	taskMarketplaceAddress,
+	taskMarketplaceV2Abi,
+	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
@@ -40,14 +40,19 @@ function isValidMetadataUri(value: string) {
 	return normalized.startsWith("ipfs://") || normalized.startsWith("https://");
 }
 
+function isValidMetadataHash(value: string): value is `0x${string}` {
+	return /^0x[0-9a-fA-F]{64}$/u.test(value.trim());
+}
+
 export function useProviderTaskCreation(
-	marketplaceContractAddress: Address | undefined = taskMarketplaceAddress,
+	marketplaceContractAddress: Address | undefined = taskMarketplaceV2Address,
 ) {
 	const { address, chainId, isConnected } = useAccount();
 	const { switchChainAsync } = useSwitchChain();
 	const { writeContractAsync } = useWriteContract();
 	const [activity, setActivity] = useState<ProviderActivity>("walk");
 	const [metadataUri, setMetadataUri] = useState("");
+	const [metadataHash, setMetadataHash] = useState("");
 	const [transactionHash, setTransactionHash] = useState<Hash>();
 	const [transactionPhase, setTransactionPhase] =
 		useState<
@@ -68,7 +73,7 @@ export function useProviderTaskCreation(
 	});
 	const roleRead = useReadContract({
 		address: marketplaceContractAddress,
-		abi: taskMarketplaceAbi,
+		abi: taskMarketplaceV2Abi,
 		functionName: "hasRole",
 		args: address ? [PROVIDER_ROLE, address] : undefined,
 		chainId: sepolia.id,
@@ -100,8 +105,9 @@ export function useProviderTaskCreation(
 		confirmedHashRef.current = transactionHash;
 		pendingRef.current = false;
 		setMetadataUri("");
+		setMetadataHash("");
 		setTransactionPhase("success");
-		setTransactionMessage("任务创建已确认，正在等待 Chainlink VRF 激活。");
+		setTransactionMessage("任务申请已确认，正在等待 Owner 审核。");
 	}, [receipt.isSuccess, transactionHash]);
 
 	const hasProviderRole = roleRead.data === true;
@@ -125,6 +131,7 @@ export function useProviderTaskCreation(
 		phase === "ready" &&
 		hasProviderRole &&
 		isValidMetadataUri(metadataUri) &&
+		isValidMetadataHash(metadataHash) &&
 		!pendingRef.current;
 
 	const createTask = useCallback(async () => {
@@ -145,9 +152,14 @@ export function useProviderTaskCreation(
 		try {
 			const simulation = await simulateContract(wagmiConfig, {
 				address: marketplaceContractAddress,
-				abi: taskMarketplaceAbi,
-				functionName: "createTask",
-				args: [address, ACTIVITY_VALUES[activity], metadataUri.trim()],
+				abi: taskMarketplaceV2Abi,
+				functionName: "requestTask",
+				args: [
+					address,
+					ACTIVITY_VALUES[activity],
+					metadataUri.trim(),
+					metadataHash.trim() as `0x${string}`,
+				],
 				account: address,
 				chainId: sepolia.id,
 			});
@@ -165,6 +177,7 @@ export function useProviderTaskCreation(
 		address,
 		canSubmit,
 		marketplaceContractAddress,
+		metadataHash,
 		metadataUri,
 		writeContractAsync,
 	]);
@@ -185,6 +198,8 @@ export function useProviderTaskCreation(
 		setActivity,
 		metadataUri,
 		setMetadataUri,
+		metadataHash,
+		setMetadataHash,
 		hasProviderRole,
 		phase,
 		message,

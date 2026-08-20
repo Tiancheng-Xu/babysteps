@@ -194,15 +194,12 @@ export function useTaskPurchase(
 
 	let phase: TaskPurchasePhase = "unavailable";
 	if (transactionPhase) phase = transactionPhase;
-	else if (
-		!contractsConfigured ||
-		walletState !== "ready" ||
-		task.state !== "active"
-	) {
+	else if (!contractsConfigured || walletState !== "ready") {
 		phase = "unavailable";
 	} else if (readsFailed) phase = "read-error";
 	else if (readsPending || allowance === undefined) phase = "loading";
 	else if (hasPurchased) phase = "purchased";
+	else if (task.state !== "active") phase = "unavailable";
 	else if (allowance >= task.price) phase = "ready-to-buy";
 	else phase = "ready-to-approve";
 

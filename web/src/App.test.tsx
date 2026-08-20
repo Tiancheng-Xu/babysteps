@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
 	useNotebook: vi.fn(),
 	usePointTransfer: vi.fn(),
 	useProviderTaskCreation: vi.fn(),
+	useOwnerTaskReview: vi.fn(),
 	useSwitchChain: vi.fn(),
 	useUniswapSwap: vi.fn(),
 	transfer: vi.fn(),
@@ -56,6 +57,10 @@ vi.mock("./features/marketplace/useMarketplace", () => ({
 
 vi.mock("./features/provider/useProviderTaskCreation", () => ({
 	useProviderTaskCreation: mocks.useProviderTaskCreation,
+}));
+
+vi.mock("./features/provider/useOwnerTaskReview", () => ({
+	useOwnerTaskReview: mocks.useOwnerTaskReview,
 }));
 
 vi.mock("./features/growth/usePointTransfer", () => ({
@@ -194,6 +199,8 @@ describe("BabySteps App", () => {
 			setActivity: vi.fn(),
 			metadataUri: "",
 			setMetadataUri: vi.fn(),
+			metadataHash: "",
+			setMetadataHash: vi.fn(),
 			hasProviderRole: false,
 			phase: "unavailable",
 			message: undefined,
@@ -202,6 +209,21 @@ describe("BabySteps App", () => {
 			transactionHash: undefined,
 			createTask: vi.fn(),
 			switchToSepolia: vi.fn(),
+		});
+		mocks.useOwnerTaskReview.mockReturnValue({
+			taskId: "",
+			setTaskId: vi.fn(),
+			rejectionReason: "",
+			setRejectionReason: vi.fn(),
+			isOwner: false,
+			phase: "unavailable",
+			message: undefined,
+			transactionHash: undefined,
+			canApprove: false,
+			canReject: false,
+			isPending: false,
+			approve: vi.fn(),
+			reject: vi.fn(),
 		});
 		mocks.useNotebook.mockImplementation(() => notebookState);
 		mocks.usePointTransfer.mockImplementation(() => transferState);

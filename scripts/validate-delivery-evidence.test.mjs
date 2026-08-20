@@ -59,6 +59,18 @@ import renderingArchitecture from "../../../docs/architecture/starbuddy-renderin
 import renderingSequence from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import renderingDesktop from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobile from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
+import productClosureDesktop from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
+import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
+<section>
+  <p>WEB3 PRODUCT CLOSURE · LOCAL VERIFIED</p>
+  <p>Provider requestTask → Owner approve/reject → VRF</p>
+  <p>会话 + purchaseIdForBuyer 双门禁</p>
+  <p>D1 证据申请 → Owner 钱包 → confirmCompletion → SBT</p>
+  <p>本地闭环通过 · 云端待发布</p>
+  <img src={productClosureDesktop} alt="Web3 产品闭环 Evidence 桌面端本地验证" />
+  <img src={providerConsoleMobile} alt="Provider 与 Owner 控制台 390 像素本地验证" />
+  <p>只读状态不冒充钱包角色或链上交易成功</p>
+</section>
 <section>
   <h2>边缘渲染与故障降级</h2>
   <p>边缘 SSR → 精确水合 → 纯 CSR 降级</p>
@@ -110,6 +122,24 @@ import renderingMobile from "../../../docs/evidence/screenshots/2026-08-14-rende
 `;
 
 const validAssetFacts = [
+	{
+		path: "docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png",
+		exists: true,
+		bytes: 567722,
+		sha256: "9da97c7141a2431cc8d8a067a1f59d8d150d54217a9b782837153f6cad1abe65",
+		width: 0,
+		height: 0,
+		text: "",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png",
+		exists: true,
+		bytes: 297645,
+		sha256: "50063a6c93420227d9b5441ff598a828b374c62926a14d2d74ecdb07ef60edb1",
+		width: 0,
+		height: 0,
+		text: "",
+	},
 	{
 		path: "docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png",
 		exists: true,
@@ -225,10 +255,10 @@ const validAssetFacts = [
 				<text>Provider 上架与 Owner 审核</text><text>家长购买结算</text>
 				<text>成长任务完成与证书</text><text>签名过期</text><text>滑点 / 余额不足</text>
 				<text>哈希冲突</text><text>VRF pending</text><text>allowance / receipt 失败</text>
-				<text>Relayer 重试</text><text>Graph 延迟</text>
+				<text>purchaseId 唯一</text><text>Graph 延迟</text>
 				<text>Worker verify</text><text>rejectTask</text>
 				<text>Coordinator 回调 Marketplace</text>
-				<text>Relayer → Marketplace.confirmCompletion</text>
+				<text>Owner 授权钱包 → Marketplace.confirmCompletion</text>
 				<text>Marketplace → SBT.mintForPurchase</text><text>RPC 不一致</text>
 				<text>06 纪念卡</text><text>spendTransferable(12)</text>
 				<text>70/22/7/1</text><text>24h recover</text>
@@ -559,11 +589,11 @@ test("rejects a sequence image without all six business phases and bounded failu
 	).join("\n");
 	assert.match(errors, /登录会话/);
 	assert.match(errors, /Uniswap 获得 BABY/);
-	assert.match(errors, /Relayer 重试/);
+	assert.match(errors, /purchaseId 唯一/);
 	assert.match(errors, /Worker verify/);
 	assert.match(errors, /rejectTask/);
 	assert.match(errors, /Coordinator 回调 Marketplace/);
-	assert.match(errors, /Relayer → Marketplace\.confirmCompletion/);
+	assert.match(errors, /Owner 授权钱包 → Marketplace\.confirmCompletion/);
 	assert.match(errors, /Marketplace → SBT\.mintForPurchase/);
 });
 

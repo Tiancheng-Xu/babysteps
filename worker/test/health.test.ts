@@ -6,6 +6,7 @@ const expectedTables = [
 	"audit_logs",
 	"auth_challenges",
 	"comments",
+	"completion_submissions",
 	"performance_rate_limits",
 	"profiles",
 	"published_tasks",
@@ -56,6 +57,26 @@ describe("Worker health and D1 schema", () => {
 			env,
 		);
 		expect(rejected.headers.has("Access-Control-Allow-Origin")).toBe(false);
+	});
+
+	it("allows the profile PUT request through the browser preflight", async () => {
+		const response = await app.request(
+			"/api/profile",
+			{
+				method: "OPTIONS",
+				headers: {
+					Origin: "https://babysteps.baby2b.online",
+					"Access-Control-Request-Method": "PUT",
+					"Access-Control-Request-Headers": "content-type",
+				},
+			},
+			env,
+		);
+
+		expect(response.status).toBe(204);
+		expect(response.headers.get("Access-Control-Allow-Methods")).toContain(
+			"PUT",
+		);
 	});
 
 	it("applies all initial tables and critical indexes", async () => {

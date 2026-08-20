@@ -52,6 +52,32 @@ describe("web3 contract configuration", () => {
 		expect(
 			encodeFunctionData({
 				abi: taskMarketplaceV2Abi,
+				functionName: "requestTask",
+				args: [
+					"0x1111111111111111111111111111111111111111",
+					1,
+					"ipfs://task-1",
+					`0x${"1".repeat(64)}`,
+				],
+			}),
+		).toMatch(/^0x/u);
+		expect(
+			encodeFunctionData({
+				abi: taskMarketplaceV2Abi,
+				functionName: "approveTask",
+				args: [1n],
+			}),
+		).toMatch(/^0x/u);
+		expect(
+			encodeFunctionData({
+				abi: taskMarketplaceV2Abi,
+				functionName: "rejectTask",
+				args: [1n, `0x${"2".repeat(64)}`],
+			}),
+		).toMatch(/^0x/u);
+		expect(
+			encodeFunctionData({
+				abi: taskMarketplaceV2Abi,
 				functionName: "getTask",
 				args: [1n],
 			}),

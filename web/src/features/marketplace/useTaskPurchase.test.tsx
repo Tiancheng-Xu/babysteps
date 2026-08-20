@@ -223,4 +223,12 @@ describe("useTaskPurchase", () => {
 		expect(mocks.switchChainAsync).toHaveBeenCalledWith({ chainId: 11155111 });
 		expect(mocks.simulateContract).not.toHaveBeenCalled();
 	});
+
+	it("keeps purchased learning content available after the task closes", () => {
+		purchased = 9n;
+		const { result } = renderHook(() =>
+			useTaskPurchase({ ...task, state: "expired" }, babyCoin, marketplace),
+		);
+		expect(result.current.phase).toBe("purchased");
+	});
 });
