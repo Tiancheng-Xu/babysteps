@@ -1,3 +1,5 @@
+import { OwnerCompletionReviewPanel } from "../features/provider/OwnerCompletionReviewPanel";
+import { useOwnerTaskReview } from "../features/provider/useOwnerTaskReview";
 import type { ProviderActivity } from "../features/provider/useProviderTaskCreation";
 import { useProviderTaskCreation } from "../features/provider/useProviderTaskCreation";
 
@@ -5,15 +7,16 @@ const EXPLORER_TX_BASE = "https://sepolia.etherscan.io/tx/";
 
 export function ProviderConsolePage() {
 	const provider = useProviderTaskCreation();
+	const owner = useOwnerTaskReview();
 	const fieldsEnabled = provider.phase === "ready" && provider.hasProviderRole;
 	const buttonLabel = provider.isPending
 		? provider.phase === "awaiting-signature"
 			? "请确认创建"
 			: "创建确认中"
 		: provider.canSubmit
-			? "创建并请求 VRF"
+			? "提交 Owner 审核"
 			: provider.isConfigured
-				? "填写有效元数据后创建"
+				? "填写 URI 与哈希后提交"
 				: "等待市场合约部署";
 
 	return (
@@ -63,6 +66,15 @@ export function ProviderConsolePage() {
 						disabled={!fieldsEnabled}
 						value={provider.metadataUri}
 						onChange={(event) => provider.setMetadataUri(event.target.value)}
+					/>
+					<label htmlFor="provider-task-hash">D1 元数据哈希</label>
+					<input
+						id="provider-task-hash"
+						type="text"
+						placeholder="0x…（64 位十六进制）"
+						disabled={!fieldsEnabled}
+						value={provider.metadataHash}
+						onChange={(event) => provider.setMetadataHash(event.target.value)}
 					/>
 					<button
 						type="submit"
@@ -116,11 +128,11 @@ export function ProviderConsolePage() {
 						</li>
 						<li>
 							<strong>2</strong>
-							<span>等待 VRF 返回两个随机数</span>
+							<span>Owner 核对元数据并审核</span>
 						</li>
 						<li>
 							<strong>3</strong>
-							<span>价格和开放时长锁定</span>
+							<span>VRF 返回随机价格与开放时长</span>
 						</li>
 						<li>
 							<strong>4</strong>
@@ -129,6 +141,75 @@ export function ProviderConsolePage() {
 					</ol>
 				</section>
 			</div>
+
+			<section
+				className="provider-form-card"
+				aria-labelledby="owner-review-heading"
+			>
+				<div className="marketplace-task-card__heading">
+					<span>OWNER REVIEW</span>
+					<strong>{owner.isOwner ? "Owner 已验证" : "只读"}</strong>
+				</div>
+				<h2 id="owner-review-heading">任务审核</h2>
+				<p>输入链上待审任务 ID；批准后才会请求 VRF，拒绝原因只上链保存哈希。</p>
+				<label htmlFor="owner-review-task-id">待审任务 ID</label>
+				<input
+					id="owner-review-task-id"
+					inputMode="numeric"
+					value={owner.taskId}
+					onChange={(event) => owner.setTaskId(event.target.value)}
+					disabled={!owner.isOwner || owner.isPending}
+				/>
+				<label htmlFor="owner-rejection-reason">拒绝原因（拒绝时必填）</label>
+				<textarea
+					id="owner-rejection-reason"
+					maxLength={200}
+					value={owner.rejectionReason}
+					onChange={(event) => owner.setRejectionReason(event.target.value)}
+					disabled={!owner.isOwner || owner.isPending}
+				/>
+				<div className="button-row">
+					<button
+						type="button"
+						className="button button--web3"
+						disabled={!owner.canApprove || owner.isPending}
+						onClick={() => void owner.approve()}
+					>
+						批准并请求 VRF
+					</button>
+					<button
+						type="button"
+						className="button button--secondary"
+						disabled={!owner.canReject || owner.isPending}
+						onClick={() => void owner.reject()}
+					>
+						拒绝任务
+					</button>
+				</div>
+				{owner.message ? (
+					<div
+						className={
+							owner.phase === "error"
+								? "transaction-panel transaction-panel--error"
+								: "transaction-panel"
+						}
+						role={owner.phase === "error" ? "alert" : "status"}
+					>
+						{owner.message}
+					</div>
+				) : null}
+				{owner.transactionHash ? (
+					<a
+						className="explorer-link"
+						href={`${EXPLORER_TX_BASE}${owner.transactionHash}`}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看审核交易
+					</a>
+				) : null}
+			</section>
+			<OwnerCompletionReviewPanel />
 		</section>
 	);
 }

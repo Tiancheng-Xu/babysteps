@@ -10,6 +10,8 @@ import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
+import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
+import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -301,6 +303,105 @@ export function EvidencePage() {
 				</section>
 			</section>
 
+			<section
+				className="evidence-feature-proof"
+				aria-labelledby="web3-product-closure-title"
+			>
+				<header className="evidence-feature-proof__header">
+					<div>
+						<p className="section-kicker">
+							WEB3 PRODUCT CLOSURE · LOCAL VERIFIED
+						</p>
+						<h2 id="web3-product-closure-title">
+							上架、内容解锁与任务完成证书入口
+						</h2>
+					</div>
+					<span className="evidence-diagram-card__status">
+						本地闭环通过 · 云端待发布
+					</span>
+				</header>
+				<p className="evidence-feature-proof__lead">
+					Provider 改为 V2 requestTask，Owner
+					钱包负责审核；公共任务详情不再返回视频，只有签名会话和链上购买事实同时成立时才能解锁。家长提交任务完成说明后，Owner
+					把同一 evidence hash 写入 Sepolia，Marketplace 再按 purchaseId
+					幂等铸造锁定 SBT。
+				</p>
+				<section
+					className="evidence-requirement-map"
+					aria-label="Web3 产品闭环实现映射"
+				>
+					<h3>要求、实现与证据映射</h3>
+					<div>
+						<article>
+							<strong>上架审核</strong>
+							<span>Provider requestTask → Owner approve/reject → VRF</span>
+							<strong>代码位置</strong>
+							<code>web/src/features/provider</code>
+							<strong>验证证据</strong>
+							<span>Provider/Owner Hook 与 ABI 测试通过</span>
+							<strong>当前状态</strong>
+							<span>本地已验证；Preview/production 待发布</span>
+						</article>
+						<article>
+							<strong>购买后解锁</strong>
+							<span>公开视频脱敏；会话 + purchaseIdForBuyer 双门禁</span>
+							<strong>代码位置</strong>
+							<code>worker/src/routes/tasks.ts · TaskLearningPanel.tsx</code>
+							<strong>验证证据</strong>
+							<span>未登录、未购买、RPC 失败和已购路径均有测试</span>
+							<strong>当前状态</strong>
+							<span>本地已验证；D1 migration 待云端应用</span>
+						</article>
+						<article>
+							<strong>任务完成与证书</strong>
+							<span>D1 证据申请 → Owner 钱包 → confirmCompletion → SBT</span>
+							<strong>代码位置</strong>
+							<code>
+								worker/src/routes/completions.ts ·
+								OwnerCompletionReviewPanel.tsx
+							</code>
+							<strong>验证证据</strong>
+							<span>Worker 62/62、Web 226/226；旧链上 SBT #1 已验证</span>
+							<strong>当前状态</strong>
+							<span>入口已实现；生产钱包角色与新交易待验证</span>
+						</article>
+					</div>
+				</section>
+				<section
+					className="evidence-screenshot-grid"
+					aria-label="Web3 产品闭环本地响应式截图"
+				>
+					<figure>
+						<img
+							src={productClosureDesktopImage}
+							alt="Web3 产品闭环 Evidence 桌面端本地验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里</strong>：1440
+							像素下三列映射、状态标签与中英文代码路径均完整换行。
+							<br />
+							<strong>证明什么</strong>：新增 Evidence
+							走读真实渲染且无横向溢出；它不代表云端发布已完成。
+						</figcaption>
+					</figure>
+					<figure>
+						<img
+							src={providerConsoleMobileImage}
+							alt="Provider 与 Owner 控制台 390 像素本地验证"
+							loading="lazy"
+						/>
+						<figcaption>
+							<strong>看哪里</strong>：390 像素下 V2
+							提交、任务审核和任务完成审核按单列排列。
+							<br />
+							<strong>证明什么</strong>
+							：产品入口与移动端布局已落地；只读状态不冒充钱包角色或链上交易成功。
+						</figcaption>
+					</figure>
+				</section>
+			</section>
+
 			<section className="evidence-diagrams" aria-label="架构与关键业务流程">
 				<article
 					className="evidence-diagram-card"
@@ -393,8 +494,8 @@ export function EvidencePage() {
 						<p>
 							<strong>证明什么</strong>
 							登录签名、Uniswap swap、任务 VRF、精确 approve → buy →
-							transferFrom、完成 Relayer、纪念卡 VRF 与两类 SBT
-							都有明确责任方；失败不会伪造会话、余额、购买或证书。
+							transferFrom、Owner 任务完成确认（可替换 KMS Relayer）、纪念卡 VRF
+							与两类 SBT 都有明确责任方；失败不会伪造会话、余额、购买或证书。
 						</p>
 					</div>
 					<a
@@ -855,7 +956,10 @@ export function EvidencePage() {
 					</div>
 					<div className="verification-summary">
 						<strong>仍待外部闭环</strong>
-						<span>Privy 登录 UI 与可选 IPFS pin</span>
+						<span>
+							新版 Worker/D1 migration、Owner 任务完成角色、新 UI 与可选 IPFS
+							pin
+						</span>
 					</div>
 				</section>
 			</div>

@@ -15,6 +15,7 @@ import {
 	createCommentRoutes,
 	type OwnerWalletFactory,
 } from "./routes/comments";
+import { createCompletionRoutes } from "./routes/completions";
 import { profileRoutes } from "./routes/profile";
 import { createTaskRoutes } from "./routes/tasks";
 
@@ -93,6 +94,10 @@ export function createApp(_dependencies: AppDependencies = {}) {
 	application.route(
 		"/api",
 		createCommentRoutes(marketplaceReaderFactory, ownerWalletFactory),
+	);
+	application.route(
+		"/api",
+		createCompletionRoutes(marketplaceReaderFactory, ownerWalletFactory),
 	);
 
 	application.onError((error, context) => {
