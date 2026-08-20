@@ -310,14 +310,14 @@ export function EvidencePage() {
 				<header className="evidence-feature-proof__header">
 					<div>
 						<p className="section-kicker">
-							WEB3 PRODUCT CLOSURE · LOCAL VERIFIED
+							WEB3 PRODUCT CLOSURE · CLOUDFLARE DEPLOYED
 						</p>
 						<h2 id="web3-product-closure-title">
 							上架、内容解锁与任务完成证书入口
 						</h2>
 					</div>
 					<span className="evidence-diagram-card__status">
-						本地闭环通过 · 云端待发布
+						Cloudflare 已发布 · 新链上交易待验证
 					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
@@ -340,7 +340,7 @@ export function EvidencePage() {
 							<strong>验证证据</strong>
 							<span>Provider/Owner Hook 与 ABI 测试通过</span>
 							<strong>当前状态</strong>
-							<span>本地已验证；Preview/production 待发布</span>
+							<span>UI 已发布；生产 Provider/Owner 新交易待验证</span>
 						</article>
 						<article>
 							<strong>购买后解锁</strong>
@@ -350,7 +350,7 @@ export function EvidencePage() {
 							<strong>验证证据</strong>
 							<span>未登录、未购买、RPC 失败和已购路径均有测试</span>
 							<strong>当前状态</strong>
-							<span>本地已验证；D1 migration 待云端应用</span>
+							<span>Worker #4 与 D1 0001–0003 已发布；已购回读待验证</span>
 						</article>
 						<article>
 							<strong>任务完成与证书</strong>
@@ -361,9 +361,9 @@ export function EvidencePage() {
 								OwnerCompletionReviewPanel.tsx
 							</code>
 							<strong>验证证据</strong>
-							<span>Worker 62/62、Web 226/226；旧链上 SBT #1 已验证</span>
+							<span>Worker 62/62、Web 226/226；生产无会话请求为 401</span>
 							<strong>当前状态</strong>
-							<span>入口已实现；生产钱包角色与新交易待验证</span>
+							<span>D1/Worker 已发布；生产已购提交与新交易待验证</span>
 						</article>
 					</div>
 				</section>
@@ -382,7 +382,8 @@ export function EvidencePage() {
 							像素下三列映射、状态标签与中英文代码路径均完整换行。
 							<br />
 							<strong>证明什么</strong>：新增 Evidence
-							走读真实渲染且无横向溢出；它不代表云端发布已完成。
+							走读真实渲染且无横向溢出；云端发布另由 Worker #4、D1 migration 与
+							HTTP 结果证明。
 						</figcaption>
 					</figure>
 					<figure>

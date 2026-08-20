@@ -4,11 +4,11 @@
 
 ## 当前边界
 
-- 浏览器：React、外部钱包；Privy 邮箱入口仍待接入。
-- Cloudflare：Pages 已有历史上线证据；Worker/D1 已完成本地实现，远程待部署。
-- Sepolia：V1 BabyCoin、Marketplace 和 VRF 闭环已有交易证据；V2 审核、幂等完成和 ERC-5192 已本地验证，待部署。
+- 浏览器：React、Privy Google/邮箱/外部钱包与签名会话已接入；需要钱包角色的生产写交易仍逐项验收。
+- Cloudflare：Pages 已发布 commit `de107c2`；Worker #4 与 D1 migrations `0001`–`0003` 已发布，健康、鉴权边界和 CORS 已通过生产 HTTP 验收。
+- Sepolia：V1 与 V2 的 Provider/Owner/VRF、购买、幂等完成和 ERC-5192 闭环均已有真实交易证据；本批产品入口尚未发送新的完成确认交易。
 - AWS：隔离 VPC、两条私有子网、私有 RDS、Readiness/自动停库 Lambda、EventBridge、GitHub OIDC、私有 S3 与 CodeBuild 已真实部署；Runtime Stack 为 `CREATE_COMPLETE`，RDS 为 `stopped`。API Gateway、NAT/EIP、KMS、Secrets 和生产 Relayer 明确延后。
-- 读取：公共 RPC 有历史证据；ethers.js 三源对照与 The Graph 仍待实现。
+- 读取：公共 RPC、Infura、Alchemy 三源对照一致；The Graph Studio 已同步并通过真实 GraphQL 回读。
 
 ## 核心数据流
 
