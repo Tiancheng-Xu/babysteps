@@ -58,6 +58,26 @@ describe("Worker health and D1 schema", () => {
 		expect(rejected.headers.has("Access-Control-Allow-Origin")).toBe(false);
 	});
 
+	it("allows the profile PUT request through the browser preflight", async () => {
+		const response = await app.request(
+			"/api/profile",
+			{
+				method: "OPTIONS",
+				headers: {
+					Origin: "https://babysteps.baby2b.online",
+					"Access-Control-Request-Method": "PUT",
+					"Access-Control-Request-Headers": "content-type",
+				},
+			},
+			env,
+		);
+
+		expect(response.status).toBe(204);
+		expect(response.headers.get("Access-Control-Allow-Methods")).toContain(
+			"PUT",
+		);
+	});
+
 	it("applies all initial tables and critical indexes", async () => {
 		const tables = await env.DB.prepare(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' AND name <> 'd1_migrations' ORDER BY name",

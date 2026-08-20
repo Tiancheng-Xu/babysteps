@@ -39,7 +39,7 @@ export function createApp(_dependencies: AppDependencies = {}) {
 				const allowedOrigin = new URL(readConfig(context.env).uri).origin;
 				return origin === allowedOrigin ? origin : null;
 			},
-			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: ["Content-Type"],
 			credentials: true,
 			maxAge: 86_400,
