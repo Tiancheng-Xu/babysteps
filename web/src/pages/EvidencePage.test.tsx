@@ -72,4 +72,15 @@ describe("EvidencePage", () => {
 		).toBeGreaterThan(0);
 		expect(screen.queryByText("Sepolia 待部署")).toBeNull();
 	});
+
+	it("shows the deployed Cloudflare product closure without claiming new wallet transactions", () => {
+		render(<EvidencePage />);
+
+		expect(
+			screen.getByText("Cloudflare 已发布 · 新链上交易待验证"),
+		).toBeTruthy();
+		expect(screen.getByText(/Worker #4 与 D1 0001–0003 已发布/u)).toBeTruthy();
+		expect(screen.getByText(/生产无会话请求为 401/u)).toBeTruthy();
+		expect(screen.queryByText("本地闭环通过 · 云端待发布")).toBeNull();
+	});
 });

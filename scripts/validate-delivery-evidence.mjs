@@ -269,11 +269,13 @@ const expectedDiagramAssets = [
 	},
 ];
 const evidencePageMarkers = [
-	"WEB3 PRODUCT CLOSURE · LOCAL VERIFIED",
+	"WEB3 PRODUCT CLOSURE · CLOUDFLARE DEPLOYED",
 	"Provider requestTask → Owner approve/reject → VRF",
 	"会话 + purchaseIdForBuyer 双门禁",
 	"D1 证据申请 → Owner 钱包 → confirmCompletion → SBT",
-	"本地闭环通过 · 云端待发布",
+	"Cloudflare 已发布 · 新链上交易待验证",
+	"Worker #4 与 D1 0001–0003 已发布",
+	"生产无会话请求为 401",
 	"Web3 产品闭环 Evidence 桌面端本地验证",
 	"Provider 与 Owner 控制台 390 像素本地验证",
 	"只读状态不冒充钱包角色或链上交易成功",

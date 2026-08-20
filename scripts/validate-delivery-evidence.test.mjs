@@ -62,11 +62,13 @@ import renderingMobile from "../../../docs/evidence/screenshots/2026-08-14-rende
 import productClosureDesktop from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
 import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
 <section>
-  <p>WEB3 PRODUCT CLOSURE · LOCAL VERIFIED</p>
+  <p>WEB3 PRODUCT CLOSURE · CLOUDFLARE DEPLOYED</p>
   <p>Provider requestTask → Owner approve/reject → VRF</p>
   <p>会话 + purchaseIdForBuyer 双门禁</p>
   <p>D1 证据申请 → Owner 钱包 → confirmCompletion → SBT</p>
-  <p>本地闭环通过 · 云端待发布</p>
+  <p>Cloudflare 已发布 · 新链上交易待验证</p>
+  <p>Worker #4 与 D1 0001–0003 已发布；已购回读待验证</p>
+  <p>生产无会话请求为 401</p>
   <img src={productClosureDesktop} alt="Web3 产品闭环 Evidence 桌面端本地验证" />
   <img src={providerConsoleMobile} alt="Provider 与 Owner 控制台 390 像素本地验证" />
   <p>只读状态不冒充钱包角色或链上交易成功</p>
