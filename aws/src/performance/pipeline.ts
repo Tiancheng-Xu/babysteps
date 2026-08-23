@@ -16,6 +16,24 @@ const performanceCategories = [
 
 const performanceOutcomes = ["success", "failure", "unavailable"] as const;
 
+const web3OperationNames = [
+	"contract.read",
+	"contract.write",
+	"web3.uniswap.quote",
+	"web3.uniswap.swap",
+	"web3.privy.login",
+	"wallet.connect",
+	"auth.challenge",
+	"auth.sign",
+	"auth.verify",
+	"rpc.read",
+	"web3.rpc.read",
+	"approve.submit",
+	"approve.receipt",
+	"transaction.submit",
+	"transaction.receipt",
+] as const;
+
 const allowedEventNames = {
 	metric: new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]),
 	resource: new Set([
@@ -58,21 +76,8 @@ const allowedEventNames = {
 		"hydration.recoverable_error",
 	]),
 	web3: new Set([
-		"contract.read",
-		"contract.write",
-		"web3.uniswap.quote",
-		"web3.uniswap.swap",
-		"web3.privy.login",
-		"wallet.connect",
-		"auth.challenge",
-		"auth.sign",
-		"auth.verify",
-		"rpc.read",
-		"web3.rpc.read",
-		"approve.submit",
-		"approve.receipt",
-		"transaction.submit",
-		"transaction.receipt",
+		...web3OperationNames,
+		...web3OperationNames.map((name) => `${name}.error`),
 	]),
 } as const;
 

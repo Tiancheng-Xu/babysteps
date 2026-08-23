@@ -53,6 +53,9 @@ describe("performance ingest", () => {
 			),
 		).not.toThrow();
 		expect(() =>
+			parsePerformanceBatch(batch("web3", "contract.write.error", "ms")),
+		).not.toThrow();
+		expect(() =>
 			parsePerformanceBatch(
 				batch("resource", "https://private.example/a?token=x", "ms"),
 			),
@@ -74,9 +77,7 @@ describe("performance ingest", () => {
 			),
 		).toThrow();
 		expect(() =>
-			parsePerformanceBatch(
-				batch("error", "error.javascript.user@example", "count"),
-			),
+			parsePerformanceBatch(batch("error", "javascript.alice_smith", "count")),
 		).toThrow();
 	});
 
