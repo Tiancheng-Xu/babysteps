@@ -17,3 +17,13 @@ export function normalizeRoute(value: string): string {
 export function safeMetricName(value: string): string {
 	return value.replace(/[^a-z0-9._-]/giu, "_").slice(0, 64) || "unknown";
 }
+
+export function classifyErrorCategory(
+	value: unknown,
+): "type_error" | "network" | "timeout" | "unknown" {
+	const message = value instanceof Error ? value.message : String(value ?? "");
+	if (/typeerror/iu.test(message)) return "type_error";
+	if (/network|failed to fetch|load failed/iu.test(message)) return "network";
+	if (/timeout|timed out/iu.test(message)) return "timeout";
+	return "unknown";
+}

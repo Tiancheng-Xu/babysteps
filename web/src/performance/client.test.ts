@@ -82,6 +82,74 @@ describe("performance client", () => {
 		expect(bodies.join("\n")).toContain("LCP");
 	});
 
+	it("drops a client-error batch instead of retaining it", async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(new Response(null, { status: 400 }));
+		const client = createPerformanceClient({
+			environment: "production",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+		});
+		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
+
+		await client.flush();
+		await client.flush();
+
+		expect(fetcher).toHaveBeenCalledOnce();
+	});
+
+	it("retries throttled or server-error batches no more than three times", async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(new Response(null, { status: 503 }));
+		const client = createPerformanceClient({
+			environment: "production",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+		});
+		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
+
+		await client.flush();
+		await client.flush();
+		await client.flush();
+		await client.flush();
+
+		expect(fetcher).toHaveBeenCalledTimes(3);
+	});
+
+	it("sends high-priority vital events before resource backlog", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		client.record({
+			type: "resource",
+			name: "resource.image.duration",
+			value: 10,
+			unit: "ms",
+			category: "image",
+		});
+		client.record({ type: "metric", name: "LCP", value: 20, unit: "ms" });
+
+		await client.flush();
+
+		expect(JSON.parse(sent[0] ?? "").events[0]).toMatchObject({
+			name: "LCP",
+		});
+	});
+
 	it("samples, rate-limits, batches and flushes on a timer", async () => {
 		vi.useFakeTimers();
 		const sent: string[] = [];
@@ -122,10 +190,6 @@ describe("performance client", () => {
 			},
 			fetcher: vi.fn(),
 			random: () => 0,
-			now: (() => {
-				let current = 100;
-				return () => (current += 25);
-			})(),
 		});
 
 		await expect(

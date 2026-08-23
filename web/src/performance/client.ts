@@ -1,4 +1,11 @@
-import { normalizeRoute, safeMetricName } from "./sanitize";
+import { createLongTaskObserver } from "./longTasks";
+import { collectNavigationEvents } from "./navigation";
+import { classifyResource } from "./resources";
+import {
+	classifyErrorCategory,
+	normalizeRoute,
+	safeMetricName,
+} from "./sanitize";
 import type {
 	PerformanceBatch,
 	PerformanceClient,
@@ -18,9 +25,10 @@ type ClientOptions = {
 	beacon?: (url: string, data: BodyInit) => boolean;
 	fetcher?: typeof fetch;
 	random?: () => number;
-	now?: () => number;
 	loadWebVitals?: () => Promise<typeof import("web-vitals")>;
 };
+
+type QueuedEvent = PerformanceEvent & { retries: number };
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 
@@ -33,38 +41,59 @@ export function createPerformanceClient(
 	const batchSize = options.batchSize ?? 20;
 	const flushIntervalMs = options.flushIntervalMs ?? 5_000;
 	const random = options.random ?? Math.random;
-	const now = options.now ?? Date.now;
 	const route = options.route ?? (() => globalThis.location?.href ?? "/");
 	const beacon =
 		options.beacon ??
 		((url, data) => globalThis.navigator?.sendBeacon?.(url, data) ?? false);
 	const fetcher = options.fetcher ?? globalThis.fetch?.bind(globalThis);
 	const loadWebVitals = options.loadWebVitals ?? (() => import("web-vitals"));
-	const queue: PerformanceEvent[] = [];
-	let minuteStartedAt = now();
+	const highPriority: QueuedEvent[] = [];
+	const lowPriority: QueuedEvent[] = [];
+	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
 	let timer: ReturnType<typeof setInterval> | undefined;
-	let observers: PerformanceObserver[] = [];
+	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
 	let started = false;
-	const onError = () =>
+	const isHighPriority = (event: PerformanceEventInput) =>
+		event.type === "metric" || event.type === "error" || event.type === "web3";
+	const queueSize = () => highPriority.length + lowPriority.length;
+	const enqueue = (event: QueuedEvent) =>
+		(isHighPriority(event) ? highPriority : lowPriority).push(event);
+	const dequeue = () => {
+		const queue = highPriority.length > 0 ? highPriority : lowPriority;
+		return queue.splice(0, batchSize);
+	};
+	const requeue = (events: QueuedEvent[]) => {
+		for (const event of [...events].reverse()) {
+			const queue = isHighPriority(event) ? highPriority : lowPriority;
+			queue.unshift(event);
+		}
+	};
+	const onError = (event: ErrorEvent) => {
+		const category = classifyErrorCategory(event.error ?? event.message);
 		record({
 			type: "error",
-			name: "javascript.error",
+			name: `error.javascript.${category}`,
 			value: 1,
 			unit: "count",
+			category,
 		});
-	const onUnhandledRejection = () =>
+	};
+	const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+		const category = classifyErrorCategory(event.reason);
 		record({
 			type: "error",
-			name: "promise.rejection",
+			name: `error.promise.${category}`,
 			value: 1,
 			unit: "count",
+			category,
 		});
-	const onPageHide = () => void flush();
+	};
+	const onPageHide = () => void flushAll();
 
 	const record = (input: PerformanceEventInput) => {
 		try {
-			const current = now();
+			const current = Date.now();
 			if (current - minuteStartedAt >= 60_000) {
 				minuteStartedAt = current;
 				minuteCount = 0;
@@ -72,7 +101,7 @@ export function createPerformanceClient(
 			if (random() >= sampleRate || minuteCount >= maxEventsPerMinute) return;
 			if (!Number.isFinite(input.value)) return;
 			minuteCount += 1;
-			queue.push({
+			enqueue({
 				...input,
 				name: safeMetricName(input.name),
 				eventId: crypto.randomUUID(),
@@ -80,19 +109,21 @@ export function createPerformanceClient(
 				route: normalizeRoute(route()),
 				environment: options.environment.slice(0, 32),
 				version: options.version.slice(0, 64),
+				retries: 0,
 			});
-			if (queue.length >= batchSize) void flush();
+			if (queueSize() >= batchSize) void flush();
 		} catch {
 			// Telemetry is best-effort and must never break the host application.
 		}
 	};
 
 	const flush = async () => {
-		if (queue.length === 0) return;
-		const events = queue.splice(0, batchSize);
+		if (queueSize() === 0) return;
+		const queued = dequeue();
+		const events = queued.map(({ retries: _retries, ...event }) => event);
 		const payload: PerformanceBatch = {
 			schemaVersion: 2,
-			sentAt: now(),
+			sentAt: Date.now(),
 			events,
 		};
 		const body = JSON.stringify(payload);
@@ -105,11 +136,33 @@ export function createPerformanceClient(
 				keepalive: true,
 				credentials: "omit",
 			});
-			if (response && !response.ok) queue.unshift(...events);
+			if (!response || response.ok) return;
+			if (
+				response.status >= 400 &&
+				response.status < 500 &&
+				response.status !== 429
+			)
+				return;
+			if (response.status === 429 || response.status >= 500) {
+				const retryable = queued
+					.map((event) => ({ ...event, retries: event.retries + 1 }))
+					.filter((event) => event.retries < 3);
+				requeue(retryable);
+				if (retryable.length > 0) {
+					setTimeout(() => void flush(), 2 ** retryable[0].retries * 100);
+				}
+			}
 		} catch {
-			queue.unshift(...events);
+			const retryable = queued
+				.map((event) => ({ ...event, retries: event.retries + 1 }))
+				.filter((event) => event.retries < 3);
+			requeue(retryable);
 			// Deliberately silent: performance reporting cannot fail the product flow.
 		}
+	};
+
+	const flushAll = async () => {
+		while (queueSize() > 0) await flush();
 	};
 
 	const observe = (
@@ -143,15 +196,23 @@ export function createPerformanceClient(
 				onTTFB(report("TTFB", "ms"));
 			})
 			.catch(() => undefined);
-		observe("resource", (entry) => {
-			if (!entry.name.includes("/api/performance/"))
-				record({
-					type: "resource",
-					name: "resource.duration",
-					value: entry.duration,
-					unit: "ms",
-				});
+		observe("navigation", (entry) => {
+			for (const event of collectNavigationEvents(
+				entry as PerformanceNavigationTiming,
+			))
+				record(event);
 		});
+		observe("resource", (entry) => {
+			const origin = globalThis.location?.origin ?? "https://babysteps.invalid";
+			if (entry.name === new URL(endpoint, origin).href) return;
+			const event = classifyResource(
+				entry as PerformanceResourceTiming,
+				origin,
+			);
+			if (event) record(event);
+		});
+		const longTaskObserver = createLongTaskObserver(record);
+		if (longTaskObserver) observers.push(longTaskObserver);
 		globalThis.addEventListener?.("error", onError);
 		globalThis.addEventListener?.("unhandledrejection", onUnhandledRejection);
 		globalThis.addEventListener?.("pagehide", onPageHide);
@@ -175,16 +236,21 @@ export function createPerformanceClient(
 		name: string,
 		operation: () => Promise<T>,
 	) => {
-		const startedAt = now();
+		const startedAt = performance.now();
 		try {
 			const result = await operation();
-			record({ type: "web3", name, value: now() - startedAt, unit: "ms" });
+			record({
+				type: "web3",
+				name,
+				value: performance.now() - startedAt,
+				unit: "ms",
+			});
 			return result;
 		} catch (error) {
 			record({
 				type: "web3",
 				name: `${name}.error`,
-				value: now() - startedAt,
+				value: performance.now() - startedAt,
 				unit: "ms",
 			});
 			throw error;
