@@ -83,9 +83,7 @@ describe("EvidencePage", () => {
 	it("separates completed assignment requirements from optional production rechecks", () => {
 		render(<EvidencePage />);
 
-		expect(
-			screen.getByText("核心交付已验证 · 生产增强待复核"),
-		).toBeTruthy();
+		expect(screen.getByText("核心交付已验证 · 生产增强待复核")).toBeTruthy();
 		expect(
 			screen.getByText(/Sepolia Provider → Owner → VRF 已有真实交易/u),
 		).toBeTruthy();
