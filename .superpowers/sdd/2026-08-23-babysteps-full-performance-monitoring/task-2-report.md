@@ -21,7 +21,7 @@
 
 ## Commit
 
-- `47d2418` (`feat: collect browser performance events`)。
+- `6c53f7a` (`feat: collect browser performance events`)。
 
 ## 风险
 
