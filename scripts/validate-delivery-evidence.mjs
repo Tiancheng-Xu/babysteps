@@ -11,6 +11,15 @@ const requiredHeaders = [
 	"当前状态",
 ];
 const allowedStatuses = new Set(["complete", "partial", "pending", "blocked"]);
+const teacherRequirementPrefixes = [
+	"1. 链上任务列表",
+	"2. Owner 管理商家/老师",
+	"3. 发行 ERC-20 平台币",
+	"4. Uniswap 池",
+	"5. 点击购买",
+	"6. Chainlink 随机性",
+	"7. 个人中心使用 Privy 登录",
+];
 const architectureSections = [
 	"系统上下文",
 	"运行时请求与数据流",
@@ -273,9 +282,10 @@ const evidencePageMarkers = [
 	"Provider requestTask → Owner approve/reject → VRF",
 	"会话 + purchaseIdForBuyer 双门禁",
 	"D1 证据申请 → Owner 钱包 → confirmCompletion → SBT",
-	"Cloudflare 已发布 · 新链上交易待验证",
-	"Worker #4 与 D1 0001–0003 已发布",
-	"生产无会话请求为 401",
+	"核心交付已验证 · 生产增强待复核",
+	"Sepolia Provider → Owner → VRF 已有真实交易",
+	"链上 + D1 ID 绑定与评论已闭环",
+	"真实 confirmCompletion 与锁定 SBT #1",
 	"Web3 产品闭环 Evidence 桌面端本地验证",
 	"Provider 与 Owner 控制台 390 像素本地验证",
 	"只读状态不冒充钱包角色或链上交易成功",
@@ -378,14 +388,36 @@ export function validateDeliveryEvidence(
 		}
 
 		const statusIndex = headers.indexOf("当前状态");
+		const requirementIndex = headers.indexOf("作业要求");
+		const dataRows = [];
 		if (statusIndex >= 0) {
 			for (const line of lines.slice(headerLineIndex + 2)) {
 				const cells = tableCells(line);
 				if (cells.length === 0) break;
 				if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
+				dataRows.push(cells);
 				const status = normalizeStatus(cells[statusIndex] ?? "");
 				if (!allowedStatuses.has(status)) {
 					errors.push(`invalid status: ${status || "empty"}`);
+				}
+			}
+		}
+
+		if (
+			mapText.includes("# BabySteps Web3 作业实现映射") &&
+			statusIndex >= 0 &&
+			requirementIndex >= 0
+		) {
+			for (const prefix of teacherRequirementPrefixes) {
+				const row = dataRows.find((cells) =>
+					(cells[requirementIndex] ?? "").startsWith(prefix),
+				);
+				if (!row) {
+					errors.push(`teacher requirement is missing: ${prefix}`);
+					continue;
+				}
+				if (normalizeStatus(row[statusIndex] ?? "") !== "complete") {
+					errors.push(`teacher requirement must be complete: ${prefix}`);
 				}
 			}
 		}

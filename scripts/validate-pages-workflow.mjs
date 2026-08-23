@@ -17,7 +17,7 @@ for (const fragment of [
 	"output-directory: web/dist",
 	"pages-project: babysteps",
 	"production-url: https://babysteps.baby2b.online/",
-	"evidence-url: https://evidence.baby2b.online/babysteps/",
+	"evidence-url: https://babysteps.baby2b.online/evidence/",
 ]) {
 	assert.ok(manifest.includes(fragment), `Missing Cloudflare publishing contract: ${fragment}`);
 }

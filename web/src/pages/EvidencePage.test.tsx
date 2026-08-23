@@ -80,14 +80,20 @@ describe("EvidencePage", () => {
 		expect(screen.queryByText("Sepolia 待部署")).toBeNull();
 	});
 
-	it("shows the deployed Cloudflare product closure without claiming new wallet transactions", () => {
+	it("separates completed assignment requirements from optional production rechecks", () => {
 		render(<EvidencePage />);
 
+		expect(screen.getByText("核心交付已验证 · 生产增强待复核")).toBeTruthy();
 		expect(
-			screen.getByText("Cloudflare 已发布 · 新链上交易待验证"),
+			screen.getByText(/Sepolia Provider → Owner → VRF 已有真实交易/u),
 		).toBeTruthy();
-		expect(screen.getByText(/Worker #4 与 D1 0001–0003 已发布/u)).toBeTruthy();
-		expect(screen.getByText(/生产无会话请求为 401/u)).toBeTruthy();
+		expect(screen.getByText(/链上 \+ D1 ID 绑定与评论已闭环/u)).toBeTruthy();
+		expect(
+			screen.getByText(/真实 confirmCompletion 与锁定 SBT #1/u),
+		).toBeTruthy();
+		expect(
+			screen.queryByText("UI 已发布；生产 Provider/Owner 新交易待验证"),
+		).toBeNull();
 		expect(screen.queryByText("本地闭环通过 · 云端待发布")).toBeNull();
 	});
 });
