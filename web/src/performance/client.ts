@@ -29,6 +29,7 @@ type ClientOptions = {
 };
 
 type QueuedEvent = PerformanceEvent & { retries: number };
+type PendingRetry = { events: QueuedEvent[]; readyAt: number };
 type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
@@ -50,6 +51,7 @@ export function createPerformanceClient(
 	const loadWebVitals = options.loadWebVitals ?? (() => import("web-vitals"));
 	const highPriority: QueuedEvent[] = [];
 	const lowPriority: QueuedEvent[] = [];
+	const pendingRetries: PendingRetry[] = [];
 	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
 	let lowPriorityMinuteCount = 0;
@@ -65,12 +67,6 @@ export function createPerformanceClient(
 	const dequeue = () => {
 		const queue = highPriority.length > 0 ? highPriority : lowPriority;
 		return queue.splice(0, batchSize);
-	};
-	const requeue = (events: QueuedEvent[]) => {
-		for (const event of [...events].reverse()) {
-			const queue = isHighPriority(event) ? highPriority : lowPriority;
-			queue.unshift(event);
-		}
 	};
 	const onError = (event: ErrorEvent) => {
 		const category = classifyErrorCategory(event.error ?? event.message);
@@ -129,28 +125,56 @@ export function createPerformanceClient(
 		}
 	};
 
+	const nextReadyRetry = () =>
+		pendingRetries
+			.filter(({ readyAt }) => readyAt <= Date.now())
+			.sort((left, right) => left.readyAt - right.readyAt)[0];
+	const takeReadyRetry = () => {
+		const retry = nextReadyRetry();
+		if (!retry) return undefined;
+		pendingRetries.splice(pendingRetries.indexOf(retry), 1);
+		return retry;
+	};
+	const takeRetry = (retry: PendingRetry) => {
+		const index = pendingRetries.indexOf(retry);
+		if (index < 0) return undefined;
+		return pendingRetries.splice(index, 1)[0];
+	};
+	const armRetryTimer = () => {
+		if (retryTimer) clearTimeout(retryTimer);
+		const next = [...pendingRetries].sort(
+			(left, right) => left.readyAt - right.readyAt,
+		)[0];
+		if (!next) {
+			retryTimer = undefined;
+			return;
+		}
+		retryTimer = setTimeout(
+			() => {
+				retryTimer = undefined;
+				const retry = takeRetry(next);
+				if (retry) void sendBatch(retry.events).finally(armRetryTimer);
+				else armRetryTimer();
+			},
+			Math.max(0, next.readyAt - Date.now()),
+		);
+	};
 	const scheduleRetry = (events: QueuedEvent[]) => {
 		const retryable = events
 			.map((event) => ({ ...event, retries: event.retries + 1 }))
 			.filter((event) => event.retries < 3);
 		if (retryable.length === 0) return "drop" as const;
-		requeue(retryable);
-		if (!retryTimer) {
-			retryTimer = setTimeout(
-				() => {
-					retryTimer = undefined;
-					void flushOnce();
-				},
-				2 ** (retryable[0].retries - 1) * 100,
-			);
-		}
+		pendingRetries.push({
+			events: retryable,
+			readyAt: Date.now() + 2 ** (retryable[0].retries - 1) * 100,
+		});
+		armRetryTimer();
 		return "retry" as const;
 	};
 
-	const flushOnce = async (): Promise<FlushDisposition> => {
-		if (retryTimer) return "retry";
-		if (queueSize() === 0) return "empty";
-		const queued = dequeue();
+	const sendBatch = async (
+		queued: QueuedEvent[],
+	): Promise<FlushDisposition> => {
 		const events = queued.map(({ retries: _retries, ...event }) => event);
 		const payload: PerformanceBatch = {
 			schemaVersion: 2,
@@ -184,14 +208,21 @@ export function createPerformanceClient(
 		}
 	};
 
+	const flushOnce = async (): Promise<FlushDisposition> => {
+		const retry = takeReadyRetry();
+		if (retry) return sendBatch(retry.events);
+		if (queueSize() === 0) return "empty";
+		return sendBatch(dequeue());
+	};
+
 	const flush = async () => {
 		await flushOnce();
 	};
 
 	const flushAll = async () => {
-		while (queueSize() > 0) {
+		while (queueSize() > 0 || nextReadyRetry()) {
 			const disposition = await flushOnce();
-			if (disposition === "retry") return;
+			if (disposition === "empty") return;
 		}
 	};
 

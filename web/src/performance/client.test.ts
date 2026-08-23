@@ -41,6 +41,7 @@ describe("performance client", () => {
 			beacon: () => false,
 			fetcher,
 			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
 		});
 
 		client.record({
@@ -200,6 +201,7 @@ describe("performance client", () => {
 			beacon: () => false,
 			fetcher,
 			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
 		});
 		client.start();
 		client.record({ type: "metric", name: "LCP", value: 1, unit: "ms" });
@@ -212,6 +214,57 @@ describe("performance client", () => {
 		expect(fetcher).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(1);
 		expect(fetcher).toHaveBeenCalledTimes(2);
+		client.stop();
+	});
+
+	it("drains ready pagehide batches while retrying their failed batch first at its deadline", async () => {
+		vi.useFakeTimers();
+		const names: string[] = [];
+		const fetcher = vi.fn(async (_url, init) => {
+			const name = JSON.parse(String(init?.body)).events[0].name as string;
+			names.push(name);
+			return new Response(null, {
+				status: name === "resource.image.duration" ? 503 : 202,
+			});
+		});
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			batchSize: 20,
+			flushIntervalMs: 10_000,
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
+		});
+		client.start();
+		client.record({
+			type: "resource",
+			name: "resource.image.duration",
+			value: 1,
+			unit: "ms",
+			category: "image",
+		});
+		await client.flush();
+		client.record({ type: "metric", name: "FCP", value: 2, unit: "ms" });
+		globalThis.dispatchEvent(new Event("pagehide"));
+		await vi.advanceTimersByTimeAsync(0);
+		client.record({ type: "metric", name: "LCP", value: 3, unit: "ms" });
+
+		expect(names).toEqual(["resource.image.duration", "FCP"]);
+		await vi.advanceTimersByTimeAsync(100);
+		expect(names).toEqual([
+			"resource.image.duration",
+			"FCP",
+			"resource.image.duration",
+		]);
+		await vi.advanceTimersByTimeAsync(200);
+		expect(names).toEqual([
+			"resource.image.duration",
+			"FCP",
+			"resource.image.duration",
+			"resource.image.duration",
+		]);
 		client.stop();
 	});
 
