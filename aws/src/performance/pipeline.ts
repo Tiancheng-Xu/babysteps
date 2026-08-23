@@ -16,6 +16,66 @@ const performanceCategories = [
 
 const performanceOutcomes = ["success", "failure", "unavailable"] as const;
 
+const allowedEventNames = {
+	metric: new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]),
+	resource: new Set([
+		"resource.duration",
+		"resource.fetch.duration",
+		"resource.xhr.duration",
+		"resource.script.duration",
+		"resource.stylesheet.duration",
+		"resource.image.duration",
+		"resource.font.duration",
+	]),
+	error: new Set([
+		"javascript.error",
+		"promise.rejection",
+		"error.javascript.type_error",
+		"error.javascript.network",
+		"error.javascript.timeout",
+		"error.javascript.unknown",
+		"error.promise.type_error",
+		"error.promise.network",
+		"error.promise.timeout",
+		"error.promise.unknown",
+	]),
+	custom: new Set([
+		"navigation.dns",
+		"navigation.tcp",
+		"navigation.tls",
+		"navigation.request_wait",
+		"navigation.download",
+		"navigation.dom_ready",
+		"navigation.window_load",
+		"longtask.duration",
+		"longtask.count",
+		"longtask.total",
+		"longtask.max",
+		"spa.route.duration",
+		"ssr.shell.duration",
+		"hydration.duration",
+		"csr.fallback",
+		"hydration.recoverable_error",
+	]),
+	web3: new Set([
+		"contract.read",
+		"contract.write",
+		"web3.uniswap.quote",
+		"web3.uniswap.swap",
+		"web3.privy.login",
+		"wallet.connect",
+		"auth.challenge",
+		"auth.sign",
+		"auth.verify",
+		"rpc.read",
+		"web3.rpc.read",
+		"approve.submit",
+		"approve.receipt",
+		"transaction.submit",
+		"transaction.receipt",
+	]),
+} as const;
+
 const allowedRoutes = [
 	"/",
 	"/home",
@@ -66,23 +126,7 @@ const eventSchema = z
 		if (event.unit !== expectedUnit) {
 			context.addIssue({ code: "custom", message: "metric unit mismatch" });
 		}
-		const validName =
-			(event.type === "metric" &&
-				["LCP", "CLS", "INP", "FCP", "TTFB"].includes(event.name)) ||
-			(event.type === "resource" &&
-				(event.name === "resource.duration" ||
-					/^resource\.(fetch|xhr|script|stylesheet|image|font)\.duration$/u.test(
-						event.name,
-					))) ||
-			(event.type === "error" &&
-				/^(javascript|promise|error)\.[a-z0-9._-]+$/iu.test(event.name)) ||
-			(event.type === "custom" &&
-				(event.name === "csr.fallback" ||
-					event.name === "hydration.recoverable_error" ||
-					/^[a-z0-9_-]+(?:\.[a-z0-9_-]+)*\.count$/iu.test(event.name))) ||
-			(event.type === "web3" &&
-				/^(web3|contract)\.[a-z0-9._-]+$/iu.test(event.name));
-		if (!validName) {
+		if (!allowedEventNames[event.type].has(event.name)) {
 			context.addIssue({
 				code: "custom",
 				message: "metric name is not allowed",

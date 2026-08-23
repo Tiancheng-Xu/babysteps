@@ -60,6 +60,24 @@ describe("performance ingest", () => {
 		expect(() =>
 			parsePerformanceBatch({ schemaVersion: 1, events: [event()] }),
 		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch({
+				schemaVersion: 1,
+				events: [
+					event({ type: "custom", name: "hydration.duration", unit: "ms" }),
+				],
+			}),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("web3", "web3.rpc.read.0x1234567890abcdef", "ms"),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("error", "error.javascript.user@example", "count"),
+			),
+		).toThrow();
 	});
 
 	it("authenticates, validates and enqueues a bounded batch", async () => {
