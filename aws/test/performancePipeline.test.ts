@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	acceptPerformanceBatch,
+	computePerformanceDashboard,
 	computePerformanceStats,
 	type PerformanceEvent,
+	parsePerformanceBatch,
 } from "../src/performance/pipeline";
 
 const event = (
@@ -21,6 +23,45 @@ const event = (
 });
 
 describe("performance ingest", () => {
+	it("accepts v1 and v2 whitelisted events while rejecting private resource names", () => {
+		const batch = (
+			type: PerformanceEvent["type"],
+			name: string,
+			unit: PerformanceEvent["unit"],
+			overrides: Partial<PerformanceEvent> = {},
+		) => ({
+			schemaVersion: 2 as const,
+			events: [event({ type, name, unit, ...overrides })],
+		});
+
+		expect(() =>
+			parsePerformanceBatch(batch("custom", "csr.fallback", "count")),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(batch("custom", "longtask.count", "count")),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("resource", "resource.image.duration", "ms", {
+					category: "image",
+				}),
+			),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("web3", "web3.rpc.read", "ms", { outcome: "success" }),
+			),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("resource", "https://private.example/a?token=x", "ms"),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch({ schemaVersion: 1, events: [event()] }),
+		).not.toThrow();
+	});
+
 	it("authenticates, validates and enqueues a bounded batch", async () => {
 		const enqueueBatch = vi.fn(async () => undefined);
 		const result = await acceptPerformanceBatch({
@@ -132,6 +173,18 @@ describe("performance ingest", () => {
 });
 
 describe("real-sample statistics", () => {
+	it("uses UTC hour boundaries for dashboard trend buckets", () => {
+		const dashboard = computePerformanceDashboard([
+			event({ timestamp: 3_599_999, value: 10 }),
+			event({ timestamp: 3_600_001, value: 20 }),
+		]);
+
+		expect(dashboard.trend).toEqual([
+			{ bucketStart: 0, sampleCount: 1, p75: 10 },
+			{ bucketStart: 3_600_000, sampleCount: 1, p75: 20 },
+		]);
+	});
+
 	it("computes sample count and p50/p75/p95 from the raw window", () => {
 		const stats = computePerformanceStats([
 			event({ value: 10 }),
@@ -196,8 +249,8 @@ describe("real-sample statistics", () => {
 			"LCP",
 		);
 		expect(stats.trend).toEqual([
-			{ bucketStart: 1_786_600_000_000, sampleCount: 2, p75: 30 },
-			{ bucketStart: 1_786_603_600_000, sampleCount: 1, p75: 90 },
+			{ bucketStart: 1_786_597_200_000, sampleCount: 2, p75: 30 },
+			{ bucketStart: 1_786_600_800_000, sampleCount: 1, p75: 90 },
 		]);
 	});
 });

@@ -91,7 +91,7 @@ export function createPerformanceClient(
 		if (queue.length === 0) return;
 		const events = queue.splice(0, batchSize);
 		const payload: PerformanceBatch = {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			sentAt: now(),
 			events,
 		};

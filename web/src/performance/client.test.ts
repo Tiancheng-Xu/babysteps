@@ -28,6 +28,7 @@ describe("performance client", () => {
 			environment: "preview",
 			version: "abc123",
 		});
+		expect(payload.schemaVersion).toBe(2);
 		expect(JSON.stringify(payload)).not.toContain("secret");
 		expect(fetcher).not.toHaveBeenCalled();
 	});

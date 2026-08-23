@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+const performanceCategories = [
+	"fetch",
+	"xhr",
+	"script",
+	"stylesheet",
+	"image",
+	"font",
+	"type_error",
+	"network",
+	"timeout",
+	"user_rejected",
+	"unknown",
+] as const;
+
+const performanceOutcomes = ["success", "failure", "unavailable"] as const;
+
 const allowedRoutes = [
 	"/",
 	"/home",
@@ -23,6 +39,8 @@ const eventSchema = z
 		name: z.string().regex(/^[a-z0-9._-]{1,64}$/iu),
 		value: z.number().finite(),
 		unit: z.enum(["ms", "score", "count"]),
+		category: z.enum(performanceCategories).optional(),
+		outcome: z.enum(performanceOutcomes).optional(),
 		route: z.enum(allowedRoutes),
 		environment: z.enum([
 			"production",
@@ -38,16 +56,53 @@ const eventSchema = z
 		if (/@|%40/iu.test(event.route)) {
 			context.addIssue({ code: "custom", message: "route contains PII" });
 		}
+		const isCountMetric =
+			event.type === "error" ||
+			event.name.endsWith(".count") ||
+			event.name === "csr.fallback" ||
+			event.name === "hydration.recoverable_error";
 		const expectedUnit =
-			event.name === "CLS" ? "score" : event.type === "error" ? "count" : "ms";
+			event.name === "CLS" ? "score" : isCountMetric ? "count" : "ms";
 		if (event.unit !== expectedUnit) {
 			context.addIssue({ code: "custom", message: "metric unit mismatch" });
+		}
+		const validName =
+			(event.type === "metric" &&
+				["LCP", "CLS", "INP", "FCP", "TTFB"].includes(event.name)) ||
+			(event.type === "resource" &&
+				(event.name === "resource.duration" ||
+					/^resource\.(fetch|xhr|script|stylesheet|image|font)\.duration$/u.test(
+						event.name,
+					))) ||
+			(event.type === "error" &&
+				/^(javascript|promise|error)\.[a-z0-9._-]+$/iu.test(event.name)) ||
+			(event.type === "custom" &&
+				(event.name === "csr.fallback" ||
+					event.name === "hydration.recoverable_error" ||
+					/^[a-z0-9_-]+(?:\.[a-z0-9_-]+)*\.count$/iu.test(event.name))) ||
+			(event.type === "web3" &&
+				/^(web3|contract)\.[a-z0-9._-]+$/iu.test(event.name));
+		if (!validName) {
+			context.addIssue({
+				code: "custom",
+				message: "metric name is not allowed",
+			});
+		}
+		if (
+			event.type === "resource" &&
+			event.name !== "resource.duration" &&
+			event.category !== event.name.split(".")[1]
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "resource category mismatch",
+			});
 		}
 	});
 
 const batchSchema = z
 	.object({
-		schemaVersion: z.literal(1),
+		schemaVersion: z.union([z.literal(1), z.literal(2)]),
 		events: z.array(eventSchema).min(1).max(20),
 		sentAt: z.number().int().optional(),
 	})
@@ -69,6 +124,10 @@ export class PerformanceRequestError extends Error {
 	) {
 		super(message);
 	}
+}
+
+export function parsePerformanceBatch(input: unknown): PerformanceEvent[] {
+	return batchSchema.parse(input).events;
 }
 
 function secureEqual(left: string, right: string): boolean {
@@ -159,14 +218,11 @@ export function computePerformanceStats(
 	const values = selected.map(({ value }) => value).sort((a, b) => a - b);
 	const routeGroups = new Map<string, number[]>();
 	const trendGroups = new Map<number, number[]>();
-	const trendAnchor = selected[0]?.timestamp ?? 0;
 	for (const event of selected) {
 		const group = routeGroups.get(event.route) ?? [];
 		group.push(event.value);
 		routeGroups.set(event.route, group);
-		const bucketStart =
-			trendAnchor +
-			Math.floor((event.timestamp - trendAnchor) / 3_600_000) * 3_600_000;
+		const bucketStart = Math.floor(event.timestamp / 3_600_000) * 3_600_000;
 		const bucket = trendGroups.get(bucketStart) ?? [];
 		bucket.push(event.value);
 		trendGroups.set(bucketStart, bucket);
@@ -204,4 +260,11 @@ export function computePerformanceStats(
 				),
 			})),
 	};
+}
+
+export function computePerformanceDashboard(
+	events: StoredPerformanceEvent[],
+	metric?: string,
+): ReturnType<typeof computePerformanceStats> {
+	return computePerformanceStats(events, metric);
 }
