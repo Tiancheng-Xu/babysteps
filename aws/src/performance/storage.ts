@@ -81,17 +81,24 @@ export class PostgresPerformanceStore {
 		}
 
 		const result = await this.database.query(
-			`SELECT bucket_start_ms AS "bucketStart", type, name, unit,
-			 NULLIF(category, '') AS category, NULLIF(outcome, '') AS outcome,
-			 route, environment, version, sample.timestamp_ms AS timestamp,
-			 sample.value, COUNT(*) OVER () AS "totalCount"
+			`WITH bounded_samples AS (
+			 SELECT bucket_start_ms AS "bucketStart", type, name, unit,
+			  NULLIF(category, '') AS category, NULLIF(outcome, '') AS outcome,
+			  route, environment, version, sample.timestamp_ms AS timestamp,
+			  sample.value
 			 FROM babysteps_performance.hourly_aggregates
 			 CROSS JOIN LATERAL unnest(timestamps_ms, values)
 			 AS sample(timestamp_ms, value)
 			 WHERE ${clauses.join(" AND ")}
 			 AND sample.timestamp_ms >= $2
-			 ORDER BY sample.timestamp_ms ASC
-			 LIMIT 10000`,
+			 LIMIT 10001
+			), counted_samples AS (
+			 SELECT *, COUNT(*) OVER () AS "totalCount"
+			 FROM bounded_samples
+			)
+			SELECT * FROM counted_samples
+			ORDER BY timestamp ASC
+			LIMIT 10000`,
 			values,
 		);
 		const rows = result.rows as Array<{

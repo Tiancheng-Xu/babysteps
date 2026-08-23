@@ -352,6 +352,13 @@ const longTaskCatalog = [
 	"longtask.total",
 	"longtask.max",
 ] as const;
+const renderingCatalog = [
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+	"csr.fallback",
+	"hydration.recoverable_error",
+] as const;
 const topN = 10;
 
 export function isAllowedPerformanceMetricName(name: string): boolean {
@@ -505,6 +512,7 @@ export function computePerformanceStats(
 export function computePerformanceDashboard(
 	events: StoredPerformanceEvent[],
 	metric = "LCP",
+	observedAt = Date.now(),
 ): PerformanceDashboardResponse {
 	const latestSampleAt = events.length
 		? Math.max(...events.map(({ timestamp }) => timestamp))
@@ -527,12 +535,7 @@ export function computePerformanceDashboard(
 	const longTaskEvents = events.filter(({ name }) =>
 		longTaskCatalog.includes(name as (typeof longTaskCatalog)[number]),
 	);
-	const count = events
-		.filter(
-			(event) =>
-				event.name === "longtask.count" && event.outcome !== "unavailable",
-		)
-		.reduce((total, event) => total + event.value, 0);
+	const count = durationValues.length;
 	const web3 = web3OperationNames.map((name) => {
 		const operationEvents = events.filter(
 			(event) => event.name === name || event.name === `${name}.error`,
@@ -614,6 +617,15 @@ export function computePerformanceDashboard(
 		...longTaskCatalog.map((name) =>
 			summarizeMetric(events, name, name.endsWith(".count") ? "count" : "ms"),
 		),
+		...renderingCatalog.map((name) =>
+			summarizeMetric(
+				events,
+				name,
+				name === "csr.fallback" || name === "hydration.recoverable_error"
+					? "count"
+					: "ms",
+			),
+		),
 		...errors.map(({ name, coverage: status }) => ({
 			name,
 			coverage: status,
@@ -623,7 +635,7 @@ export function computePerformanceDashboard(
 
 	return {
 		freshness: {
-			observedAt: latestSampleAt,
+			observedAt,
 			latestSampleAt,
 			mode: "live",
 			source: "live-api",

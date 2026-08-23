@@ -74,6 +74,15 @@ describe("performance PostgreSQL store", () => {
 		expect(calls[0]?.text).toContain("bucket_start_ms >= $1");
 		expect(calls[0]?.text).toContain("hourly_aggregates");
 		expect(calls[0]?.text).toContain("LIMIT 10000");
+		const sql = calls[0]?.text ?? "";
+		expect(sql).toContain("LIMIT 10001");
+		expect(sql.indexOf("LIMIT 10001")).toBeLessThan(
+			sql.indexOf("COUNT(*) OVER ()"),
+		);
+		expect(sql.indexOf("COUNT(*) OVER ()")).toBeLessThan(
+			sql.lastIndexOf("LIMIT 10000"),
+		);
+		expect(sql.slice(0, sql.indexOf("LIMIT 10001"))).not.toContain("ORDER BY");
 		expect(calls[0]?.text).not.toContain("FROM babysteps_performance.events");
 		expect(calls[0]?.values).toEqual(
 			expect.arrayContaining(["/", "preview", "abc123"]),

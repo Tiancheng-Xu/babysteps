@@ -294,6 +294,71 @@ describe("real-sample statistics", () => {
 		});
 	});
 
+	it.each([
+		{ durations: [50, 70], cumulativeCounts: [1, 2], expectedCount: 2 },
+		{
+			durations: [50, 70, 90],
+			cumulativeCounts: [1, 2, 3],
+			expectedCount: 3,
+		},
+	])(
+		"counts $expectedCount long-task duration events instead of summing cumulative counters",
+		({ durations, cumulativeCounts, expectedCount }) => {
+			const dashboard = computePerformanceDashboard([
+				...durations.map((value) =>
+					event({
+						type: "custom",
+						name: "longtask.duration",
+						unit: "ms",
+						value,
+					}),
+				),
+				...cumulativeCounts.map((value) =>
+					event({
+						type: "custom",
+						name: "longtask.count",
+						unit: "count",
+						value,
+					}),
+				),
+			]);
+
+			expect(dashboard.longTasks).toMatchObject({
+				count: expectedCount,
+				totalDurationMs: durations.reduce((total, value) => total + value, 0),
+				maxDurationMs: Math.max(...durations),
+			});
+		},
+	);
+
+	it("includes every fixed rendering metric in coverage", () => {
+		const names = computePerformanceDashboard([]).coverage.map(
+			({ name }) => name,
+		);
+
+		expect(names).toEqual(
+			expect.arrayContaining([
+				"spa.route.duration",
+				"ssr.shell.duration",
+				"hydration.duration",
+				"csr.fallback",
+				"hydration.recoverable_error",
+			]),
+		);
+	});
+
+	it("keeps response observation time separate from the latest database sample", () => {
+		const latestSampleAt = 1_786_600_000_000;
+		const observedAt = latestSampleAt + 12_345;
+		const dashboard = computePerformanceDashboard(
+			[event({ timestamp: latestSampleAt })],
+			"LCP",
+			observedAt,
+		);
+
+		expect(dashboard.freshness).toMatchObject({ observedAt, latestSampleAt });
+	});
+
 	it("returns only the ten slowest routes", () => {
 		const routes = [
 			"/",

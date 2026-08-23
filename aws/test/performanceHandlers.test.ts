@@ -46,6 +46,7 @@ describe("performance Lambda adapters", () => {
 		const handler = createPerformanceQueryHandler({
 			originToken: "token",
 			query,
+			now: () => 1_786_600_001_000,
 		});
 		const response = await handler({
 			headers: { "x-babysteps-origin-token": "token" },
@@ -60,7 +61,12 @@ describe("performance Lambda adapters", () => {
 		expect(result).toMatchObject({
 			window: "24h",
 			pipeline: { status: "unavailable", source: "database-only" },
-			freshness: { source: "live-api", mode: "live" },
+			freshness: {
+				observedAt: 1_786_600_001_000,
+				latestSampleAt: 1_786_600_000_000,
+				source: "live-api",
+				mode: "live",
+			},
 		});
 	});
 

@@ -92,6 +92,7 @@ export function createPerformanceIngestHandler(dependencies: {
 export function createPerformanceQueryHandler(dependencies: {
 	originToken: string;
 	query: (filters: PerformanceFilters) => Promise<StoredPerformanceEvent[]>;
+	now?: () => number;
 }) {
 	return async (
 		event: Pick<
@@ -114,7 +115,11 @@ export function createPerformanceQueryHandler(dependencies: {
 			const events = await dependencies.query(parsed.data);
 			return response(200, {
 				window: parsed.data.window,
-				...computePerformanceDashboard(events, parsed.data.metric),
+				...computePerformanceDashboard(
+					events,
+					parsed.data.metric,
+					dependencies.now?.() ?? Date.now(),
+				),
 			});
 		} catch {
 			return response(503, { error: "statistics unavailable" });

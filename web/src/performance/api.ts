@@ -90,6 +90,72 @@ export class PerformanceApiError extends Error {
 	}
 }
 
+const vitalNames = ["LCP", "CLS", "INP", "FCP", "TTFB"] as const;
+const navigationNames = [
+	"navigation.dns",
+	"navigation.tcp",
+	"navigation.tls",
+	"navigation.request_wait",
+	"navigation.download",
+	"navigation.dom_ready",
+	"navigation.window_load",
+] as const;
+const resourceNames = [
+	"resource.duration",
+	"resource.fetch.duration",
+	"resource.xhr.duration",
+	"resource.script.duration",
+	"resource.stylesheet.duration",
+	"resource.image.duration",
+	"resource.font.duration",
+] as const;
+const errorNames = [
+	"javascript.error",
+	"promise.rejection",
+	"error.javascript.type_error",
+	"error.javascript.network",
+	"error.javascript.timeout",
+	"error.javascript.unknown",
+	"error.promise.type_error",
+	"error.promise.network",
+	"error.promise.timeout",
+	"error.promise.unknown",
+] as const;
+const web3Names = [
+	"contract.read",
+	"contract.write",
+	"web3.uniswap.quote",
+	"web3.uniswap.swap",
+	"web3.privy.login",
+	"wallet.connect",
+	"auth.challenge",
+	"auth.sign",
+	"auth.verify",
+	"rpc.read",
+	"web3.rpc.read",
+	"approve.submit",
+	"approve.receipt",
+	"transaction.submit",
+	"transaction.receipt",
+] as const;
+const coverageNames = [
+	...vitalNames,
+	...navigationNames,
+	...resourceNames,
+	"longtask.duration",
+	"longtask.count",
+	"longtask.total",
+	"longtask.max",
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+	"csr.fallback",
+	"hydration.recoverable_error",
+	...errorNames,
+	...web3Names,
+] as const;
+const topN = 10;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -114,6 +180,28 @@ function isCoverage(value: unknown): value is PerformanceCoverageStatus {
 	);
 }
 
+function hasExactNames<T>(
+	items: T[],
+	expectedNames: readonly string[],
+	getName: (item: T) => string,
+): boolean {
+	if (items.length !== expectedNames.length) return false;
+	const names = new Set(items.map(getName));
+	return (
+		names.size === expectedNames.length &&
+		expectedNames.every((name) => names.has(name))
+	);
+}
+
+function hasUniqueNamesWithinLimit<T>(
+	items: T[],
+	getName: (item: T) => string,
+): boolean {
+	return (
+		items.length <= topN && new Set(items.map(getName)).size === items.length
+	);
+}
+
 function isMetricSummary(value: unknown): value is PerformanceMetricSummary {
 	if (!isRecord(value)) return false;
 	const validShape =
@@ -126,7 +214,12 @@ function isMetricSummary(value: unknown): value is PerformanceMetricSummary {
 		isCoverage(value.coverage);
 	if (!validShape) return false;
 	if (value.sampleCount === 0) {
-		return value.p50 === null && value.p75 === null && value.p95 === null;
+		return (
+			value.p50 === null &&
+			value.p75 === null &&
+			value.p95 === null &&
+			value.coverage !== "observed"
+		);
 	}
 	return (
 		isFiniteNumber(value.p50) &&
@@ -155,8 +248,7 @@ function isLongTasks(
 ): value is PerformanceDashboardResponse["longTasks"] {
 	if (!isRecord(value)) return false;
 	return (
-		isFiniteNumber(value.count) &&
-		value.count >= 0 &&
+		isNonnegativeInteger(value.count) &&
 		isFiniteNumber(value.totalDurationMs) &&
 		value.totalDurationMs >= 0 &&
 		isNullableNumber(value.maxDurationMs) &&
@@ -182,19 +274,45 @@ function isWeb3Summary(
 	value: unknown,
 ): value is PerformanceDashboardResponse["web3"][number] {
 	if (!isRecord(value)) return false;
+	if (typeof value.name !== "string" || value.unit !== "ms") return false;
+	if (
+		!isNonnegativeInteger(value.sampleCount) ||
+		!isNonnegativeInteger(value.successCount) ||
+		!isNonnegativeInteger(value.failureCount)
+	) {
+		return false;
+	}
+	if (
+		!isNullableNumber(value.successRate) ||
+		(value.successRate !== null &&
+			(value.successRate < 0 || value.successRate > 1)) ||
+		!isNullableNumber(value.p50) ||
+		!isNullableNumber(value.p75) ||
+		!isNullableNumber(value.p95) ||
+		!isCoverage(value.coverage)
+	) {
+		return false;
+	}
+	const sampleCount = value.sampleCount;
+	const successCount = value.successCount;
+	const failureCount = value.failureCount;
+	if (sampleCount !== successCount + failureCount) return false;
+	if (sampleCount === 0) {
+		return (
+			value.successRate === null &&
+			value.p50 === null &&
+			value.p75 === null &&
+			value.p95 === null &&
+			value.coverage !== "observed"
+		);
+	}
 	return (
-		typeof value.name === "string" &&
-		value.unit === "ms" &&
-		isNonnegativeInteger(value.sampleCount) &&
-		isNonnegativeInteger(value.successCount) &&
-		isNonnegativeInteger(value.failureCount) &&
-		isNullableNumber(value.successRate) &&
-		(value.successRate === null ||
-			(value.successRate >= 0 && value.successRate <= 1)) &&
-		isNullableNumber(value.p50) &&
-		isNullableNumber(value.p75) &&
-		isNullableNumber(value.p95) &&
-		isCoverage(value.coverage)
+		isFiniteNumber(value.successRate) &&
+		value.successRate === successCount / sampleCount &&
+		isFiniteNumber(value.p50) &&
+		isFiniteNumber(value.p75) &&
+		isFiniteNumber(value.p95) &&
+		value.coverage === "observed"
 	);
 }
 
@@ -246,21 +364,28 @@ export function isPerformanceDashboardResponse(
 		isFreshness(value.freshness) &&
 		Array.isArray(value.vitals) &&
 		value.vitals.every(isMetricSummary) &&
+		hasExactNames(value.vitals, vitalNames, (item) => item.name) &&
 		Array.isArray(value.navigation) &&
 		value.navigation.every(isMetricSummary) &&
+		hasExactNames(value.navigation, navigationNames, (item) => item.name) &&
 		Array.isArray(value.resources) &&
 		value.resources.every(isMetricSummary) &&
+		hasExactNames(value.resources, resourceNames, (item) => item.name) &&
 		isLongTasks(value.longTasks) &&
 		Array.isArray(value.errors) &&
 		value.errors.every(isErrorSummary) &&
+		hasExactNames(value.errors, errorNames, (item) => item.name) &&
 		Array.isArray(value.web3) &&
 		value.web3.every(isWeb3Summary) &&
+		hasExactNames(value.web3, web3Names, (item) => item.name) &&
 		Array.isArray(value.routes) &&
 		value.routes.every(isRouteSummary) &&
+		hasUniqueNamesWithinLimit(value.routes, (item) => item.route) &&
 		Array.isArray(value.trend) &&
 		value.trend.every(isTrendSummary) &&
 		Array.isArray(value.versions) &&
 		value.versions.every(isVersionSummary) &&
+		hasUniqueNamesWithinLimit(value.versions, (item) => item.version) &&
 		Array.isArray(value.coverage) &&
 		value.coverage.every(
 			(item) =>
@@ -268,6 +393,7 @@ export function isPerformanceDashboardResponse(
 				typeof item.name === "string" &&
 				isCoverage(item.status),
 		) &&
+		hasExactNames(value.coverage, coverageNames, (item) => item.name) &&
 		isRecord(value.pipeline) &&
 		value.pipeline.status === "unavailable" &&
 		value.pipeline.source === "database-only"
