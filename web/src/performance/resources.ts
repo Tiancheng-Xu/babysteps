@@ -3,6 +3,7 @@ import type { PerformanceCategory, PerformanceEventInput } from "./types";
 const resourceCategories: Record<string, PerformanceCategory> = {
 	fetch: "fetch",
 	xhr: "xhr",
+	xmlhttprequest: "xhr",
 	script: "script",
 	link: "stylesheet",
 	css: "stylesheet",

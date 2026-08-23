@@ -29,6 +29,32 @@ describe("performance observers", () => {
 		);
 	});
 
+	it("marks an unavailable TLS phase and does not overlap DOM and load", () => {
+		const events = collectNavigationEvents({
+			domainLookupStart: 1,
+			domainLookupEnd: 2,
+			connectStart: 2,
+			connectEnd: 5,
+			secureConnectionStart: 0,
+			requestStart: 5,
+			responseStart: 8,
+			responseEnd: 10,
+			domContentLoadedEventEnd: 20,
+			loadEventEnd: 25,
+		} as PerformanceNavigationTiming);
+
+		expect(events).toContainEqual(
+			expect.objectContaining({
+				name: "navigation.tls",
+				value: 0,
+				outcome: "unavailable",
+			}),
+		);
+		expect(events).toContainEqual(
+			expect.objectContaining({ name: "navigation.window_load", value: 5 }),
+		);
+	});
+
 	it("classifies same-origin image resources without retaining their URL", () => {
 		expect(
 			classifyResource(
@@ -44,6 +70,26 @@ describe("performance observers", () => {
 			category: "image",
 			value: 24,
 		});
+	});
+
+	it.each([
+		["fetch", "resource.fetch.duration", "fetch"],
+		["xmlhttprequest", "resource.xhr.duration", "xhr"],
+		["script", "resource.script.duration", "script"],
+		["link", "resource.stylesheet.duration", "stylesheet"],
+		["img", "resource.image.duration", "image"],
+		["font", "resource.font.duration", "font"],
+	])("classifies %s resources", (initiatorType, name, category) => {
+		expect(
+			classifyResource(
+				{
+					initiatorType,
+					duration: 24,
+					name: "https://app.example/resource",
+				} as PerformanceResourceTiming,
+				"https://app.example",
+			),
+		).toMatchObject({ name, category });
 	});
 
 	it("emits long-task count, total, max, and duration", () => {

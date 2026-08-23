@@ -57,6 +57,7 @@ describe("performance client", () => {
 	});
 
 	it("requeues a batch when the upstream returns a non-success response", async () => {
+		vi.useFakeTimers();
 		const bodies: string[] = [];
 		const fetcher = vi
 			.fn()
@@ -76,7 +77,7 @@ describe("performance client", () => {
 		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
 
 		await client.flush();
-		await client.flush();
+		await vi.advanceTimersByTimeAsync(100);
 
 		expect(fetcher).toHaveBeenCalledTimes(2);
 		expect(bodies.join("\n")).toContain("LCP");
@@ -102,6 +103,7 @@ describe("performance client", () => {
 	});
 
 	it("retries throttled or server-error batches no more than three times", async () => {
+		vi.useFakeTimers();
 		const fetcher = vi
 			.fn()
 			.mockResolvedValue(new Response(null, { status: 503 }));
@@ -115,9 +117,9 @@ describe("performance client", () => {
 		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
 
 		await client.flush();
-		await client.flush();
-		await client.flush();
-		await client.flush();
+		await vi.advanceTimersByTimeAsync(100);
+		await vi.advanceTimersByTimeAsync(200);
+		await vi.advanceTimersByTimeAsync(400);
 
 		expect(fetcher).toHaveBeenCalledTimes(3);
 	});
@@ -150,6 +152,69 @@ describe("performance client", () => {
 		});
 	});
 
+	it("reserves one third of the minute budget for vitals, errors, and Web3", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 7,
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 7; index += 1) {
+			client.record({
+				type: "resource",
+				name: "resource.image.duration",
+				value: index,
+				unit: "ms",
+				category: "image",
+			});
+		}
+		client.record({ type: "metric", name: "LCP", value: 1, unit: "ms" });
+		client.record({
+			type: "error",
+			name: "error.javascript.unknown",
+			value: 1,
+			unit: "count",
+			category: "unknown",
+		});
+		await client.markOperation("contract.read", async () => undefined);
+		await client.flush();
+		await client.flush();
+
+		expect(sent.join("\n")).toContain('"name":"LCP"');
+		expect(sent.join("\n")).toContain('"name":"error.javascript.unknown"');
+		expect(sent.join("\n")).toContain('"name":"contract.read"');
+	});
+
+	it("backs off network failures and pagehide does not immediately retry them", async () => {
+		vi.useFakeTimers();
+		const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+		});
+		client.start();
+		client.record({ type: "metric", name: "LCP", value: 1, unit: "ms" });
+		globalThis.dispatchEvent(new Event("pagehide"));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(fetcher).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(99);
+		expect(fetcher).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(1);
+		expect(fetcher).toHaveBeenCalledTimes(2);
+		client.stop();
+	});
+
 	it("samples, rate-limits, batches and flushes on a timer", async () => {
 		vi.useFakeTimers();
 		const sent: string[] = [];
@@ -157,7 +222,7 @@ describe("performance client", () => {
 			environment: "test",
 			version: "v1",
 			sampleRate: 1,
-			maxEventsPerMinute: 2,
+			maxEventsPerMinute: 3,
 			batchSize: 2,
 			flushIntervalMs: 5_000,
 			beacon: (_url, body) => {

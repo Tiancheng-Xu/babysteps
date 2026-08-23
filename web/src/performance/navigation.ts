@@ -21,16 +21,32 @@ export function collectNavigationEvents(
 	const timings: Array<[string, number, number]> = [
 		["navigation.dns", entry.domainLookupEnd, entry.domainLookupStart],
 		["navigation.tcp", entry.connectEnd, entry.connectStart],
-		["navigation.tls", entry.connectEnd, entry.secureConnectionStart],
 		["navigation.request_wait", entry.responseStart, entry.requestStart],
 		["navigation.download", entry.responseEnd, entry.responseStart],
 		["navigation.dom_ready", entry.domContentLoadedEventEnd, entry.responseEnd],
-		["navigation.window_load", entry.loadEventEnd, entry.responseEnd],
+		[
+			"navigation.window_load",
+			entry.loadEventEnd,
+			entry.domContentLoadedEventEnd,
+		],
 	];
-	return timings.map(([name, end, start]) => ({
+	const events = timings.map(([name, end, start]) => ({
 		type: "custom" as const,
 		name,
 		value: duration(Number(end), Number(start)),
 		unit: "ms" as const,
 	}));
+	events.splice(2, 0, {
+		type: "custom",
+		name: "navigation.tls",
+		value:
+			entry.secureConnectionStart > 0
+				? duration(entry.connectEnd, entry.secureConnectionStart)
+				: 0,
+		unit: "ms",
+		...(entry.secureConnectionStart > 0
+			? {}
+			: { outcome: "unavailable" as const }),
+	});
+	return events;
 }

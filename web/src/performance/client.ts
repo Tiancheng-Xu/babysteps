@@ -29,6 +29,7 @@ type ClientOptions = {
 };
 
 type QueuedEvent = PerformanceEvent & { retries: number };
+type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 
@@ -51,7 +52,9 @@ export function createPerformanceClient(
 	const lowPriority: QueuedEvent[] = [];
 	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
+	let lowPriorityMinuteCount = 0;
 	let timer: ReturnType<typeof setInterval> | undefined;
+	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
 	let started = false;
 	const isHighPriority = (event: PerformanceEventInput) =>
@@ -97,10 +100,19 @@ export function createPerformanceClient(
 			if (current - minuteStartedAt >= 60_000) {
 				minuteStartedAt = current;
 				minuteCount = 0;
+				lowPriorityMinuteCount = 0;
 			}
-			if (random() >= sampleRate || minuteCount >= maxEventsPerMinute) return;
+			const highPriority = isHighPriority(input);
+			const lowPriorityLimit = Math.floor((maxEventsPerMinute * 2) / 3);
+			if (
+				random() >= sampleRate ||
+				minuteCount >= maxEventsPerMinute ||
+				(!highPriority && lowPriorityMinuteCount >= lowPriorityLimit)
+			)
+				return;
 			if (!Number.isFinite(input.value)) return;
 			minuteCount += 1;
+			if (!highPriority) lowPriorityMinuteCount += 1;
 			enqueue({
 				...input,
 				name: safeMetricName(input.name),
@@ -117,8 +129,27 @@ export function createPerformanceClient(
 		}
 	};
 
-	const flush = async () => {
-		if (queueSize() === 0) return;
+	const scheduleRetry = (events: QueuedEvent[]) => {
+		const retryable = events
+			.map((event) => ({ ...event, retries: event.retries + 1 }))
+			.filter((event) => event.retries < 3);
+		if (retryable.length === 0) return "drop" as const;
+		requeue(retryable);
+		if (!retryTimer) {
+			retryTimer = setTimeout(
+				() => {
+					retryTimer = undefined;
+					void flushOnce();
+				},
+				2 ** (retryable[0].retries - 1) * 100,
+			);
+		}
+		return "retry" as const;
+	};
+
+	const flushOnce = async (): Promise<FlushDisposition> => {
+		if (retryTimer) return "retry";
+		if (queueSize() === 0) return "empty";
 		const queued = dequeue();
 		const events = queued.map(({ retries: _retries, ...event }) => event);
 		const payload: PerformanceBatch = {
@@ -128,7 +159,7 @@ export function createPerformanceClient(
 		};
 		const body = JSON.stringify(payload);
 		try {
-			if (beacon(endpoint, body)) return;
+			if (beacon(endpoint, body)) return "sent";
 			const response = await fetcher?.(endpoint, {
 				method: "POST",
 				headers: { "content-type": "application/json" },
@@ -136,33 +167,32 @@ export function createPerformanceClient(
 				keepalive: true,
 				credentials: "omit",
 			});
-			if (!response || response.ok) return;
+			if (!response || response.ok) return "sent";
 			if (
 				response.status >= 400 &&
 				response.status < 500 &&
 				response.status !== 429
 			)
-				return;
+				return "drop";
 			if (response.status === 429 || response.status >= 500) {
-				const retryable = queued
-					.map((event) => ({ ...event, retries: event.retries + 1 }))
-					.filter((event) => event.retries < 3);
-				requeue(retryable);
-				if (retryable.length > 0) {
-					setTimeout(() => void flush(), 2 ** retryable[0].retries * 100);
-				}
+				return scheduleRetry(queued);
 			}
+			return "drop";
 		} catch {
-			const retryable = queued
-				.map((event) => ({ ...event, retries: event.retries + 1 }))
-				.filter((event) => event.retries < 3);
-			requeue(retryable);
+			return scheduleRetry(queued);
 			// Deliberately silent: performance reporting cannot fail the product flow.
 		}
 	};
 
+	const flush = async () => {
+		await flushOnce();
+	};
+
 	const flushAll = async () => {
-		while (queueSize() > 0) await flush();
+		while (queueSize() > 0) {
+			const disposition = await flushOnce();
+			if (disposition === "retry") return;
+		}
 	};
 
 	const observe = (
@@ -221,6 +251,8 @@ export function createPerformanceClient(
 
 	const stop = () => {
 		if (timer) clearInterval(timer);
+		if (retryTimer) clearTimeout(retryTimer);
+		retryTimer = undefined;
 		for (const observer of observers) observer.disconnect();
 		globalThis.removeEventListener?.("error", onError);
 		globalThis.removeEventListener?.(
