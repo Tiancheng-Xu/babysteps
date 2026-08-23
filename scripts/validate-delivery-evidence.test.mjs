@@ -66,9 +66,10 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
   <p>Provider requestTask → Owner approve/reject → VRF</p>
   <p>会话 + purchaseIdForBuyer 双门禁</p>
   <p>D1 证据申请 → Owner 钱包 → confirmCompletion → SBT</p>
-  <p>Cloudflare 已发布 · 新链上交易待验证</p>
-  <p>Worker #4 与 D1 0001–0003 已发布；已购回读待验证</p>
-  <p>生产无会话请求为 401</p>
+  <p>核心交付已验证 · 生产增强待复核</p>
+  <p>Sepolia Provider → Owner → VRF 已有真实交易；新版 UI 新交易为增强复核</p>
+  <p>链上 + D1 ID 绑定与评论已闭环；新版已购内容接口为增强复核</p>
+  <p>真实 confirmCompletion 与锁定 SBT #1；新版 D1 completion UI 为增强复核</p>
   <img src={productClosureDesktop} alt="Web3 产品闭环 Evidence 桌面端本地验证" />
   <img src={providerConsoleMobile} alt="Provider 与 Owner 控制台 390 像素本地验证" />
   <p>只读状态不冒充钱包角色或链上交易成功</p>
@@ -359,6 +360,30 @@ test("accepts a complete evidence mapping contract", () => {
 	]);
 
 	assert.deepEqual(validate(validMap), []);
+});
+
+test("rejects a BabySteps map when a teacher requirement remains partial", () => {
+	const requirements = [
+		"1. 链上任务列表 + 链下数据库",
+		"2. Owner 管理商家/老师",
+		"3. 发行 ERC-20 平台币",
+		"4. Uniswap 池",
+		"5. 点击购买",
+		"6. Chainlink 随机性",
+		"7. 个人中心使用 Privy 登录",
+	];
+	const map = mapWith(
+		requiredHeaders,
+		requirements.map((requirement, index) => [
+			requirement,
+			"实现",
+			"`src/example.ts`",
+			"真实证据",
+			index === 1 ? "`partial`" : "`complete`",
+		]),
+	).replace("# Web3 delivery implementation map", "# BabySteps Web3 作业实现映射");
+
+	assert.match(validate(map).join("\n"), /teacher requirement must be complete: 2\./);
 });
 
 test("accepts stronger remote Worker and D1 verification", () => {
