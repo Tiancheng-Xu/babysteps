@@ -179,7 +179,7 @@ export function parsePerformanceBatch(input: unknown): PerformanceEvent[] {
 	return batchSchema.parse(input).events;
 }
 
-function secureEqual(left: string, right: string): boolean {
+export function secureEqual(left: string, right: string): boolean {
 	if (left.length !== right.length) return false;
 	let mismatch = 0;
 	for (let index = 0; index < left.length; index += 1) {
@@ -239,6 +239,197 @@ function percentile(sorted: number[], quantile: number): number {
 	if (sorted.length === 0) return 0;
 	const index = Math.ceil(quantile * sorted.length) - 1;
 	return sorted[Math.max(0, index)] ?? 0;
+}
+
+export type PerformanceCoverageStatus =
+	| "observed"
+	| "instrumented-no-sample"
+	| "unavailable";
+
+export type PerformanceMetricSummary = {
+	name: string;
+	unit: PerformanceEvent["unit"];
+	sampleCount: number;
+	p50: number | null;
+	p75: number | null;
+	p95: number | null;
+	coverage: PerformanceCoverageStatus;
+};
+
+export type PerformanceDashboardResponse = {
+	freshness: {
+		observedAt: number | null;
+		latestSampleAt: number | null;
+		mode: "live";
+		source: "live-api";
+		runId: string | null;
+		commit: string | null;
+	};
+	vitals: PerformanceMetricSummary[];
+	navigation: PerformanceMetricSummary[];
+	resources: PerformanceMetricSummary[];
+	longTasks: {
+		count: number;
+		totalDurationMs: number;
+		maxDurationMs: number | null;
+		duration: PerformanceMetricSummary;
+		coverage: PerformanceCoverageStatus;
+	};
+	errors: Array<{
+		name: string;
+		sampleCount: number;
+		rate: number | null;
+		coverage: PerformanceCoverageStatus;
+	}>;
+	web3: Array<{
+		name: string;
+		unit: "ms";
+		sampleCount: number;
+		successCount: number;
+		failureCount: number;
+		successRate: number | null;
+		p50: number | null;
+		p75: number | null;
+		p95: number | null;
+		coverage: PerformanceCoverageStatus;
+	}>;
+	routes: Array<{
+		route: string;
+		sampleCount: number;
+		p75: number;
+		p95: number;
+	}>;
+	trend: Array<{
+		bucketStart: number;
+		name: string;
+		sampleCount: number;
+		p75: number;
+	}>;
+	versions: Array<{
+		version: string;
+		sampleCount: number;
+		p75: number;
+		p95: number;
+	}>;
+	coverage: Array<{ name: string; status: PerformanceCoverageStatus }>;
+	pipeline: { status: "unavailable"; source: "database-only" };
+};
+
+const vitalCatalog = ["LCP", "CLS", "INP", "FCP", "TTFB"] as const;
+const navigationCatalog = [
+	"navigation.dns",
+	"navigation.tcp",
+	"navigation.tls",
+	"navigation.request_wait",
+	"navigation.download",
+	"navigation.dom_ready",
+	"navigation.window_load",
+] as const;
+const resourceCatalog = [
+	"resource.duration",
+	"resource.fetch.duration",
+	"resource.xhr.duration",
+	"resource.script.duration",
+	"resource.stylesheet.duration",
+	"resource.image.duration",
+	"resource.font.duration",
+] as const;
+const errorCatalog = [
+	"javascript.error",
+	"promise.rejection",
+	"error.javascript.type_error",
+	"error.javascript.network",
+	"error.javascript.timeout",
+	"error.javascript.unknown",
+	"error.promise.type_error",
+	"error.promise.network",
+	"error.promise.timeout",
+	"error.promise.unknown",
+] as const;
+const longTaskCatalog = [
+	"longtask.duration",
+	"longtask.count",
+	"longtask.total",
+	"longtask.max",
+] as const;
+const topN = 10;
+
+export function isAllowedPerformanceMetricName(name: string): boolean {
+	return Object.values(allowedEventNames).some((names) => names.has(name));
+}
+
+function coverageFor(
+	events: StoredPerformanceEvent[],
+): PerformanceCoverageStatus {
+	if (events.some(({ outcome }) => outcome !== "unavailable"))
+		return "observed";
+	if (events.some(({ outcome }) => outcome === "unavailable"))
+		return "unavailable";
+	return "instrumented-no-sample";
+}
+
+function nullablePercentile(values: number[], quantile: number): number | null {
+	return values.length === 0
+		? null
+		: percentile(
+				[...values].sort((left, right) => left - right),
+				quantile,
+			);
+}
+
+function summarizeMetric(
+	events: StoredPerformanceEvent[],
+	name: string,
+	unit: PerformanceEvent["unit"],
+): PerformanceMetricSummary {
+	const matching = events.filter((event) => event.name === name);
+	const observed = matching.filter(({ outcome }) => outcome !== "unavailable");
+	const values = observed.map(({ value }) => value);
+	return {
+		name,
+		unit,
+		sampleCount: observed.length,
+		p50: nullablePercentile(values, 0.5),
+		p75: nullablePercentile(values, 0.75),
+		p95: nullablePercentile(values, 0.95),
+		coverage: coverageFor(matching),
+	};
+}
+
+function summarizeDimension(
+	events: StoredPerformanceEvent[],
+	dimension: "route" | "version",
+): Array<{
+	key: string;
+	sampleCount: number;
+	p75: number;
+	p95: number;
+}> {
+	const groups = new Map<string, number[]>();
+	for (const event of events) {
+		const key = event[dimension];
+		const values = groups.get(key) ?? [];
+		values.push(event.value);
+		groups.set(key, values);
+	}
+	return [...groups]
+		.map(([key, values]) => ({
+			key,
+			sampleCount: values.length,
+			p75: percentile(
+				[...values].sort((a, b) => a - b),
+				0.75,
+			),
+			p95: percentile(
+				[...values].sort((a, b) => a - b),
+				0.95,
+			),
+		}))
+		.sort(
+			(left, right) =>
+				right.p75 - left.p75 || left.key.localeCompare(right.key),
+		)
+		.slice(0, topN);
 }
 
 export function computePerformanceStats(
@@ -313,7 +504,168 @@ export function computePerformanceStats(
 
 export function computePerformanceDashboard(
 	events: StoredPerformanceEvent[],
-	metric?: string,
-): ReturnType<typeof computePerformanceStats> {
-	return computePerformanceStats(events, metric);
+	metric = "LCP",
+): PerformanceDashboardResponse {
+	const latestSampleAt = events.length
+		? Math.max(...events.map(({ timestamp }) => timestamp))
+		: null;
+	const diagnosticEvents = events.filter(
+		(event) => event.name === metric && event.outcome !== "unavailable",
+	);
+	const pageObservationCount = events.filter(
+		(event) =>
+			event.name === "navigation.window_load" &&
+			event.outcome !== "unavailable",
+	).length;
+	const duration = summarizeMetric(events, "longtask.duration", "ms");
+	const durationValues = events
+		.filter(
+			(event) =>
+				event.name === "longtask.duration" && event.outcome !== "unavailable",
+		)
+		.map(({ value }) => value);
+	const longTaskEvents = events.filter(({ name }) =>
+		longTaskCatalog.includes(name as (typeof longTaskCatalog)[number]),
+	);
+	const count = events
+		.filter(
+			(event) =>
+				event.name === "longtask.count" && event.outcome !== "unavailable",
+		)
+		.reduce((total, event) => total + event.value, 0);
+	const web3 = web3OperationNames.map((name) => {
+		const operationEvents = events.filter(
+			(event) => event.name === name || event.name === `${name}.error`,
+		);
+		const observed = operationEvents.filter(
+			({ outcome }) => outcome !== "unavailable",
+		);
+		const successCount = observed.filter(
+			(event) =>
+				event.outcome === "success" ||
+				(event.outcome === undefined && !event.name.endsWith(".error")),
+		).length;
+		const failureCount = observed.filter(
+			(event) => event.outcome === "failure" || event.name.endsWith(".error"),
+		).length;
+		const denominator = successCount + failureCount;
+		const values = observed.map(({ value }) => value);
+		return {
+			name,
+			unit: "ms" as const,
+			sampleCount: observed.length,
+			successCount,
+			failureCount,
+			successRate: denominator === 0 ? null : successCount / denominator,
+			p50: nullablePercentile(values, 0.5),
+			p75: nullablePercentile(values, 0.75),
+			p95: nullablePercentile(values, 0.95),
+			coverage: coverageFor(operationEvents),
+		};
+	});
+	const routeSummaries = summarizeDimension(diagnosticEvents, "route");
+	const versionSummaries = summarizeDimension(diagnosticEvents, "version");
+	const trendGroups = new Map<number, number[]>();
+	for (const event of diagnosticEvents) {
+		const bucketStart = Math.floor(event.timestamp / 3_600_000) * 3_600_000;
+		const values = trendGroups.get(bucketStart) ?? [];
+		values.push(event.value);
+		trendGroups.set(bucketStart, values);
+	}
+
+	const vitals = vitalCatalog.map((name) =>
+		summarizeMetric(events, name, name === "CLS" ? "score" : "ms"),
+	);
+	const navigation = navigationCatalog.map((name) =>
+		summarizeMetric(events, name, "ms"),
+	);
+	const resources = resourceCatalog
+		.map((name) => summarizeMetric(events, name, "ms"))
+		.sort(
+			(left, right) =>
+				(right.p75 ?? Number.NEGATIVE_INFINITY) -
+					(left.p75 ?? Number.NEGATIVE_INFINITY) ||
+				left.name.localeCompare(right.name),
+		)
+		.slice(0, topN);
+	const errors = errorCatalog
+		.map((name) => {
+			const matching = events.filter((event) => event.name === name);
+			return {
+				name,
+				sampleCount: matching.length,
+				rate:
+					pageObservationCount === 0
+						? null
+						: matching.length / pageObservationCount,
+				coverage: coverageFor(matching),
+			};
+		})
+		.sort(
+			(left, right) =>
+				right.sampleCount - left.sampleCount ||
+				left.name.localeCompare(right.name),
+		)
+		.slice(0, topN);
+	const coverage = [
+		...vitals,
+		...navigation,
+		...resources,
+		...longTaskCatalog.map((name) =>
+			summarizeMetric(events, name, name.endsWith(".count") ? "count" : "ms"),
+		),
+		...errors.map(({ name, coverage: status }) => ({
+			name,
+			coverage: status,
+		})),
+		...web3,
+	].map(({ name, coverage: status }) => ({ name, status }));
+
+	return {
+		freshness: {
+			observedAt: latestSampleAt,
+			latestSampleAt,
+			mode: "live",
+			source: "live-api",
+			runId: null,
+			commit: null,
+		},
+		vitals,
+		navigation,
+		resources,
+		longTasks: {
+			count,
+			totalDurationMs: durationValues.reduce(
+				(total, value) => total + value,
+				0,
+			),
+			maxDurationMs:
+				durationValues.length === 0 ? null : Math.max(...durationValues),
+			duration,
+			coverage: coverageFor(longTaskEvents),
+		},
+		errors,
+		web3,
+		routes: routeSummaries.map(({ key, ...summary }) => ({
+			route: key,
+			...summary,
+		})),
+		trend: [...trendGroups]
+			.sort(([left], [right]) => left - right)
+			.map(([bucketStart, values]) => ({
+				bucketStart,
+				name: metric,
+				sampleCount: values.length,
+				p75: percentile(
+					[...values].sort((a, b) => a - b),
+					0.75,
+				),
+			})),
+		versions: versionSummaries.map(({ key, ...summary }) => ({
+			version: key,
+			...summary,
+		})),
+		coverage,
+		pipeline: { status: "unavailable", source: "database-only" },
+	};
 }

@@ -199,8 +199,123 @@ describe("real-sample statistics", () => {
 		]);
 
 		expect(dashboard.trend).toEqual([
-			{ bucketStart: 0, sampleCount: 1, p75: 10 },
-			{ bucketStart: 3_600_000, sampleCount: 1, p75: 20 },
+			{ bucketStart: 0, name: "LCP", sampleCount: 1, p75: 10 },
+			{
+				bucketStart: 3_600_000,
+				name: "LCP",
+				sampleCount: 1,
+				p75: 20,
+			},
+		]);
+		expect(
+			dashboard.trend.every(({ bucketStart }) => bucketStart % 3_600_000 === 0),
+		).toBe(true);
+	});
+
+	it("returns the fixed vital catalog with honest empty-sample coverage", () => {
+		const dashboard = computePerformanceDashboard([
+			event({ name: "LCP", value: 200 }),
+		]);
+
+		expect(dashboard.vitals.map(({ name }) => name)).toEqual([
+			"LCP",
+			"CLS",
+			"INP",
+			"FCP",
+			"TTFB",
+		]);
+		expect(dashboard.vitals.find(({ name }) => name === "INP")).toMatchObject({
+			sampleCount: 0,
+			p50: null,
+			p75: null,
+			p95: null,
+			coverage: "instrumented-no-sample",
+		});
+		expect(dashboard.coverage.find(({ name }) => name === "INP")).toEqual({
+			name: "INP",
+			status: "instrumented-no-sample",
+		});
+	});
+
+	it("marks explicit unavailable observations without turning zero into a percentile", () => {
+		const dashboard = computePerformanceDashboard([
+			event({
+				type: "custom",
+				name: "navigation.tls",
+				value: 0,
+				unit: "ms",
+				outcome: "unavailable",
+			}),
+		]);
+
+		expect(
+			dashboard.navigation.find(({ name }) => name === "navigation.tls"),
+		).toMatchObject({
+			sampleCount: 0,
+			p75: null,
+			coverage: "unavailable",
+		});
+	});
+
+	it("uses page observations for error rates and operation outcomes for Web3 success", () => {
+		const dashboard = computePerformanceDashboard([
+			event({ type: "custom", name: "navigation.window_load", unit: "ms" }),
+			event({ type: "custom", name: "navigation.window_load", unit: "ms" }),
+			event({
+				type: "error",
+				name: "javascript.error",
+				unit: "count",
+				value: 1,
+			}),
+			event({
+				type: "web3",
+				name: "web3.rpc.read",
+				outcome: "success",
+			}),
+			event({
+				type: "web3",
+				name: "web3.rpc.read",
+				outcome: "failure",
+			}),
+		]);
+
+		expect(dashboard.errors[0]).toMatchObject({
+			name: "javascript.error",
+			sampleCount: 1,
+			rate: 0.5,
+		});
+		expect(
+			dashboard.web3.find(({ name }) => name === "web3.rpc.read"),
+		).toMatchObject({
+			sampleCount: 2,
+			successCount: 1,
+			failureCount: 1,
+			successRate: 0.5,
+		});
+	});
+
+	it("returns only the ten slowest routes", () => {
+		const routes = [
+			"/",
+			"/home",
+			"/marketplace",
+			"/parent",
+			"/keepsakes",
+			"/provider",
+			"/exchange",
+			"/profile",
+			"/performance",
+			"/evidence",
+			"/tasks",
+			"/tasks/:id",
+		] as const;
+		const dashboard = computePerformanceDashboard(
+			routes.map((route, index) => event({ route, value: index + 1 })),
+		);
+
+		expect(dashboard.routes).toHaveLength(10);
+		expect(dashboard.routes.map(({ p75 }) => p75)).toEqual([
+			12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
 		]);
 	});
 

@@ -28,6 +28,7 @@ describe("performance PostgreSQL store", () => {
 		expect(calls[0]?.text).toContain("ON CONFLICT (event_id) DO NOTHING");
 		expect(calls[0]?.text).toContain("babysteps_performance.hourly_aggregates");
 		expect(calls[0]?.text).toContain("FROM inserted");
+		expect(calls[0]?.text).toContain("category, outcome");
 		expect(calls[0]?.values).toContain(sample.eventId);
 		expect(calls[0]?.text).not.toContain(sample.eventId);
 	});
@@ -48,8 +49,11 @@ describe("performance PostgreSQL store", () => {
 								route: sample.route,
 								environment: sample.environment,
 								version: sample.version,
-								timestamps: [sample.timestamp],
-								values: [sample.value],
+								timestamp: sample.timestamp,
+								value: sample.value,
+								category: null,
+								outcome: null,
+								totalCount: 1,
 							},
 						],
 						rowCount: 1,
@@ -69,6 +73,7 @@ describe("performance PostgreSQL store", () => {
 		expect(result).toHaveLength(1);
 		expect(calls[0]?.text).toContain("bucket_start_ms >= $1");
 		expect(calls[0]?.text).toContain("hourly_aggregates");
+		expect(calls[0]?.text).toContain("LIMIT 10000");
 		expect(calls[0]?.text).not.toContain("FROM babysteps_performance.events");
 		expect(calls[0]?.values).toEqual(
 			expect.arrayContaining(["/", "preview", "abc123"]),
@@ -89,11 +94,11 @@ describe("performance PostgreSQL store", () => {
 							route: sample.route,
 							environment: sample.environment,
 							version: sample.version,
-							timestamps: Array.from(
-								{ length: 10_001 },
-								() => sample.timestamp,
-							),
-							values: Array.from({ length: 10_001 }, () => sample.value),
+							timestamp: sample.timestamp,
+							value: sample.value,
+							category: null,
+							outcome: null,
+							totalCount: 10_001,
 						},
 					],
 					rowCount: 1,
@@ -120,8 +125,11 @@ describe("performance PostgreSQL store", () => {
 							route: sample.route,
 							environment: sample.environment,
 							version: sample.version,
-							timestamps: [sample.timestamp - 1, sample.timestamp + 1],
-							values: [999, 123],
+							timestamp: sample.timestamp + 1,
+							value: 123,
+							category: "image",
+							outcome: "success",
+							totalCount: 1,
 						},
 					],
 					rowCount: 1,
@@ -131,6 +139,12 @@ describe("performance PostgreSQL store", () => {
 		);
 
 		const result = await store.query({ window: "1h", metric: "LCP" });
-		expect(result.map(({ value }) => value)).toEqual([123]);
+		expect(result).toEqual([
+			expect.objectContaining({
+				value: 123,
+				category: "image",
+				outcome: "success",
+			}),
+		]);
 	});
 });

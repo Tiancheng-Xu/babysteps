@@ -41,7 +41,7 @@ describe("performance Lambda adapters", () => {
 		});
 	});
 
-	it("returns real statistics and an empty state without fixtures", async () => {
+	it("returns the full dashboard contract without fixtures", async () => {
 		const query = vi.fn(async () => [JSON.parse(body).events[0]]);
 		const handler = createPerformanceQueryHandler({
 			originToken: "token",
@@ -53,9 +53,14 @@ describe("performance Lambda adapters", () => {
 			queryStringParameters: { window: "24h" },
 		});
 		expect(response.statusCode).toBe(200);
-		expect(JSON.parse(response.body)).toMatchObject({
-			sampleCount: 1,
-			p75: 100,
+		const result = JSON.parse(response.body);
+		expect(
+			result.vitals.find(({ name }: { name: string }) => name === "LCP"),
+		).toMatchObject({ sampleCount: 1, p75: 100 });
+		expect(result).toMatchObject({
+			window: "24h",
+			pipeline: { status: "unavailable", source: "database-only" },
+			freshness: { source: "live-api", mode: "live" },
 		});
 	});
 
