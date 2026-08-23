@@ -526,7 +526,8 @@ export function EvidencePage() {
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
 					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
-					31765573258 已用一条受控事件验证完整闭环，并在取证后自动删除临时资源。
+					32626397427 已在 commit acd4898f61fc
+					上用一条受控事件复验完整闭环，并在取证后自动删除临时资源。
 				</p>
 				<section
 					className="evidence-requirement-map"
@@ -555,11 +556,11 @@ export function EvidencePage() {
 							<code>aws/src/performance · aws/performance-template.yaml</code>
 							<strong>验证证据</strong>
 							<a
-								href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258"
+								href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/32626397427"
 								target="_blank"
 								rel="noreferrer"
 							>
-								Run 31765573258
+								Run 32626397427
 							</a>
 							<strong>当前状态</strong>
 							<span>已实现并验证</span>
@@ -572,12 +573,20 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>
 								web/src/pages/PerformancePage.tsx ·
-								.github/workflows/performance-aws-closed-loop.yml
+								.github/workflows/aws-performance.yml
 							</code>
 							<strong>验证证据</strong>
 							<span>
-								sampleCount=1，p50=p75=p95=321；九类项目运行资源均为 0
+								sampleCount=1，p50=p75=p95=321；Schema 与精确项目 Stack
+								已删除，项目 ECS Cluster 为 0
 							</span>
+							<a
+								href="https://github.com/Tiancheng-Xu/babysteps/blob/main/docs/evidence/deployment/2026-08-23-performance-aws-observation.json"
+								target="_blank"
+								rel="noreferrer"
+							>
+								查看机器可读证据
+							</a>
 							<strong>当前状态</strong>
 							<span>已实现并验证</span>
 						</article>
@@ -714,6 +723,18 @@ export function EvidencePage() {
 								sampleCount=1，p50=p75=p95=321；Schema、Stack
 								与九类项目资源均完成清理。
 							</li>
+							<li>
+								<a
+									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/32626397427"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Run 32626397427
+								</a>
+								：commit acd4898f61fc 的最新复验成功，受控 LCP 为 321ms， ECS
+								Cleaner exitCode=0；Schema 与精确项目 Stack 已删除，项目 ECS
+								Cluster 为 0，共享 Foundation 保持受保护。
+							</li>
 						</ol>
 					</section>
 				</section>
@@ -837,7 +858,7 @@ export function EvidencePage() {
 							<br />
 							<strong>证明什么：</strong>
 							手机端没有根级横向溢出；该截图证明 UI，最终云端结果由 Run
-							31765573258 的工件与清理盘点证明。
+							32626397427 的工件与清理盘点证明。
 						</figcaption>
 					</figure>
 				</div>
