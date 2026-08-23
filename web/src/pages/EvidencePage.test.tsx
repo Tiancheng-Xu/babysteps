@@ -47,13 +47,20 @@ describe("EvidencePage", () => {
 		).toBeTruthy();
 		expect(screen.getByText(/31760380214/u)).toBeTruthy();
 		expect(screen.getByText(/31761586956/u)).toBeTruthy();
-		expect(screen.getAllByText(/31765573258/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/32626397427/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/commit acd4898f61fc/u).length).toBeGreaterThan(
+			0,
+		);
 		expect(
 			screen.getAllByText(/sampleCount=1，p50=p75=p95=321/u).length,
 		).toBeGreaterThan(0);
 		expect(
-			screen.getAllByText(/九类项目运行资源均为 0/u).length,
+			screen.getAllByText(/Schema 与精确项目 Stack/u).length,
 		).toBeGreaterThan(0);
+		expect(
+			screen.getAllByText(/项目 ECS Cluster 为 0/u).length,
+		).toBeGreaterThan(0);
+		expect(screen.getByRole("link", { name: "查看机器可读证据" })).toBeTruthy();
 		expect(screen.getByText("AWS 闭环已验证")).toBeTruthy();
 		expect(screen.queryByText("AWS 云端待验证")).toBeNull();
 	});

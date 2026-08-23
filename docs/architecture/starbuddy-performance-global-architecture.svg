@@ -17,7 +17,7 @@
   <g transform="translate(80 67)"><circle cx="34" cy="28" r="32" fill="#ffedb4" stroke="#e5a84f" stroke-width="4"/><path d="M34 4L42 21L61 24L47 37L51 56L34 47L17 56L21 37L7 24L26 21Z" fill="#f6c75c" stroke="#8b5626" stroke-width="2"/><circle cx="27" cy="31" r="2.5"/><circle cx="41" cy="31" r="2.5"/><path d="M29 39Q34 44 39 39" fill="none" stroke="#6b4328" stroke-width="2.5"/></g>
   <text x="155" y="93" class="title">BabySteps × StarBuddy · 性能观测展开版全局架构</text>
   <text x="157" y="130" class="subtitle">浏览器 SDK → Worker → AWS · 异步清洗、真实百分位、OIDC 临时部署与自动清理</text>
-  <g transform="translate(1800 74)"><rect width="205" height="34" rx="17" fill="#d9eccf"/><circle cx="19" cy="17" r="7" fill="#4e855b"/><text x="34" y="23" class="status">AWS 闭环已验证</text><rect x="220" width="265" height="34" rx="17" fill="#d9eccf"/><circle cx="239" cy="17" r="7" fill="#4e855b"/><text x="255" y="23" class="status">Run 31765573258</text></g>
+  <g transform="translate(1800 74)"><rect width="205" height="34" rx="17" fill="#d9eccf"/><circle cx="19" cy="17" r="7" fill="#4e855b"/><text x="34" y="23" class="status">AWS 闭环已验证</text><rect x="220" width="265" height="34" rx="17" fill="#d9eccf"/><circle cx="239" cy="17" r="7" fill="#4e855b"/><text x="255" y="23" class="status">Run 32626397427</text></g>
 
   <!-- six responsibility columns -->
   <g transform="translate(70 190)">
@@ -62,5 +62,5 @@
   <text x="105" y="1372" class="lane">失败与恢复</text><path class="fail" d="M280 1364H520"/><text x="550" y="1372" class="body" style="fill:#fffaf0">Worker 502 / 页面诚实显示“暂不可用”</text><path class="fail" d="M1030 1364H1240"/><text x="1270" y="1372" class="body" style="fill:#fffaf0">SQS 有界重试 → DLQ</text>
   <text x="105" y="1418" class="body" style="fill:#cce8cc">清理责任：项目 Schema、SQS/DLQ、ECR、ECS Cluster/Task、Lambda/API、Log Group 随项目栈删除</text>
   <text x="105" y="1444" class="body" style="fill:#ffdda0">受保护共享资源：VPC、公私子网、单 NAT、RDS 引擎、GitHub OIDC、Artifact Bucket 不进入项目 cleanup</text>
-  <rect x="72" y="1490" width="2256" height="54" rx="20" fill="#fff" fill-opacity=".68"/><text x="105" y="1524" class="status">AWS 闭环已验证 · Run 31765573258 · LCP=321 · sampleCount=1 · p50=p75=p95=321 · ECS exitCode=0 · 项目栈自动清理</text>
+  <rect x="72" y="1490" width="2256" height="54" rx="20" fill="#fff" fill-opacity=".68"/><text x="105" y="1524" class="status">AWS 闭环已验证 · Run 32626397427 · LCP=321 · sampleCount=1 · p50=p75=p95=321 · ECS exitCode=0 · 项目栈自动清理</text>
 </svg>

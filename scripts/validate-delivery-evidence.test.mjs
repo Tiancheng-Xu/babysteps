@@ -110,7 +110,8 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
   <img src={performanceMobile} alt="性能统计页手机端" />
   <h3>要求、实现与证据映射</h3>
   <p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · AWS 闭环已验证</p>
-  <p>Run 31765573258 · sampleCount=1，p50=p75=p95=321 · 九类项目运行资源均为 0</p>
+	<p>Run 32626397427 · sampleCount=1，p50=p75=p95=321 · 项目 ECS Cluster 为 0</p>
+	<a>查看机器可读证据</a>
   <p>无演示数据兜底 · 最终云端结果由 Run 证明</p>
 	<p>应反向优化的共享能力</p>
 </section>
@@ -197,7 +198,7 @@ const validAssetFacts = [
 			<text>API Gateway</text><text>SQS 主队列</text><text>SQS DLQ</text>
 			<text>一次性 ECS Fargate Cleaner</text><text>共享 PostgreSQL</text>
 			<text>p50 / p75 / p95</text><text>GitHub Actions + OIDC</text>
-			<text>项目栈自动清理</text><text>AWS 闭环已验证</text><text>Run 31765573258</text>
+			<text>项目栈自动清理</text><text>AWS 闭环已验证</text><text>Run 32626397427</text>
 		</svg>`,
 	},
 	{
@@ -211,7 +212,7 @@ const validAssetFacts = [
 			<text>04 ECS 清洗</text><text>05 真实统计</text><text>06 Evidence 与清理</text>
 			<text>sendBeacon</text><text>失败静默</text><text>maxReceiveCount = 3</text>
 			<text>幂等写入</text><text>sampleCount</text><text>DROP SCHEMA</text><text>delete-stack</text>
-			<text>Run 31765573258</text><text>ECS exitCode=0</text>
+			<text>Run 32626397427</text><text>ECS exitCode=0</text>
 		</svg>`,
 	},
 	{

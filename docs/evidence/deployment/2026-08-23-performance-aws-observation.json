@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "status": "verified-and-cleaned",
+  "observedAt": "2026-08-23",
+  "workflow": {
+    "name": "BabySteps AWS Performance Evidence",
+    "runId": 32626397427,
+    "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/32626397427",
+    "commit": "acd4898f61fcc0e05809879ec57ed6d881a58c72",
+    "region": "us-east-1",
+    "mode": "manual temporary validation"
+  },
+  "controlledEvent": {
+    "schemaVersion": 1,
+    "type": "metric",
+    "name": "LCP",
+    "value": 321,
+    "unit": "ms",
+    "route": "/performance",
+    "environment": "evidence",
+    "version": "acd4898f61fc",
+    "accepted": 1
+  },
+  "pipeline": [
+    "Browser-shaped event",
+    "Cloudflare Worker proxy",
+    "API Gateway and ingest Lambda",
+    "SQS with DLQ",
+    "on-demand ECS Fargate cleaner",
+    "project PostgreSQL schema",
+    "query Lambda",
+    "sanitized workflow artifact"
+  ],
+  "cleanerTask": {
+    "lastStatus": "STOPPED",
+    "container": "cleaner",
+    "exitCode": 0
+  },
+  "aggregate": {
+    "window": "1h",
+    "metric": "LCP",
+    "sampleCount": 1,
+    "p50": 321,
+    "p75": 321,
+    "p95": 321,
+    "errorRate": 0,
+    "route": "/performance"
+  },
+  "provisioning": {
+    "cloudFormationResourcesCreated": 21,
+    "temporaryProjectStack": true,
+    "sharedFoundationReused": true
+  },
+  "cleanup": {
+    "schemaDeleted": true,
+    "schemaCleanupAttempt": 1,
+    "projectStackDeleted": true,
+    "remainingProjectClusters": 0,
+    "sharedFoundationProtected": true
+  },
+  "security": {
+    "browserAwsCredentials": false,
+    "longLivedAwsAccessKey": false,
+    "githubIdentity": "short-lived OIDC session",
+    "publishedSecrets": false
+  },
+  "limitations": [
+    "This run proves one controlled event and the complete temporary lifecycle, not production traffic scale.",
+    "The project stack and database schema were deleted after evidence capture, so the public dashboard does not claim a continuously running AWS backend.",
+    "Cleanup values are the sanitized workflow artifact produced by the successful run; no separate root-session inventory is claimed."
+  ]
+}
