@@ -13,6 +13,10 @@ test("uses Cloudflare Git Integration as the only production publisher", () => {
 	assert.match(manifest, /^production-branch: main$/m);
 	assert.match(manifest, /^pages-project: babysteps$/m);
 	assert.match(manifest, /^output-directory: web\/dist$/m);
+	assert.match(
+		manifest,
+		/^evidence-url: https:\/\/babysteps\.baby2b\.online\/evidence\/$/m,
+	);
 	assert.match(verifier, /permissions:\n  contents: read/);
 	assert.match(
 		verifier,

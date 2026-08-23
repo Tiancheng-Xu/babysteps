@@ -6,5 +6,5 @@ build-command: pnpm --filter @babysteps/web build
 output-directory: web/dist
 pages-project: babysteps
 production-url: https://babysteps.baby2b.online/
-evidence-url: https://evidence.baby2b.online/babysteps/
+evidence-url: https://babysteps.baby2b.online/evidence/
 backup-url: https://babysteps-83x.pages.dev/
