@@ -44,6 +44,19 @@ Resources:
         - { Key: ManagedBy, Value: cloudformation }
         - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
 
+  OriginTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    Properties:
+      Name: !Sub babysteps-performance-origin-${EnvironmentName}
+      Description: !Sub Temporary BabySteps performance origin token ${EnvironmentName}
+      SecretString: { Ref: OriginToken }
+      Tags:
+        - { Key: Project, Value: babysteps-performance }
+        - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: ManagedBy, Value: cloudformation }
+        - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
+
   PerformanceDeadLetterQueue:
     Type: AWS::SQS::Queue
     DeletionPolicy: Delete
@@ -280,6 +293,7 @@ Resources:
 
 Outputs:
   ApiEndpoint: { Value: !Sub "https://${PerformanceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}" }
+  OriginTokenSecretArn: { Value: { Fn::GetAtt: [OriginTokenSecret, Id] } }
   QueueUrl: { Value: { Ref: PerformanceQueue } }
   ClusterArn: { Value: !GetAtt PerformanceCluster.Arn }
   CleanerTaskDefinitionArn: { Value: { Ref: CleanerTaskDefinition } }

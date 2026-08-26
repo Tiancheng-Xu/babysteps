@@ -1,0 +1,58 @@
+{
+	"dispatchInputKeys": [
+		"action",
+		"operation_id",
+		"generation",
+		"expires_at",
+		"estimated_cost_usd"
+	],
+	"dispatch": {
+		"action": "start",
+		"operation_id": "operation-fixture-start-1",
+		"generation": "7",
+		"expires_at": "2026-08-26T12:45:00Z",
+		"estimated_cost_usd": "0.20"
+	},
+	"stopDispatch": {
+		"action": "stop",
+		"operation_id": "operation-fixture-stop-1",
+		"generation": "7",
+		"expires_at": "2026-08-26T12:45:00Z",
+		"estimated_cost_usd": "0.20"
+	},
+	"callbackHeaderKeys": [
+		"x-performance-timestamp",
+		"x-performance-delivery-id",
+		"x-performance-signature-256"
+	],
+	"hmac": {
+		"secret": "consumer-fixture-secret",
+		"timestamp": "1700000000",
+		"rawBody": "{\"schemaVersion\":\"1.0\",\"deliveryId\":\"delivery-fixture-control-1\",\"source\":\"control\",\"operationId\":\"operation-fixture-1\",\"generation\":7,\"workflowRunId\":\"123456789\",\"status\":\"stopped\",\"occurredAt\":\"2026-08-26T12:00:00.000Z\",\"cleanupVerified\":true,\"zeroResidualVerified\":true}",
+		"signature": "sha256=fde324bcdcfa7de699759f168daeb0700ad0766a7b33f2b8b540c65f825b8944"
+	},
+	"controlTerminal": {
+		"schemaVersion": "1.0",
+		"deliveryId": "delivery-fixture-control-1",
+		"source": "control",
+		"operationId": "operation-fixture-1",
+		"generation": 7,
+		"workflowRunId": "123456789",
+		"status": "stopped",
+		"occurredAt": "2026-08-26T12:00:00.000Z",
+		"cleanupVerified": true,
+		"zeroResidualVerified": true
+	},
+	"awsSafetyExpiryTerminal": {
+		"schemaVersion": "1.0",
+		"deliveryId": "delivery-fixture-expiry-1",
+		"source": "aws-safety-expiry",
+		"operationId": "operation-fixture-1",
+		"generation": 7,
+		"workflowRunId": "123456790",
+		"status": "cleanup_required",
+		"occurredAt": "2026-08-26T12:45:00.000Z",
+		"cleanupVerified": false,
+		"zeroResidualVerified": false
+	}
+}

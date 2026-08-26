@@ -1,31 +1,14 @@
 {
   "schemaVersion": 1,
-  "runId": "d91f8a58-65df-4bb4-92f9-fcfb2b9a4013",
-  "feature": "starbuddy-keepsakes",
+  "runId": "d35c7307-4a53-4b75-9d51-b7d9e5002026",
+  "feature": "performance-mfa-control",
   "version": 1,
-  "contractHash": "7b99929c46cba4df2534ae5710377d53e95f181584fd088b8fd8fb63d25e80d4",
-  "goal": "Implement the approved StarBuddy keepsake draw, fusion, recovery, and responsive UI loop.",
-  "nonGoals": [
-    "Production release",
-    "Mainnet deployment",
-    "Migration of previous Sepolia state",
-    "Transfer or resale of keepsakes",
-    "Child or family-private metadata"
-  ],
-  "spec": "docs/superpowers/specs/2026-08-13-starbuddy-keepsakes-design.md",
-  "plan": "docs/superpowers/plans/2026-08-13-starbuddy-keepsakes.md",
-  "repository": "/Users/shier/Desktop/babysteps",
-  "branch": "feature/starbuddy-keepsakes",
-  "allowedWritePaths": [
-    ".tc-flow",
-    "contracts",
-    "web",
-    "docs",
-    "scripts"
-  ],
-  "networkScope": [
-    "local Hardhat",
-    "Ethereum Sepolia test environment only after local gates"
-  ],
-  "production": "manual"
+  "contractHash": "b7d9e5003a74291de098ddbd6e2af9730b25782a43acc6422c56ce347a99a575",
+  "goal": "Allow one approved operator to start and stop the BabySteps AWS performance observation pipeline through a Cloudflare Access independent-MFA control plane.",
+  "nonGoals": ["Device posture as an authorization factor", "Arbitrary repository, workflow, AWS command, duration, region, or stack inputs", "A second VPC, NAT gateway, database, OIDC provider, or shared foundation", "A continuously running performance stack", "Publishing credentials, raw identity claims, cookies, tokens, or private telemetry"],
+  "repositories": ["/Users/shier/Desktop/repos/babysteps/.worktrees/performance-mfa-control-b7d9e500", "/Users/shier/Desktop/.tc-worktrees/fullstack-showcase-performance-mfa-control-b7d9e500"],
+  "allowedWritePaths": [".github/workflows/", "aws/", "scripts/", "docs/", ".tc-flow/"],
+  "networkScope": ["GitHub Actions for Tiancheng-Xu/babysteps only", "AWS account 782086108248 in us-east-1 through repository-scoped OIDC roles", "Fixed HTTPS callback to the Baby2B performance-control Worker"],
+  "acceptanceCriteria": ["Only the fixed start, stop, and scheduled-expiry operations are accepted", "The live stack reuses the verified shared VPC, NAT, RDS, artifact bucket, and GitHub OIDC provider", "At most one live project stack exists and its TTL is fixed at 45 minutes", "Estimated incremental cost is capped at USD 0.20 before deployment", "Stop and expiry perform final aggregation, exact schema deletion, exact stack deletion, and zero-residue verification", "Status callbacks are authenticated and contain no AWS or GitHub credentials", "Failures remain retryable and never claim successful cleanup without readback", "Evidence records architecture, sequence, cost, limitations, tests, and sanitized production proof"],
+  "production": "explicitly-authorized-after-gates"
 }

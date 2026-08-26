@@ -1,18 +1,1 @@
-{
-  "schemaVersion": 1,
-  "runId": "d91f8a58-65df-4bb4-92f9-fcfb2b9a4013",
-  "feature": "starbuddy-keepsakes",
-  "contractHash": "7b99929c46cba4df2534ae5710377d53e95f181584fd088b8fd8fb63d25e80d4",
-  "node": "N8",
-  "strategy": "inline",
-  "difficulty": "high",
-  "workspace": "/Users/shier/Desktop/babysteps",
-  "worktreeDeviation": "User requested direct feature-branch work without an additional Codex worktree.",
-  "tasks": {
-    "T1": "completed",
-    "T2": "completed",
-    "T3": "completed",
-    "T4": "completed",
-    "T5": "completed"
-  }
-}
+{"schemaVersion":1,"runId":"d35c7307-4a53-4b75-9d51-b7d9e5002026","feature":"performance-mfa-control","contractHash":"b7d9e5003a74291de098ddbd6e2af9730b25782a43acc6422c56ce347a99a575","node":"N3","status":"in_progress","difficulty":"high","strategy":"parallel-multi-repo-tdd-with-isolated-review","workspace":"/Users/shier/Desktop/repos/babysteps/.worktrees/performance-mfa-control-b7d9e500","tasks":{"T-001":"in_progress","T-002":"pending","T-003":"pending"}}
