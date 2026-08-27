@@ -102,6 +102,7 @@ test("parsed workflow fixes region, stack, TTL and cost outside caller inputs", 
 		CLEANUP_STATE_PARAMETER: "/babysteps/performance-control/cleanup-state",
 		ACTIVE_OPERATION_PARAMETER:
 			"/babysteps/performance-control/active-operation",
+		RUN_ID: "${{ github.run_id }}",
 	});
 	assert.deepEqual(Object.keys(workflow.on.workflow_dispatch.inputs).sort(), [
 		"action",
@@ -169,7 +170,7 @@ test("parsed start stop and safety-expiry cleanup topology are explicit", async 
 	assert.ok(deleteIndex < residueIndex);
 	assert.ok(residueIndex < stoppedIndex);
 	assert.match(steps[deleteIndex].if, /^always\(\)/);
-	assert.doesNotMatch(steps[deleteIndex].if, /schema-cleanup\.outcome/);
+	assert.match(steps[deleteIndex].if, /schema-cleanup\.outcome == 'success'/);
 	assert.match(steps[residueIndex].if, /^always\(\)/);
 	assert.match(steps[stoppedIndex].if, /steps\.zero-residue\.outcome == 'success'/);
 });
@@ -399,7 +400,7 @@ test("event and input expressions enter shell only through step env after operat
 	assert.ok(validationIndex < firstAwsOrSecret);
 });
 
-test("final aggregation is best effort while schema and stack cleanup retry independently", async () => {
+test("final aggregation is best effort while schema cleanup preserves the exact recovery stack on failure", async () => {
 	const { steps } = await loadWorkflow();
 	const aggregate = stepByName(steps, "Run final-aggregate");
 	assert.equal(aggregate["continue-on-error"], true);
@@ -415,7 +416,7 @@ test("final aggregation is best effort while schema and stack cleanup retry inde
 
 	const deletion = stepByName(steps, "Delete exact stable project stack");
 	assert.match(deletion.if, /^always\(\)/);
-	assert.doesNotMatch(deletion.if, /schema-cleanup\.outcome == 'success'/);
+	assert.match(deletion.if, /schema-cleanup\.outcome == 'success'/);
 	assert.match(deletion.if, /expiry/);
 	assert.match(deletion.run, /for attempt in 1 2 3/);
 	assert.match(deletion.run, /stack-delete-complete/);
@@ -439,11 +440,11 @@ test("stop without a stack performs fixed residue readback and idempotent stoppe
 	assert.doesNotMatch(callback.run, /performance-snapshot/);
 });
 
-test("expiry deletes the stack after schema failure and reports honest cleanup state", async () => {
+test("expiry retains the exact stack after schema failure and reports honest cleanup_required state", async () => {
 	const { steps } = await loadWorkflow();
 	const deletion = stepByName(steps, "Delete exact stable project stack");
 	assert.match(deletion.if, /expiry/);
-	assert.doesNotMatch(deletion.if, /schema-cleanup\.outcome/);
+	assert.match(deletion.if, /schema-cleanup\.outcome == 'success'/);
 	const cleanup = stepByName(
 		steps,
 		"Publish cleanup_required without claiming cleanup success",
@@ -451,6 +452,38 @@ test("expiry deletes the stack after schema failure and reports honest cleanup s
 	assert.match(cleanup.if, /steps\.schema-cleanup\.outcome != 'success'/);
 	assert.match(cleanup.run, /cleanupVerified:false/);
 	assert.match(cleanup.run, /zeroResidualVerified:false/);
+});
+
+test("start derives safe required deployment identity without raw approval material", async () => {
+	const { job, steps } = await loadWorkflow();
+	assert.equal(job.env.RUN_ID, "${{ github.run_id }}");
+	const token = stepByName(
+		steps,
+		"Generate ephemeral origin token for this stack lifecycle",
+	);
+	assert.deepEqual(token.env, {
+		OPERATION_ID: "${{ steps.resolve.outputs.operation_id }}",
+		GENERATION: "${{ steps.resolve.outputs.generation }}",
+		CALLBACK_SOURCE: "${{ steps.resolve.outputs.source }}",
+	});
+	assert.match(token.run, /APPROVAL_REFERENCE_HASH=/);
+	assert.match(token.run, /sha256sum/);
+	assert.doesNotMatch(token.run, /approval_reference|APPROVAL_REFERENCE\b/);
+
+	const deploy = stepByName(steps, "Deploy existing single performance stack");
+	assert.match(deploy.run, /--parameter-overrides[^\n]*RunId="\$RUN_ID"/);
+	assert.match(deploy.run, /ApprovalReferenceHash="\$APPROVAL_REFERENCE_HASH"/);
+});
+
+test("final cleaner evidence comes from the exact ECS task stream and validates honest counters", async () => {
+	const { steps } = await loadWorkflow();
+	const aggregate = stepByName(steps, "Run final-aggregate");
+	assert.match(aggregate.run, /\/babysteps\/performance\/\$ENVIRONMENT_NAME/);
+	assert.match(aggregate.run, /cleaner\/cleaner\/\$task_id/);
+	assert.match(aggregate.run, /logs get-log-events/);
+	assert.match(aggregate.run, /evidence\/cleaner-summary\.json/);
+	assert.match(aggregate.run, /retryableFailures/);
+	assert.match(aggregate.run, /processed.*inserted.*deduplicated.*discarded.*retryableFailures/s);
 });
 
 test("AWS absence checks use the classified helper and never negate describe commands", async () => {
@@ -508,5 +541,22 @@ test("zero residue checks orphaned API Gateway resources by fixed tags and fails
 	assert.match(residue.run, /Key=Environment,Values=control/);
 	assert.match(residue.run, /resource-type-filters apigateway:apis/);
 	assert.match(residue.run, /test "\$orphan_api_count" = "0"/);
+	assert.match(residue.run, /ecs list-tasks/);
+	assert.match(residue.run, /ecs_task_count/);
+	assert.match(residue.run, /ecs list-task-definitions/);
+	assert.match(residue.run, /iam list-roles/);
+	assert.match(residue.run, /iam_role_count/);
+	assert.match(residue.run, /remainingRunnableProjectResources/);
+	assert.match(residue.run, /inventory/);
+	assert.match(residue.run, /cloudWatchLogGroups/);
+	for (const logGroup of [
+		"/babysteps/performance/control",
+		"/aws/lambda/babysteps-performance-ingest-control",
+		"/aws/lambda/babysteps-performance-query-control",
+	]) {
+		assert.match(residue.run, new RegExp(logGroup.replaceAll("/", "\\/")));
+	}
+	const deletion = stepByName(steps, "Delete exact stable project stack");
+	assert.match(deletion.run, /delete-task-definitions/);
 	assert.doesNotMatch(residue.run, /\|\|\s*true/);
 });

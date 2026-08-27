@@ -55,6 +55,9 @@ import performanceArchitecture from "../../../docs/architecture/starbuddy-perfor
 import performanceSequence from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import performanceDesktop from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceMobile from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
+import performanceSnapshotDesktop from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png";
+import performanceSnapshotMobile from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png";
+import performanceSnapshotVideo from "../../../docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4";
 import renderingArchitecture from "../../../docs/architecture/starbuddy-rendering-global-architecture.svg";
 import renderingSequence from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import renderingDesktop from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -110,10 +113,15 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
   <img src={performanceDesktop} alt="性能统计页桌面端" />
   <img src={performanceMobile} alt="性能统计页手机端" />
   <h3>要求、实现与证据映射</h3>
-  <p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · AWS 闭环已验证</p>
+	<p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · 历史闭环已验证 · 新合同待云端复验</p>
+	<p>PR #36 · 0301a670 + a355227</p>
 	<p>Run 32626397427 · sampleCount=1，p50=p75=p95=321 · 项目 ECS Cluster 为 0</p>
 	<a>查看机器可读证据</a>
-  <p>无演示数据兜底 · 最终云端结果由 Run 证明</p>
+	<p>无演示数据兜底 · 历史云端结果由 Run 证明 · 新合同仍待云端复验</p>
+	<p>关闭收费资源后的可复核页面 · 历史快照 · 非实时</p>
+	<img src={performanceSnapshotDesktop} alt="性能历史快照桌面端真实页面截图" />
+	<img src={performanceSnapshotMobile} alt="性能历史快照 390 像素手机端真实页面截图" />
+	<video aria-label="性能历史快照页面滚动走读录屏"><source src={performanceSnapshotVideo} /></video>
 	<p>应反向优化的共享能力</p>
 </section>
 <section>
@@ -199,7 +207,7 @@ const validAssetFacts = [
 			<text>API Gateway</text><text>SQS 主队列</text><text>SQS DLQ</text>
 			<text>一次性 ECS Fargate Cleaner</text><text>共享 PostgreSQL</text>
 			<text>p50 / p75 / p95</text><text>GitHub Actions + OIDC</text>
-			<text>项目栈自动清理</text><text>AWS 闭环已验证</text><text>Run 32626397427</text>
+			<text>项目栈自动清理</text><text>历史闭环已验证</text><text>新性能合同云端待验证</text><text>Run 32626397427</text>
 		</svg>`,
 	},
 	{
@@ -305,6 +313,33 @@ const validAssetFacts = [
 		text: "",
 		sha256: "47286d2140cb03a53d8ce4d4f01294b36f3af5c2bf9985a2d6210a70036e85a7",
 	},
+	{
+		path: "docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png",
+		exists: true,
+		bytes: 576886,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "e4718c5f4ea52e3094a32c381e444c80f6461ae599e7a2e2263fdaf6341a22bd",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png",
+		exists: true,
+		bytes: 378111,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "f035b7080962738a0d20db39ff67b0a0ac952cde14198493436e08cdd41bb97b",
+	},
+	{
+		path: "docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4",
+		exists: true,
+		bytes: 1297104,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "4734e52dd36d6cedf4b99d8987f282e1e8ad5f21561da1abc24d832bbb57bf9c",
+	},
 ];
 
 function validate(
@@ -381,9 +416,15 @@ test("rejects a BabySteps map when a teacher requirement remains partial", () =>
 			"真实证据",
 			index === 1 ? "`partial`" : "`complete`",
 		]),
-	).replace("# Web3 delivery implementation map", "# BabySteps Web3 作业实现映射");
+	).replace(
+		"# Web3 delivery implementation map",
+		"# BabySteps Web3 作业实现映射",
+	);
 
-	assert.match(validate(map).join("\n"), /teacher requirement must be complete: 2\./);
+	assert.match(
+		validate(map).join("\n"),
+		/teacher requirement must be complete: 2\./,
+	);
 });
 
 test("accepts stronger remote Worker and D1 verification", () => {
@@ -682,5 +723,36 @@ test("rejects a screenshot whose recorded proof hash no longer matches", () => {
 			changedAssets,
 		).join("\n"),
 		/keepsake desktop screenshot SHA-256 mismatch/,
+	);
+});
+
+test("rejects performance Evidence without the post-cleanup recording", () => {
+	const validMap = mapWith(requiredHeaders, [
+		[
+			"性能观测",
+			"历史快照",
+			"`web/src/pages/PerformanceDashboardPage.tsx`",
+			"截图与录屏",
+			"`complete`",
+		],
+	]);
+	const withoutVideo = validEvidencePage.replaceAll(
+		"performance-verified-snapshot-walkthrough.mp4",
+		"missing-recording.mp4",
+	);
+	const assetsWithoutVideo = validAssetFacts.filter(
+		(asset) =>
+			!asset.path.endsWith("performance-verified-snapshot-walkthrough.mp4"),
+	);
+
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			withoutVideo,
+			assetsWithoutVideo,
+		).join("\n"),
+		/performance snapshot recording/,
 	);
 });

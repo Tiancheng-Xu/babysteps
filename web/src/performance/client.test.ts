@@ -28,6 +28,7 @@ describe("performance client", () => {
 			environment: "preview",
 			version: "abc123",
 		});
+		expect(payload.schemaVersion).toBe(2);
 		expect(JSON.stringify(payload)).not.toContain("secret");
 		expect(fetcher).not.toHaveBeenCalled();
 	});
@@ -40,6 +41,7 @@ describe("performance client", () => {
 			beacon: () => false,
 			fetcher,
 			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
 		});
 
 		client.record({
@@ -56,6 +58,7 @@ describe("performance client", () => {
 	});
 
 	it("requeues a batch when the upstream returns a non-success response", async () => {
+		vi.useFakeTimers();
 		const bodies: string[] = [];
 		const fetcher = vi
 			.fn()
@@ -75,10 +78,194 @@ describe("performance client", () => {
 		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
 
 		await client.flush();
-		await client.flush();
+		await vi.advanceTimersByTimeAsync(100);
 
 		expect(fetcher).toHaveBeenCalledTimes(2);
 		expect(bodies.join("\n")).toContain("LCP");
+	});
+
+	it("drops a client-error batch instead of retaining it", async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(new Response(null, { status: 400 }));
+		const client = createPerformanceClient({
+			environment: "production",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+		});
+		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
+
+		await client.flush();
+		await client.flush();
+
+		expect(fetcher).toHaveBeenCalledOnce();
+	});
+
+	it("retries throttled or server-error batches no more than three times", async () => {
+		vi.useFakeTimers();
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(new Response(null, { status: 503 }));
+		const client = createPerformanceClient({
+			environment: "production",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+		});
+		client.record({ type: "metric", name: "LCP", value: 123, unit: "ms" });
+
+		await client.flush();
+		await vi.advanceTimersByTimeAsync(100);
+		await vi.advanceTimersByTimeAsync(200);
+		await vi.advanceTimersByTimeAsync(400);
+
+		expect(fetcher).toHaveBeenCalledTimes(3);
+	});
+
+	it("sends high-priority vital events before resource backlog", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		client.record({
+			type: "resource",
+			name: "resource.image.duration",
+			value: 10,
+			unit: "ms",
+			category: "image",
+		});
+		client.record({ type: "metric", name: "LCP", value: 20, unit: "ms" });
+
+		await client.flush();
+
+		expect(JSON.parse(sent[0] ?? "").events[0]).toMatchObject({
+			name: "LCP",
+		});
+	});
+
+	it("reserves one third of the minute budget for vitals, errors, and Web3", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 7,
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 7; index += 1) {
+			client.record({
+				type: "resource",
+				name: "resource.image.duration",
+				value: index,
+				unit: "ms",
+				category: "image",
+			});
+		}
+		client.record({ type: "metric", name: "LCP", value: 1, unit: "ms" });
+		client.record({
+			type: "error",
+			name: "error.javascript.unknown",
+			value: 1,
+			unit: "count",
+			category: "unknown",
+		});
+		await client.markOperation("contract.read", async () => undefined);
+		await client.flush();
+		await client.flush();
+
+		expect(sent.join("\n")).toContain('"name":"LCP"');
+		expect(sent.join("\n")).toContain('"name":"error.javascript.unknown"');
+		expect(sent.join("\n")).toContain('"name":"contract.read"');
+	});
+
+	it("backs off network failures and pagehide does not immediately retry them", async () => {
+		vi.useFakeTimers();
+		const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
+		});
+		client.start();
+		client.record({ type: "metric", name: "LCP", value: 1, unit: "ms" });
+		globalThis.dispatchEvent(new Event("pagehide"));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(fetcher).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(99);
+		expect(fetcher).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(1);
+		expect(fetcher).toHaveBeenCalledTimes(2);
+		client.stop();
+	});
+
+	it("drains ready pagehide batches while retrying their failed batch first at its deadline", async () => {
+		vi.useFakeTimers();
+		const names: string[] = [];
+		const fetcher = vi.fn(async (_url, init) => {
+			const name = JSON.parse(String(init?.body)).events[0].name as string;
+			names.push(name);
+			return new Response(null, {
+				status: name === "resource.image.duration" ? 503 : 202,
+			});
+		});
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			batchSize: 20,
+			flushIntervalMs: 10_000,
+			beacon: () => false,
+			fetcher,
+			random: () => 0,
+			loadWebVitals: () => new Promise(() => {}),
+		});
+		client.start();
+		client.record({
+			type: "resource",
+			name: "resource.image.duration",
+			value: 1,
+			unit: "ms",
+			category: "image",
+		});
+		await client.flush();
+		client.record({ type: "metric", name: "FCP", value: 2, unit: "ms" });
+		globalThis.dispatchEvent(new Event("pagehide"));
+		await vi.advanceTimersByTimeAsync(0);
+		client.record({ type: "metric", name: "LCP", value: 3, unit: "ms" });
+
+		expect(names).toEqual(["resource.image.duration", "FCP"]);
+		await vi.advanceTimersByTimeAsync(100);
+		expect(names).toEqual([
+			"resource.image.duration",
+			"FCP",
+			"resource.image.duration",
+		]);
+		await vi.advanceTimersByTimeAsync(200);
+		expect(names).toEqual([
+			"resource.image.duration",
+			"FCP",
+			"resource.image.duration",
+			"resource.image.duration",
+		]);
+		client.stop();
 	});
 
 	it("samples, rate-limits, batches and flushes on a timer", async () => {
@@ -88,7 +275,7 @@ describe("performance client", () => {
 			environment: "test",
 			version: "v1",
 			sampleRate: 1,
-			maxEventsPerMinute: 2,
+			maxEventsPerMinute: 3,
 			batchSize: 2,
 			flushIntervalMs: 5_000,
 			beacon: (_url, body) => {
@@ -121,10 +308,6 @@ describe("performance client", () => {
 			},
 			fetcher: vi.fn(),
 			random: () => 0,
-			now: (() => {
-				let current = 100;
-				return () => (current += 25);
-			})(),
 		});
 
 		await expect(

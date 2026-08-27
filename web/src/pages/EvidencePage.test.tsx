@@ -26,7 +26,7 @@ describe("EvidencePage", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("shows the verified AWS performance closed loop and exact cleanup proof", () => {
+	it("separates the historical AWS performance proof from the pending current contract", () => {
 		render(<EvidencePage />);
 
 		expect(
@@ -61,8 +61,25 @@ describe("EvidencePage", () => {
 			screen.getAllByText(/项目 ECS Cluster 为 0/u).length,
 		).toBeGreaterThan(0);
 		expect(screen.getByRole("link", { name: "查看机器可读证据" })).toBeTruthy();
-		expect(screen.getByText("AWS 闭环已验证")).toBeTruthy();
-		expect(screen.queryByText("AWS 云端待验证")).toBeNull();
+		expect(screen.getByText("历史闭环已验证 · 新合同待云端复验")).toBeTruthy();
+		expect(
+			screen.getAllByText(/0301a670 \+\s*a355227/u).length,
+		).toBeGreaterThan(0);
+		expect(
+			screen.getAllByText(/新合同仍待云端复验|新合同已经完成云端验收/u).length,
+		).toBeGreaterThan(0);
+		expect(screen.getByText("历史快照 · 非实时")).toBeTruthy();
+		expect(
+			screen.getByRole("img", {
+				name: "性能历史快照桌面端真实页面截图",
+			}),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("img", {
+				name: "性能历史快照 390 像素手机端真实页面截图",
+			}),
+		).toBeTruthy();
+		expect(screen.getByLabelText("性能历史快照页面滚动走读录屏")).toBeTruthy();
 	});
 
 	it("shows the verified StarBuddy Sepolia draw without claiming a live fusion", () => {

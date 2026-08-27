@@ -42,3 +42,32 @@ describe("performance cleaner", () => {
 		);
 	});
 });
+
+describe("performance cleaner execution summary", () => {
+	it("prints exactly one sanitized JSON line with complete counters", async () => {
+		const { formatCleanerSummary } = await import(
+			"../src/performance/cleanerMain"
+		);
+		const line = formatCleanerSummary({
+			processed: 3,
+			inserted: 1,
+			deduplicated: 1,
+			discarded: 1,
+			retryableFailures: 0,
+			writeDurationMs: 12,
+			durationMs: 34,
+		});
+		expect(line.endsWith("\n")).toBe(true);
+		expect(line.trim().split("\n")).toHaveLength(1);
+		expect(JSON.parse(line)).toEqual({
+			processed: 3,
+			inserted: 1,
+			deduplicated: 1,
+			discarded: 1,
+			retryableFailures: 0,
+			writeDurationMs: 12,
+			durationMs: 34,
+		});
+		expect(line).not.toMatch(/secret|host|authorization|cookie|eventId|route/i);
+	});
+});

@@ -1,4 +1,11 @@
-import { normalizeRoute, safeMetricName } from "./sanitize";
+import { createLongTaskObserver } from "./longTasks";
+import { collectNavigationEvents } from "./navigation";
+import { classifyResource } from "./resources";
+import {
+	classifyErrorCategory,
+	normalizeRoute,
+	safeMetricName,
+} from "./sanitize";
 import type {
 	PerformanceBatch,
 	PerformanceClient,
@@ -18,9 +25,12 @@ type ClientOptions = {
 	beacon?: (url: string, data: BodyInit) => boolean;
 	fetcher?: typeof fetch;
 	random?: () => number;
-	now?: () => number;
 	loadWebVitals?: () => Promise<typeof import("web-vitals")>;
 };
+
+type QueuedEvent = PerformanceEvent & { retries: number };
+type PendingRetry = { events: QueuedEvent[]; readyAt: number };
+type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 
@@ -33,49 +43,73 @@ export function createPerformanceClient(
 	const batchSize = options.batchSize ?? 20;
 	const flushIntervalMs = options.flushIntervalMs ?? 5_000;
 	const random = options.random ?? Math.random;
-	const now = options.now ?? Date.now;
 	const route = options.route ?? (() => globalThis.location?.href ?? "/");
 	const beacon =
 		options.beacon ??
 		((url, data) => globalThis.navigator?.sendBeacon?.(url, data) ?? false);
 	const fetcher = options.fetcher ?? globalThis.fetch?.bind(globalThis);
 	const loadWebVitals = options.loadWebVitals ?? (() => import("web-vitals"));
-	const queue: PerformanceEvent[] = [];
-	let minuteStartedAt = now();
+	const highPriority: QueuedEvent[] = [];
+	const lowPriority: QueuedEvent[] = [];
+	const pendingRetries: PendingRetry[] = [];
+	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
+	let lowPriorityMinuteCount = 0;
 	let timer: ReturnType<typeof setInterval> | undefined;
-	let observers: PerformanceObserver[] = [];
+	let retryTimer: ReturnType<typeof setTimeout> | undefined;
+	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
 	let started = false;
-	const onError = (event: Event) =>
+	const isHighPriority = (event: PerformanceEventInput) =>
+		event.type === "metric" || event.type === "error" || event.type === "web3";
+	const queueSize = () => highPriority.length + lowPriority.length;
+	const enqueue = (event: QueuedEvent) =>
+		(isHighPriority(event) ? highPriority : lowPriority).push(event);
+	const dequeue = () => {
+		const queue = highPriority.length > 0 ? highPriority : lowPriority;
+		return queue.splice(0, batchSize);
+	};
+	const onError = (event: ErrorEvent) => {
+		const category = classifyErrorCategory(event.error ?? event.message);
 		record({
 			type: "error",
-			name:
-				typeof ErrorEvent !== "undefined" && event instanceof ErrorEvent
-					? "javascript.error"
-					: "resource.error",
+			name: `error.javascript.${category}`,
 			value: 1,
 			unit: "count",
+			category,
 		});
-	const onUnhandledRejection = () =>
+	};
+	const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+		const category = classifyErrorCategory(event.reason);
 		record({
 			type: "error",
-			name: "promise.rejection",
+			name: `error.promise.${category}`,
 			value: 1,
 			unit: "count",
+			category,
 		});
-	const onPageHide = () => void flush();
+	};
+	const onPageHide = () => void flushAll();
 
 	const record = (input: PerformanceEventInput) => {
 		try {
-			const current = now();
+			const current = Date.now();
 			if (current - minuteStartedAt >= 60_000) {
 				minuteStartedAt = current;
 				minuteCount = 0;
+				lowPriorityMinuteCount = 0;
 			}
-			if (random() >= sampleRate || minuteCount >= maxEventsPerMinute) return;
+			const highPriority = isHighPriority(input);
+			const lowPriorityLimit = Math.floor((maxEventsPerMinute * 2) / 3);
+			if (
+				random() >= sampleRate ||
+				minuteCount >= maxEventsPerMinute ||
+				(!highPriority && lowPriorityMinuteCount >= lowPriorityLimit)
+			)
+				return;
 			if (!Number.isFinite(input.value)) return;
 			minuteCount += 1;
-			queue.push({
+			if (!highPriority) lowPriorityMinuteCount += 1;
+			enqueue({
 				...input,
 				name: safeMetricName(input.name),
 				eventId: crypto.randomUUID(),
@@ -83,24 +117,73 @@ export function createPerformanceClient(
 				route: normalizeRoute(route()),
 				environment: options.environment.slice(0, 32),
 				version: options.version.slice(0, 64),
+				retries: 0,
 			});
-			if (queue.length >= batchSize) void flush();
+			if (queueSize() >= batchSize) void flush();
 		} catch {
 			// Telemetry is best-effort and must never break the host application.
 		}
 	};
 
-	const flush = async () => {
-		if (queue.length === 0) return;
-		const events = queue.splice(0, batchSize);
+	const nextReadyRetry = () =>
+		pendingRetries
+			.filter(({ readyAt }) => readyAt <= Date.now())
+			.sort((left, right) => left.readyAt - right.readyAt)[0];
+	const takeReadyRetry = () => {
+		const retry = nextReadyRetry();
+		if (!retry) return undefined;
+		pendingRetries.splice(pendingRetries.indexOf(retry), 1);
+		return retry;
+	};
+	const takeRetry = (retry: PendingRetry) => {
+		const index = pendingRetries.indexOf(retry);
+		if (index < 0) return undefined;
+		return pendingRetries.splice(index, 1)[0];
+	};
+	const armRetryTimer = () => {
+		if (retryTimer) clearTimeout(retryTimer);
+		const next = [...pendingRetries].sort(
+			(left, right) => left.readyAt - right.readyAt,
+		)[0];
+		if (!next) {
+			retryTimer = undefined;
+			return;
+		}
+		retryTimer = setTimeout(
+			() => {
+				retryTimer = undefined;
+				const retry = takeRetry(next);
+				if (retry) void sendBatch(retry.events).finally(armRetryTimer);
+				else armRetryTimer();
+			},
+			Math.max(0, next.readyAt - Date.now()),
+		);
+	};
+	const scheduleRetry = (events: QueuedEvent[]) => {
+		const retryable = events
+			.map((event) => ({ ...event, retries: event.retries + 1 }))
+			.filter((event) => event.retries < 3);
+		if (retryable.length === 0) return "drop" as const;
+		pendingRetries.push({
+			events: retryable,
+			readyAt: Date.now() + 2 ** (retryable[0].retries - 1) * 100,
+		});
+		armRetryTimer();
+		return "retry" as const;
+	};
+
+	const sendBatch = async (
+		queued: QueuedEvent[],
+	): Promise<FlushDisposition> => {
+		const events = queued.map(({ retries: _retries, ...event }) => event);
 		const payload: PerformanceBatch = {
-			schemaVersion: 1,
-			sentAt: now(),
+			schemaVersion: 2,
+			sentAt: Date.now(),
 			events,
 		};
 		const body = JSON.stringify(payload);
 		try {
-			if (beacon(endpoint, body)) return;
+			if (beacon(endpoint, body)) return "sent";
 			const response = await fetcher?.(endpoint, {
 				method: "POST",
 				headers: { "content-type": "application/json" },
@@ -108,10 +191,38 @@ export function createPerformanceClient(
 				keepalive: true,
 				credentials: "omit",
 			});
-			if (response && !response.ok) queue.unshift(...events);
+			if (!response || response.ok) return "sent";
+			if (
+				response.status >= 400 &&
+				response.status < 500 &&
+				response.status !== 429
+			)
+				return "drop";
+			if (response.status === 429 || response.status >= 500) {
+				return scheduleRetry(queued);
+			}
+			return "drop";
 		} catch {
-			queue.unshift(...events);
+			return scheduleRetry(queued);
 			// Deliberately silent: performance reporting cannot fail the product flow.
+		}
+	};
+
+	const flushOnce = async (): Promise<FlushDisposition> => {
+		const retry = takeReadyRetry();
+		if (retry) return sendBatch(retry.events);
+		if (queueSize() === 0) return "empty";
+		return sendBatch(dequeue());
+	};
+
+	const flush = async () => {
+		await flushOnce();
+	};
+
+	const flushAll = async () => {
+		while (queueSize() > 0 || nextReadyRetry()) {
+			const disposition = await flushOnce();
+			if (disposition === "empty") return;
 		}
 	};
 
@@ -146,35 +257,23 @@ export function createPerformanceClient(
 				onTTFB(report("TTFB", "ms"));
 			})
 			.catch(() => undefined);
-		observe("resource", (entry) => {
-			if (!entry.name.includes("/api/performance/"))
-				record({
-					type: "resource",
-					name: ["fetch", "xmlhttprequest"].includes(
-						(entry as PerformanceResourceTiming).initiatorType,
-					)
-						? "api.duration"
-						: "resource.duration",
-					value: entry.duration,
-					unit: "ms",
-				});
+		observe("navigation", (entry) => {
+			for (const event of collectNavigationEvents(
+				entry as PerformanceNavigationTiming,
+			))
+				record(event);
 		});
-		observe("navigation", (entry) =>
-			record({
-				type: "resource",
-				name: "navigation.duration",
-				value: entry.duration,
-				unit: "ms",
-			}),
-		);
-		observe("longtask", (entry) =>
-			record({
-				type: "resource",
-				name: "longtask.duration",
-				value: entry.duration,
-				unit: "ms",
-			}),
-		);
+		observe("resource", (entry) => {
+			const origin = globalThis.location?.origin ?? "https://babysteps.invalid";
+			if (entry.name === new URL(endpoint, origin).href) return;
+			const event = classifyResource(
+				entry as PerformanceResourceTiming,
+				origin,
+			);
+			if (event) record(event);
+		});
+		const longTaskObserver = createLongTaskObserver(record);
+		if (longTaskObserver) observers.push(longTaskObserver);
 		globalThis.addEventListener?.("error", onError);
 		globalThis.addEventListener?.("unhandledrejection", onUnhandledRejection);
 		globalThis.addEventListener?.("pagehide", onPageHide);
@@ -183,6 +282,8 @@ export function createPerformanceClient(
 
 	const stop = () => {
 		if (timer) clearInterval(timer);
+		if (retryTimer) clearTimeout(retryTimer);
+		retryTimer = undefined;
 		for (const observer of observers) observer.disconnect();
 		globalThis.removeEventListener?.("error", onError);
 		globalThis.removeEventListener?.(
@@ -198,16 +299,21 @@ export function createPerformanceClient(
 		name: string,
 		operation: () => Promise<T>,
 	) => {
-		const startedAt = now();
+		const startedAt = performance.now();
 		try {
 			const result = await operation();
-			record({ type: "web3", name, value: now() - startedAt, unit: "ms" });
+			record({
+				type: "web3",
+				name,
+				value: performance.now() - startedAt,
+				unit: "ms",
+			});
 			return result;
 		} catch (error) {
 			record({
 				type: "web3",
 				name: `${name}.error`,
-				value: now() - startedAt,
+				value: performance.now() - startedAt,
 				unit: "ms",
 			});
 			throw error;

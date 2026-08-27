@@ -4,6 +4,7 @@ import renderingArchitectureImage from "../../../docs/architecture/starbuddy-ren
 import renderingSequenceImage from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
+import performanceSnapshotVideo from "../../../docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4";
 import performanceDashboardDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceDashboardMobileImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -12,6 +13,8 @@ import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
+import performanceSnapshotDesktopImage from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png";
+import performanceSnapshotMobileImage from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -529,13 +532,17 @@ export function EvidencePage() {
 						</p>
 						<h2 id="performance-proof-title">性能观测架构图</h2>
 					</div>
-					<span className="evidence-diagram-card__status">AWS 闭环已验证</span>
+					<span className="evidence-diagram-card__status">
+						历史闭环已验证 · 新合同待云端复验
+					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
-					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
+					清洗、共享数据库和真实统计拆成独立信任边界。历史 GitHub Actions Run
 					32626397427 已在 commit acd4898f61fc
-					上用一条受控事件复验完整闭环，并在取证后自动删除临时资源。
+					上用一条受控事件复验旧版完整闭环，并在取证后自动删除临时资源。PR #36
+					的新实现（commits 0301a670 + a355227）已通过代码 Gate，但仍待新的云端
+					Run、故障恢复与零残留读回。
 				</p>
 				<section
 					className="evidence-requirement-map"
@@ -553,7 +560,7 @@ export function EvidencePage() {
 							<strong>验证证据</strong>
 							<span>SDK 单元测试与 Web 构建通过</span>
 							<strong>当前状态</strong>
-							<span>已实现并验证</span>
+							<span>历史版本已验证 · 新版本待云端复验</span>
 						</article>
 						<article>
 							<strong>交付要求</strong>
@@ -571,7 +578,7 @@ export function EvidencePage() {
 								Run 32626397427
 							</a>
 							<strong>当前状态</strong>
-							<span>已实现并验证</span>
+							<span>历史版本已验证 · 新版本待云端复验</span>
 						</article>
 						<article>
 							<strong>交付要求</strong>
@@ -739,7 +746,7 @@ export function EvidencePage() {
 								>
 									Run 32626397427
 								</a>
-								：commit acd4898f61fc 的最新复验成功，受控 LCP 为 321ms， ECS
+								：commit acd4898f61fc 的历史复验成功，受控 LCP 为 321ms， ECS
 								Cleaner exitCode=0；Schema 与精确项目 Stack 已删除，项目 ECS
 								Cluster 为 0，共享 Foundation 保持受保护。
 							</li>
@@ -865,11 +872,75 @@ export function EvidencePage() {
 							视口内筛选器与状态提示保持单列可读。
 							<br />
 							<strong>证明什么：</strong>
-							手机端没有根级横向溢出；该截图证明 UI，最终云端结果由 Run
-							32626397427 的工件与清理盘点证明。
+							手机端没有根级横向溢出；该截图证明 UI，历史云端结果由 Run
+							32626397427 的工件与清理盘点证明，新合同仍待云端复验。
 						</figcaption>
 					</figure>
 				</div>
+				<section
+					className="evidence-recorded-proof"
+					aria-labelledby="performance-recorded-proof-title"
+				>
+					<header className="evidence-recorded-proof__header">
+						<div>
+							<p className="section-kicker">VISIBLE PROOF · AFTER CLEANUP</p>
+							<h3 id="performance-recorded-proof-title">
+								关闭收费资源后的可复核页面
+							</h3>
+						</div>
+						<span className="evidence-diagram-card__status">
+							历史快照 · 非实时
+						</span>
+					</header>
+					<p>
+						历史 AWS 闭环完成后已删除项目 Schema 与临时
+						Stack，因此页面不会伪装成持续在线监控。 当实时 API
+						返回不可用时，它展示 Run 32626397427
+						留下的最后一次真实统计，并明确标注样本数、分位数和清理状态；它不证明
+						PR #36 新合同已经完成云端验收。
+					</p>
+					<div className="evidence-screenshot-grid">
+						<figure>
+							<img
+								src={performanceSnapshotDesktopImage}
+								alt="性能历史快照桌面端真实页面截图"
+								loading="lazy"
+							/>
+							<figcaption>
+								<strong>桌面证据：</strong>1440 像素完整页面，显示“历史快照 ·
+								非实时”、样本 1、p50/p75/p95=321ms、Run 链接与项目资源已清理。
+							</figcaption>
+						</figure>
+						<figure>
+							<img
+								src={performanceSnapshotMobileImage}
+								alt="性能历史快照 390 像素手机端真实页面截图"
+								loading="lazy"
+							/>
+							<figcaption>
+								<strong>手机证据：</strong>390
+								像素完整页面无根级横向溢出，筛选器、状态和真实快照保持单列可读。
+							</figcaption>
+						</figure>
+					</div>
+					<figure className="evidence-video-proof">
+						<video
+							aria-label="性能历史快照页面滚动走读录屏"
+							controls
+							muted
+							playsInline
+							preload="metadata"
+							poster={performanceSnapshotDesktopImage}
+						>
+							<source src={performanceSnapshotVideo} type="video/mp4" />
+							当前浏览器不支持 MP4 视频播放。
+						</video>
+						<figcaption>
+							5.8 秒无声滚动录屏，只包含本地验证页面；不包含账号、Token、Cookie
+							或其他窗口内容。
+						</figcaption>
+					</figure>
+				</section>
 			</section>
 
 			<section

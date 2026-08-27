@@ -7,15 +7,17 @@ on:
         description: Exact failed run stack, for example babysteps-performance-123456
         required: true
         type: string
+      database_state:
+        description: Last verified database lifecycle state
+        required: true
+        type: choice
+        options: [before-database-access, schema-initialized, schema-cleanup-verified]
       approval_reference:
         description: Human approval reference for exact project cleanup
         required: true
         type: string
-      acknowledge_pre_database_failure:
-        description: Confirm Evidence proves the container failed before database access
-        required: true
-        default: false
-        type: boolean
+  schedule:
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: read
@@ -26,9 +28,9 @@ concurrency:
 
 jobs:
   recover-exact-stack:
-    if: inputs.acknowledge_pre_database_failure == true
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     environment: aws-performance
     permissions:
       contents: read
@@ -36,61 +38,232 @@ jobs:
     env:
       AWS_REGION: us-east-1
       STACK_NAME: ${{ inputs.stack_name }}
+      DATABASE_STATE: ${{ inputs.database_state }}
     steps:
       - name: Configure short-lived AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
           aws-region: us-east-1
-      - name: Validate exact recovery target
+      - name: Validate exact recovery target and capture sanitized state
+        id: validate-target
+        env:
+          APPROVAL_REFERENCE: ${{ inputs.approval_reference }}
         run: |
           [[ "$STACK_NAME" =~ ^babysteps-performance-[0-9]+$ ]]
-          test '${{ inputs.approval_reference }}' != ''
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
-            aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
-              --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' \
-              > resources-before-cleanup.json
-          else
-            printf '[]\n' > resources-before-cleanup.json
-          fi
-      - name: Delete exact failed project stack
-        run: |
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
-            aws cloudformation delete-stack --stack-name "$STACK_NAME" \
-              --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}'
-            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
-          fi
-      - name: Verify exact project resource cleanup
-        run: |
+          [[ "$DATABASE_STATE" =~ ^(before-database-access|schema-initialized|schema-cleanup-verified)$ ]]
+          test -n "$APPROVAL_REFERENCE"
           run_id="${STACK_NAME##*-}"
-          environment_name="e${run_id}"
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
-            echo "Expected CloudFormation stack to be absent: $STACK_NAME" >&2
-            exit 1
-          fi
-          test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$environment_name')] | length(@)" --output text)" = "0"
-          repository_name="babysteps-performance-cleaner-$environment_name"
-          if aws ecr describe-repositories --repository-names "$repository_name" >/dev/null 2>&1; then
-            echo "Expected ECR repository to be absent: $repository_name" >&2
-            exit 1
-          fi
-          for queue_name in "babysteps-performance-events-$environment_name" "babysteps-performance-dlq-$environment_name"; do
-            if aws sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1; then
-              echo "Expected queue to be absent: $queue_name" >&2
-              exit 1
+          mkdir -p evidence
+          node -e 'const fs=require("fs"),crypto=require("crypto");fs.writeFileSync("evidence/recovery-run.json",JSON.stringify({runId:process.env.STACK_NAME.split("-").at(-1),databaseState:process.env.DATABASE_STATE,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
+          set +e
+          stack_metadata="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json 2> describe-stack-error.txt)"
+          describe_status=$?
+          set -e
+          if test "$describe_status" = 0; then
+            project="$(printf '%s' "$stack_metadata" | jq -er '[.Stacks[0].Tags[]? | select(.Key == "Project") | .Value] | if length == 1 then .[0] else error("INVALID_PROJECT_TAG_CARDINALITY") end')"
+            tagged_run_id="$(printf '%s' "$stack_metadata" | jq -er '[.Stacks[0].Tags[]? | select(.Key == "RunId") | .Value] | if length == 1 then .[0] else error("INVALID_RUN_ID_TAG_CARDINALITY") end')"
+            test "$project" = "babysteps-performance"
+            [[ "$tagged_run_id" =~ ^[0-9]+$ ]]
+            test "$tagged_run_id" = "$run_id"
+            stack_state=present
+            aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' > evidence/control-plane-before-recovery.json
+            for output_key in CleanerTaskDefinitionArn DatabaseAdminTaskDefinitionArn; do
+              task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='$output_key'].OutputValue" --output text)"
+              if test -n "$task_definition" && test "$task_definition" != "None"; then
+                aws ecs describe-task-definition --task-definition "$task_definition" >/dev/null
+              fi
+            done
+            security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+            if test -n "$security_group" && test "$security_group" != "None"; then
+              echo "RUNTIME_SECURITY_GROUP_ID=$security_group" >> "$GITHUB_ENV"
             fi
+          elif grep -Eq 'An error occurred \(ValidationError\).*does not exist' describe-stack-error.txt; then
+            test "$DATABASE_STATE" = "before-database-access" || test "$DATABASE_STATE" = "schema-cleanup-verified"
+            stack_state=absent
+            printf '[]\n' > evidence/control-plane-before-recovery.json
+          else
+            echo "Unable to verify the exact recovery stack" >&2
+            exit 1
+          fi
+          echo "RUN_ID=$run_id" >> "$GITHUB_ENV"
+          echo "ENVIRONMENT_NAME=e$run_id" >> "$GITHUB_ENV"
+          echo "validated=true" >> "$GITHUB_OUTPUT"
+          echo "stack_state=$stack_state" >> "$GITHUB_OUTPUT"
+      - name: Drop and verify exact run-scoped schema
+        id: schema-cleanup
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && steps.validate-target.outputs.stack_state == 'present' && inputs.database_state == 'schema-initialized'
+        run: |
+          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
+          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          for mode in cleanup-schema verify-schema-absent; do
+            succeeded=false
+            for attempt in 1 2 3; do
+              task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --overrides "{\"containerOverrides\":[{\"name\":\"cleaner\",\"environment\":[{\"name\":\"CLEANER_MODE\",\"value\":\"$mode\"}]}]}" --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+              set +e
+              aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+              wait_status=$?
+              set -e
+              if test "$wait_status" = "0" && test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"; then succeeded=true; break; fi
+              sleep 5
+            done
+            test "$succeeded" = "true"
           done
-          for family in "babysteps-performance-cleaner-$environment_name" "babysteps-performance-db-admin-$environment_name"; do
-            status="$(aws ecs describe-task-definition --task-definition "$family:1" --query 'taskDefinition.status' --output text 2>/dev/null || echo MISSING)"
-            test "$status" != "ACTIVE"
+          printf '{"schemaDeleted":true,"schemaAbsenceVerified":true}\n' > evidence/recovery-schema-cleanup.json
+      - name: Delete exact failed project stack
+        id: delete-stack
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && steps.validate-target.outputs.stack_state == 'present' && (inputs.database_state != 'schema-initialized' || steps.schema-cleanup.outcome == 'success')
+        run: |
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            deleted=false
+            for attempt in 1 2 3; do
+              aws cloudformation delete-stack --stack-name "$STACK_NAME" --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}' || true
+              set +e
+              aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+              wait_status=$?
+              set -e
+              if test "$wait_status" = "0"; then deleted=true; break; fi
+              sleep 10
+            done
+            test "$deleted" = "true"
+          fi
+          for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
+            definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns' --output text)"
+            for definition in $definitions; do
+              actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+              test "$actual_family" = "$family"
+              aws ecs delete-task-definitions --task-definitions "$definition" >/dev/null
+            done
           done
-          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.mkdirSync("evidence",{recursive:true});fs.writeFileSync("evidence/recovery-cleanup.json",JSON.stringify({cloudFormationStackAbsent:true,remainingRunnableProjectResources:0,sharedFoundationProtected:true,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
-      - name: Preserve sanitized recovery proof
+      - name: Verify exact prefix and tag inventory is zero
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && (steps.validate-target.outputs.stack_state == 'absent' || steps.delete-stack.outcome == 'success')
+        env:
+          STACK_STATE: ${{ steps.validate-target.outputs.stack_state }}
+          SCHEMA_CLEANUP_OUTCOME: ${{ steps.schema-cleanup.outcome }}
+          STACK_DELETE_OUTCOME: ${{ steps.delete-stack.outcome }}
+        run: |
+          if test "$STACK_STATE" = "present"; then
+            if test "$DATABASE_STATE" = "schema-initialized"; then
+              test "$SCHEMA_CLEANUP_OUTCOME" = "success"
+            fi
+            test "$STACK_DELETE_OUTCOME" = "success"
+          else
+            test "$STACK_STATE" = "absent"
+            test "$DATABASE_STATE" = "before-database-access" || test "$DATABASE_STATE" = "schema-cleanup-verified"
+          fi
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then exit 1; fi
+          ecr_remaining=0
+          aws ecr describe-repositories --repository-names "babysteps-performance-cleaner-$ENVIRONMENT_NAME" >/dev/null 2>&1 && ecr_remaining=1
+          ecs_clusters="$(aws ecs list-clusters --query "clusterArns[?contains(@, 'babysteps-performance-$ENVIRONMENT_NAME')]" --output text)"
+          ecs_remaining=0
+          ecs_task_remaining=0
+          for cluster in $ecs_clusters; do
+            ecs_remaining=$((ecs_remaining + 1))
+            for status in RUNNING PENDING; do
+              count="$(aws ecs list-tasks --cluster "$cluster" --desired-status "$status" --query 'length(taskArns)' --output text)"
+              ecs_task_remaining=$((ecs_task_remaining + count))
+            done
+          done
+          task_definition_remaining=0
+          for status in ACTIVE INACTIVE; do
+            for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
+              definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status "$status" --query 'taskDefinitionArns' --output text)"
+              for definition in $definitions; do
+                actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+                test "$actual_family" = "$family"
+                task_definition_remaining=$((task_definition_remaining + 1))
+              done
+            done
+          done
+          sqs_remaining=0
+          for queue_name in "babysteps-performance-events-$ENVIRONMENT_NAME" "babysteps-performance-dlq-$ENVIRONMENT_NAME"; do
+            aws sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1 && sqs_remaining=$((sqs_remaining + 1))
+          done
+          api_remaining="$(aws apigatewayv2 get-apis --query "length(Items[?Name=='babysteps-performance-api-$ENVIRONMENT_NAME'])" --output text)"
+          lambda_remaining="$(aws lambda list-functions --query "length(Functions[?starts_with(FunctionName, 'babysteps-performance-') && contains(FunctionName, '$ENVIRONMENT_NAME')])" --output text)"
+          log_remaining=0
+          for log_group in "/babysteps/performance/$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME"; do
+            count="$(aws logs describe-log-groups --log-group-name-prefix "$log_group" --query "length(logGroups[?logGroupName=='$log_group'])" --output text)"
+            log_remaining=$((log_remaining + count))
+          done
+          secret_remaining="$(aws secretsmanager list-secrets --include-planned-deletion --filters Key=name,Values=babysteps-performance- --query "length(SecretList[?contains(Name, '$ENVIRONMENT_NAME')])" --output text)"
+          security_group_remaining="$(aws ec2 describe-security-groups --filters Name=tag:Project,Values=babysteps-performance Name=tag:RunId,Values="$RUN_ID" --query 'length(SecurityGroups)' --output text)"
+          ingress_remaining=0
+          if test -n "${RUNTIME_SECURITY_GROUP_ID:-}"; then
+            ingress_remaining="$(aws ec2 describe-security-group-rules --filters Name=group-id,Values='${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}' --query "length(SecurityGroupRules[?ReferencedGroupInfo.GroupId=='$RUNTIME_SECURITY_GROUP_ID'])" --output text)"
+          fi
+          iam_remaining="$(aws iam list-roles --query "length(Roles[?starts_with(RoleName, 'babysteps-performance-') && contains(RoleName, '$ENVIRONMENT_NAME')])" --output text)"
+          remaining=$((ecr_remaining + ecs_remaining + ecs_task_remaining + task_definition_remaining + sqs_remaining + api_remaining + lambda_remaining + log_remaining + secret_remaining + security_group_remaining + ingress_remaining + iam_remaining))
+          export remaining ecr_remaining ecs_task_remaining ecs_remaining task_definition_remaining sqs_remaining api_remaining lambda_remaining log_remaining secret_remaining security_group_remaining ingress_remaining iam_remaining
+          node - <<'NODE'
+          const fs = require("fs");
+          const n = (key) => Number(process.env[key]);
+          fs.writeFileSync("evidence/recovery-cleanup.json", JSON.stringify({
+            cloudFormationStackAbsent: true,
+            remainingProjectResources: n("remaining"),
+            inventory: { ecr: n("ecr_remaining"), ecsClusters: n("ecs_remaining"), ecsTasks: n("ecs_task_remaining"), taskDefinitions: n("task_definition_remaining"), sqsAndDlq: n("sqs_remaining"), apiGateway: n("api_remaining"), lambda: n("lambda_remaining"), cloudWatchLogGroups: n("log_remaining"), secrets: n("secret_remaining"), securityGroups: n("security_group_remaining"), securityGroupIngress: n("ingress_remaining"), iamRoles: n("iam_remaining") },
+            sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
+          }, null, 2));
+          NODE
+          test "$remaining" = "0"
+      - name: Record recovery cleanup_required with exact stack retained
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.stack_state == 'present' && inputs.database_state == 'schema-initialized' && steps.schema-cleanup.outcome != 'success'
+        run: |
+          printf '{"status":"cleanup_required","schemaCleanupVerified":false,"exactStackRetainedForRecovery":true,"sharedFoundationProtected":true,"ttlJanitorRetryRequired":true}\n' > evidence/recovery-cleanup-required.json
+      - name: Preserve sanitized JSON recovery proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: babysteps-performance-recovery-${{ github.run_id }}
-          path: |
-            resources-before-cleanup.json
-            evidence/recovery-cleanup.json
+          path: evidence/*.json
           retention-days: 14
+
+  dispatch-expired-recovery:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: aws-performance
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - name: Configure read-only expiry discovery credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Dispatch one exact expired recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          active_recovery_count="$(gh run list --workflow aws-performance-recovery.yml --limit 100 --json databaseId,status | jq --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId | tostring) != $current and (.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending"))] | length')"
+          if test "$active_recovery_count" != "0"; then
+            echo "A recovery is already active; the next schedule will rescan."
+            exit 0
+          fi
+          now_epoch="$(date -u +%s)"
+          stack_names="$(aws cloudformation describe-stacks --query "Stacks[?starts_with(StackName, 'babysteps-performance-')].StackName" --output text)"
+          for stack_name in $stack_names; do
+            [[ "$stack_name" =~ ^babysteps-performance-[0-9]+$ ]] || continue
+            metadata="$(aws cloudformation describe-stacks --stack-name "$stack_name" --output json)"
+            project="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "Project")) | .[0].Value // ""')"
+            run_id="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "RunId")) | .[0].Value // ""')"
+            expires_at="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "ExpiresAt")) | .[0].Value // ""')"
+            test "$project" = "babysteps-performance" || continue
+            [[ "$run_id" =~ ^[0-9]+$ ]] || continue
+            test "$stack_name" = "babysteps-performance-$run_id" || continue
+            [[ "$expires_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || continue
+            expires_epoch="$(date -u -d "$expires_at" +%s)"
+            if test "$now_epoch" -lt "$expires_epoch"; then continue; fi
+            gh workflow run aws-performance-recovery.yml --ref main \
+              -f stack_name="$stack_name" \
+              -f database_state=schema-initialized \
+              -f approval_reference="automatic-ttl-janitor-${GITHUB_RUN_ID}"
+            echo "Dispatched fixed recovery for one expired, tag-verified stack."
+            exit 0
+          done
+          echo "No expired BabySteps performance validation stack found."

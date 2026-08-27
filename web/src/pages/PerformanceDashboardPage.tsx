@@ -1,438 +1,276 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { publicAppConfig } from "../contracts/web3Contracts";
 import {
-	fetchPerformanceOverview,
+	fetchPerformanceStats,
+	type PerformanceCoverageStatus,
+	type PerformanceDashboardResponse,
 	type PerformanceFilters,
-	type PerformanceMetricStats,
-	type PerformanceOverview,
+	type PerformanceMetricSummary,
 } from "../performance/api";
+import {
+	VERIFIED_PERFORMANCE_DASHBOARD,
+	VERIFIED_PERFORMANCE_OBSERVATION,
+} from "../performance/verifiedObservation";
 
-const LOCAL_EVIDENCE_OVERVIEW: PerformanceOverview = {
-	schemaVersion: "performance-overview/v2",
-	window: {
-		preset: "24h",
-		from: "2026-08-26T00:00:00.000Z",
-		to: "2026-08-27T00:00:00.000Z",
-	},
-	filters: { environment: "local-evidence" },
-	summary: {
-		totalEvents: 128,
-		errorCount: 3,
-		errorRate: 0.0234,
-		metricCount: 3,
-		routeCount: 2,
-		latestEventAt: Date.parse("2026-08-26T23:59:30.000Z"),
-	},
-	metrics: [
-		{
-			metric: "LCP",
-			category: "web-vital",
-			unit: "ms",
-			sampleCount: 42,
-			p50: 120,
-			p75: 180,
-			p95: 410,
-			errorCount: 0,
-			errorRate: 0,
-			routes: [
-				{ route: "/", sampleCount: 24, p50: 110, p75: 150, p95: 320 },
-				{
-					route: "/tasks/:id",
-					sampleCount: 18,
-					p50: 140,
-					p75: 220,
-					p95: 410,
-				},
-			],
-			trend: [
-				{
-					bucketStart: 1_786_600_000_000,
-					sampleCount: 20,
-					p50: 115,
-					p75: 160,
-					p95: 360,
-				},
-				{
-					bucketStart: 1_786_603_600_000,
-					sampleCount: 22,
-					p50: 120,
-					p75: 180,
-					p95: 410,
-				},
-			],
-		},
-		{
-			metric: "api.duration",
-			category: "resource",
-			unit: "ms",
-			sampleCount: 68,
-			p50: 80,
-			p75: 130,
-			p95: 300,
-			errorCount: 0,
-			errorRate: 0,
-			routes: [],
-			trend: [],
-		},
-		{
-			metric: "javascript.error",
-			category: "error",
-			unit: "count",
-			sampleCount: 3,
-			p50: 1,
-			p75: 1,
-			p95: 1,
-			errorCount: 3,
-			errorRate: 1,
-			routes: [],
-			trend: [],
-		},
-	],
-};
-const EVIDENCE_FIXTURE_ENABLED =
-	import.meta.env.DEV &&
-	import.meta.env.VITE_PERFORMANCE_EVIDENCE_FIXTURE === "true";
+type DashboardStatus =
+	| "loading"
+	| "live"
+	| "api-snapshot"
+	| "stale"
+	| "pipeline-failure"
+	| "bundled-history";
+type DashboardMode = "live" | "history";
+type SectionCoverage = PerformanceCoverageStatus | "partial";
 
-type ServerFilters = Omit<PerformanceFilters, "metric">;
-const INITIAL_FILTERS: ServerFilters = { window: "24h" };
-const UNIT_LABELS: Record<PerformanceMetricStats["unit"], string> = {
-	ms: "毫秒",
-	score: "分数",
-	count: "次数",
+const COVERAGE_LABEL: Record<PerformanceCoverageStatus, string> = {
+	observed: "已观测",
+	"instrumented-no-sample": "已埋点，当前快照无样本",
+	unavailable: "不可用",
 };
 
-function displayValue(value: number, unit: PerformanceMetricStats["unit"]) {
-	if (unit === "ms") return `${Math.round(value)} ms`;
+function filtersFromUrl(): PerformanceFilters {
+	const query = new URLSearchParams(window.location.search);
+	const windowValue = query.get("window");
+	return {
+		window: windowValue === "1h" || windowValue === "7d" ? windowValue : "24h",
+		route: query.get("route") || undefined,
+		environment: query.get("environment") || undefined,
+		version: query.get("version") || undefined,
+	};
+}
+
+function modeFromUrl(): DashboardMode {
+	return new URLSearchParams(window.location.search).get("mode") === "history"
+		? "history"
+		: "live";
+}
+
+function writeFilters(filters: PerformanceFilters, mode: DashboardMode) {
+	const query = new URLSearchParams();
+	if (mode === "history") {
+		query.set("mode", "history");
+		window.history.pushState({}, "", `${window.location.pathname}?${query}`);
+		return;
+	}
+	query.set("window", filters.window);
+	for (const key of ["route", "environment", "version"] as const) {
+		if (filters[key]) query.set(key, filters[key]);
+	}
+	query.set("mode", mode);
+	window.history.pushState(
+		{},
+		"",
+		`${window.location.pathname}?${query.toString()}`,
+	);
+}
+
+function display(value: number | null, unit: "ms" | "score" | "count") {
+	if (value === null) return "—";
 	if (unit === "score") return value.toFixed(3);
-	return `${Math.round(value)}`;
+	if (unit === "count") return `${Math.round(value)}`;
+	return `${Math.round(value)} ms`;
 }
 
-function barStyle(value: number, max: number): CSSProperties {
-	const size = max > 0 ? Math.max(3, Math.min(100, (value / max) * 100)) : 0;
-	return { "--bar-size": `${size}%` } as CSSProperties;
+function freshnessText(value: number | null, isBundled: boolean) {
+	if (isBundled)
+		return `仅日期：${VERIFIED_PERFORMANCE_OBSERVATION.observedAt}`;
+	return value
+		? new Date(value).toLocaleString("zh-CN", { hour12: false })
+		: "未提供";
 }
 
-function linePoints(
-	trend: PerformanceMetricStats["trend"],
-	key: "p50" | "p75" | "p95",
-	width = 640,
-	height = 220,
-) {
-	const padding = 24;
-	const max = Math.max(1, ...trend.map((point) => point.p95));
-	return trend
-		.map((point, index) => {
-			const x =
-				trend.length === 1
-					? width / 2
-					: padding + (index / (trend.length - 1)) * (width - padding * 2);
-			const y = height - padding - (point[key] / max) * (height - padding * 2);
-			return `${x.toFixed(1)},${y.toFixed(1)}`;
-		})
-		.join(" ");
-}
-
-function MultiMetricChart({
-	metrics,
-	selectedMetric,
-	onSelect,
+function MetricTable({
+	items,
+	caption,
 }: {
-	metrics: PerformanceMetricStats[];
-	selectedMetric: string;
-	onSelect: (metric: string) => void;
+	items: PerformanceMetricSummary[];
+	caption: string;
 }) {
-	const groups = (["ms", "score", "count"] as const)
-		.map((unit) => ({
-			unit,
-			metrics: metrics.filter((metric) => metric.unit === unit),
-		}))
-		.filter((group) => group.metrics.length > 0);
-
 	return (
-		<section
-			className="performance-panel"
-			aria-labelledby="metric-comparison-heading"
-		>
-			<div className="performance-panel__heading">
-				<div>
-					<p className="eyebrow">Metric overview</p>
-					<h2 id="metric-comparison-heading">多指标 p75 对比</h2>
-				</div>
-				<label className="performance-metric-picker">
-					分析指标
-					<select
-						aria-label="分析指标"
-						value={selectedMetric}
-						onChange={(event) => onSelect(event.target.value)}
-					>
-						{metrics.map((metric) => (
-							<option key={metric.metric} value={metric.metric}>
-								{metric.metric}
-							</option>
-						))}
-					</select>
-				</label>
-			</div>
-			<div className="performance-unit-groups">
-				{groups.map((group) => {
-					const max = Math.max(...group.metrics.map((metric) => metric.p75), 1);
-					return (
-						<article key={group.unit} className="performance-unit-group">
-							<h3>{UNIT_LABELS[group.unit]}</h3>
-							<ul className="performance-bars">
-								{group.metrics.map((metric) => (
-									<li key={metric.metric}>
-										<button
-											type="button"
-											className={
-												metric.metric === selectedMetric
-													? "is-selected"
-													: undefined
-											}
-											onClick={() => onSelect(metric.metric)}
-										>
-											<span>{metric.metric}</span>
-											<strong>{displayValue(metric.p75, metric.unit)}</strong>
-											<small>{metric.sampleCount} 样本</small>
-											<i aria-hidden="true" style={barStyle(metric.p75, max)} />
-										</button>
-									</li>
-								))}
-							</ul>
-						</article>
-					);
-				})}
-			</div>
-		</section>
-	);
-}
-
-function PercentileTrend({ metric }: { metric: PerformanceMetricStats }) {
-	return (
-		<section
-			className="performance-panel"
-			aria-labelledby="percentile-trend-heading"
-		>
-			<div className="performance-panel__heading">
-				<div>
-					<p className="eyebrow">Percentile trend</p>
-					<h2 id="percentile-trend-heading">p50 / p75 / p95 趋势</h2>
-				</div>
-				<div className="performance-selected-value">
-					<strong>{metric.metric}</strong>
-					<span>p75 · {displayValue(metric.p75, metric.unit)}</span>
-				</div>
-			</div>
-			{metric.trend.length > 0 ? (
-				<>
-					<div className="performance-line-chart">
-						<svg
-							viewBox="0 0 640 220"
-							role="img"
-							aria-label={`${metric.metric} p50、p75、p95 真实趋势图`}
-							preserveAspectRatio="none"
-						>
-							<title>{metric.metric} 分位趋势</title>
-							<line x1="24" y1="196" x2="616" y2="196" className="chart-axis" />
-							<polyline
-								points={linePoints(metric.trend, "p95")}
-								className="chart-line chart-line--p95"
-							/>
-							<polyline
-								points={linePoints(metric.trend, "p75")}
-								className="chart-line chart-line--p75"
-							/>
-							<polyline
-								points={linePoints(metric.trend, "p50")}
-								className="chart-line chart-line--p50"
-							/>
-						</svg>
-					</div>
-					<div className="performance-chart-legend">
-						<span>
-							<i className="legend-p50" />
-							p50
-						</span>
-						<span>
-							<i className="legend-p75" />
-							p75
-						</span>
-						<span>
-							<i className="legend-p95" />
-							p95
-						</span>
-						<span>
-							{metric.trend.reduce((sum, point) => sum + point.sampleCount, 0)}{" "}
-							个分桶样本
-						</span>
-					</div>
-				</>
-			) : (
-				<p className="performance-chart-empty">
-					当前指标在该窗口没有可绘制的趋势点。
-				</p>
-			)}
-		</section>
-	);
-}
-
-function RouteComparison({ metric }: { metric: PerformanceMetricStats }) {
-	const max = Math.max(...metric.routes.map((route) => route.p95), 1);
-	return (
-		<section
-			className="performance-panel performance-panel--dark"
-			aria-labelledby="route-comparison-heading"
-		>
-			<div className="performance-panel__heading">
-				<div>
-					<p className="eyebrow">Route comparison</p>
-					<h2 id="route-comparison-heading">页面路径分位对比</h2>
-				</div>
-				<span>{metric.metric}</span>
-			</div>
-			{metric.routes.length > 0 ? (
-				<div className="performance-route-chart">
-					{metric.routes.map((route) => (
-						<article key={route.route}>
-							<div>
-								<code>{route.route}</code>
-								<small>{route.sampleCount} 样本</small>
-							</div>
-							<div className="performance-route-bars">
-								<span style={barStyle(route.p50, max)}>
-									<i />
-									p50 {displayValue(route.p50, metric.unit)}
-								</span>
-								<span style={barStyle(route.p75, max)}>
-									<i />
-									p75 {displayValue(route.p75, metric.unit)}
-								</span>
-								<span style={barStyle(route.p95, max)}>
-									<i />
-									p95 {displayValue(route.p95, metric.unit)}
-								</span>
-							</div>
-						</article>
+		<div className="performance-table-frame">
+			<table className="performance-table">
+				<caption>{caption}</caption>
+				<thead>
+					<tr>
+						<th scope="col">指标</th>
+						<th scope="col">样本</th>
+						<th scope="col">p50</th>
+						<th scope="col">p75</th>
+						<th scope="col">p95</th>
+						<th scope="col">覆盖</th>
+					</tr>
+				</thead>
+				<tbody>
+					{items.map((item) => (
+						<tr key={item.name}>
+							<th scope="row">
+								<code>{item.name}</code>
+							</th>
+							<td>{item.sampleCount}</td>
+							<td>{display(item.p50, item.unit)}</td>
+							<td>{display(item.p75, item.unit)}</td>
+							<td>{display(item.p95, item.unit)}</td>
+							<td>
+								<Coverage status={item.coverage} />
+							</td>
+						</tr>
 					))}
-				</div>
-			) : (
-				<p className="performance-chart-empty">
-					当前指标没有可用的路由分位数据。
-				</p>
-			)}
-		</section>
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
-function ErrorDistribution({ metrics }: { metrics: PerformanceMetricStats[] }) {
-	const errors = metrics.filter(
-		(metric) => metric.category === "error" || metric.errorCount > 0,
-	);
-	const max = Math.max(
-		...errors.map((metric) => Math.max(metric.errorCount, metric.sampleCount)),
-		1,
-	);
+function Coverage({ status }: { status: PerformanceCoverageStatus }) {
 	return (
-		<section
-			className="performance-panel performance-panel--alert"
-			aria-labelledby="error-distribution-heading"
-		>
-			<div className="performance-panel__heading">
-				<div>
-					<p className="eyebrow">Error distribution</p>
-					<h2 id="error-distribution-heading">错误事件分布</h2>
-				</div>
-				<span>只展示真实错误样本</span>
-			</div>
-			{errors.length > 0 ? (
-				<ul className="performance-error-bars">
-					{errors.map((metric) => {
-						const count = Math.max(metric.errorCount, metric.sampleCount);
-						return (
-							<li key={metric.metric}>
-								<div>
-									<strong>{metric.metric}</strong>
-									<span>{count} 次</span>
-								</div>
-								<i aria-hidden="true" style={barStyle(count, max)} />
-							</li>
-						);
-					})}
-				</ul>
-			) : (
-				<p className="performance-chart-empty">当前窗口没有采集到错误事件。</p>
-			)}
-		</section>
+		<span className={`performance-coverage performance-coverage--${status}`}>
+			{COVERAGE_LABEL[status]}
+		</span>
 	);
+}
+
+function Meta({
+	source,
+	samples,
+	freshness,
+	coverage,
+}: {
+	source: string;
+	samples: number;
+	freshness: string;
+	coverage: SectionCoverage;
+}) {
+	return (
+		<p className="performance-meta">
+			<span>来源：{source}</span>
+			<span>样本：{samples}</span>
+			<span>新鲜度：{freshness}</span>
+			{coverage === "partial" ? (
+				<span className="performance-coverage">部分覆盖</span>
+			) : (
+				<Coverage status={coverage} />
+			)}
+		</p>
+	);
+}
+
+function sectionCoverage(
+	items: Array<{ coverage: PerformanceCoverageStatus }>,
+): SectionCoverage {
+	if (new Set(items.map((item) => item.coverage)).size > 1) return "partial";
+	return items[0]?.coverage ?? "unavailable";
+}
+
+function totalSamples(items: Array<{ sampleCount: number }>) {
+	return items.reduce((total, item) => total + item.sampleCount, 0);
 }
 
 export function PerformanceDashboardPage({
-	fetchOverview = EVIDENCE_FIXTURE_ENABLED
-		? async () => LOCAL_EVIDENCE_OVERVIEW
-		: fetchPerformanceOverview,
+	fetchStats = fetchPerformanceStats,
 }: {
-	fetchOverview?: (
-		filters: ServerFilters,
+	fetchStats?: (
+		filters: PerformanceFilters,
 		apiUrl?: string,
-	) => Promise<PerformanceOverview>;
+	) => Promise<PerformanceDashboardResponse>;
 }) {
-	const [draft, setDraft] = useState<ServerFilters>(INITIAL_FILTERS);
-	const [filters, setFilters] = useState<ServerFilters>(INITIAL_FILTERS);
-	const [overview, setOverview] = useState<PerformanceOverview | null>(null);
-	const [selectedMetric, setSelectedMetric] = useState("");
-	const [status, setStatus] = useState<"loading" | "ready" | "stale" | "error">(
-		"loading",
-	);
+	const [filters, setFilters] = useState<PerformanceFilters>(filtersFromUrl);
+	const [draft, setDraft] = useState<PerformanceFilters>(filtersFromUrl);
+	const [dashboard, setDashboard] =
+		useState<PerformanceDashboardResponse | null>(null);
+	const [status, setStatus] = useState<DashboardStatus>("loading");
+	const [mode, setMode] = useState<DashboardMode>(modeFromUrl);
+	const historyMode = mode === "history" || modeFromUrl() === "history";
+	const priorLive = useRef<{
+		key: string;
+		data: PerformanceDashboardResponse;
+	} | null>(null);
+	const [reload, setReload] = useState(0);
 
 	useEffect(() => {
+		const restore = () => {
+			const next =
+				modeFromUrl() === "history"
+					? { window: VERIFIED_PERFORMANCE_DASHBOARD.window }
+					: filtersFromUrl();
+			setFilters(next);
+			setDraft(next);
+			setMode(modeFromUrl());
+		};
+		window.addEventListener("popstate", restore);
+		return () => window.removeEventListener("popstate", restore);
+	}, []);
+
+	useEffect(() => {
+		void reload;
 		let active = true;
+		if (historyMode) {
+			window.history.replaceState(
+				{},
+				"",
+				`${window.location.pathname}?mode=history`,
+			);
+			setFilters((current) =>
+				current.window === VERIFIED_PERFORMANCE_DASHBOARD.window &&
+				!current.route &&
+				!current.environment &&
+				!current.version
+					? current
+					: { window: VERIFIED_PERFORMANCE_DASHBOARD.window },
+			);
+			setDraft((current) =>
+				current.window === VERIFIED_PERFORMANCE_DASHBOARD.window &&
+				!current.route &&
+				!current.environment &&
+				!current.version
+					? current
+					: { window: VERIFIED_PERFORMANCE_DASHBOARD.window },
+			);
+			setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
+			setStatus("bundled-history");
+			return () => {
+				active = false;
+			};
+		}
+		setDashboard(null);
 		setStatus("loading");
-		const load = () =>
-			fetchOverview(filters, publicAppConfig.apiUrl)
-				.then((next) => {
-					if (!active) return;
-					setOverview(next);
-					setSelectedMetric((current) =>
-						next.metrics.some((metric) => metric.metric === current)
-							? current
-							: (next.metrics[0]?.metric ?? ""),
-					);
-					setStatus("ready");
-				})
-				.catch(() => {
-					if (!active) return;
-					setOverview((current) => {
-						setStatus(current ? "stale" : "error");
-						return current;
-					});
-				});
+		const load = async () => {
+			try {
+				const next = await fetchStats(filters, publicAppConfig.apiUrl);
+				if (!active) return;
+				setDashboard(next);
+				if (next.freshness.mode === "live")
+					priorLive.current = { key: JSON.stringify(filters), data: next };
+				setStatus(next.freshness.mode === "live" ? "live" : "api-snapshot");
+			} catch {
+				if (!active) return;
+				if (priorLive.current?.key === JSON.stringify(filters)) {
+					setDashboard(priorLive.current.data);
+					setStatus("stale");
+				} else {
+					setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
+					setStatus("pipeline-failure");
+				}
+			}
+		};
 		void load();
-		const interval = setInterval(() => {
-			if (document.visibilityState === "visible") void load();
-		}, 10_000);
 		return () => {
 			active = false;
-			clearInterval(interval);
 		};
-	}, [fetchOverview, filters]);
+	}, [fetchStats, filters, historyMode, reload]);
 
-	const selected = useMemo(
-		() =>
-			overview?.metrics.find((metric) => metric.metric === selectedMetric) ??
-			overview?.metrics[0] ??
-			null,
-		[overview, selectedMetric],
+	const data = dashboard;
+	const isBundled =
+		status === "bundled-history" || status === "pipeline-failure";
+	const source = isBundled
+		? "已验证历史快照"
+		: data?.freshness.source === "live-api"
+			? "实时 API"
+			: "已验证历史快照";
+	const freshness = freshnessText(
+		data?.freshness.latestSampleAt ?? null,
+		isBundled,
 	);
-	const update = (key: keyof ServerFilters, value: string) => {
-		setDraft((current) => ({ ...current, [key]: value || undefined }));
-	};
-	const latency = overview?.summary.latestEventAt
-		? Math.max(
-				0,
-				Date.parse(overview.window.to) - overview.summary.latestEventAt,
-			)
-		: null;
 
 	return (
 		<section
@@ -441,146 +279,475 @@ export function PerformanceDashboardPage({
 		>
 			<header className="product-page__hero performance-hero">
 				<div>
-					<p className="eyebrow">真实数据 · AWS 清洗链路</p>
+					<p className="eyebrow">真实样本 · 可追溯口径</p>
 					<h1 id="performance-heading">BabySteps 性能观测站</h1>
 					<p>
-						浏览器指标、接口耗时、错误和业务操作统一进入真实采集、清洗、聚合与回读链路。
+						受控运行使用 Live
+						API；服务关闭或响应无效时，回退到最近已验证历史快照。
 					</p>
 				</div>
 				<span className="evidence-status">无演示数据兜底</span>
 			</header>
-			{EVIDENCE_FIXTURE_ENABLED ? (
-				<p className="performance-state performance-state--warning">
-					本地受控 UI fixture · 仅验证排版，不是 AWS 运行证据
-				</p>
-			) : null}
-
 			<form
 				className="performance-filters"
 				onSubmit={(event) => {
 					event.preventDefault();
-					setFilters({ ...draft });
+					writeFilters(draft, mode);
+					setFilters(draft);
 				}}
 			>
-				<label>
-					时间范围
-					<select
-						aria-label="时间范围"
-						value={draft.window}
-						onChange={(event) => update("window", event.target.value)}
-					>
-						<option value="1h">最近 1 小时</option>
-						<option value="24h">最近 24 小时</option>
-						<option value="7d">最近 7 天</option>
-					</select>
-				</label>
-				<label>
-					页面路径
-					<input
-						aria-label="页面路径"
-						value={draft.route ?? ""}
-						onChange={(event) => update("route", event.target.value)}
-						placeholder="全部页面"
-					/>
-				</label>
-				<label>
-					运行环境
-					<input
-						aria-label="运行环境"
-						value={draft.environment ?? ""}
-						onChange={(event) => update("environment", event.target.value)}
-						placeholder="全部环境"
-					/>
-				</label>
-				<label>
-					发布版本
-					<input
-						aria-label="发布版本"
-						value={draft.version ?? ""}
-						onChange={(event) => update("version", event.target.value)}
-						placeholder="全部版本"
-					/>
-				</label>
-				<button type="submit">应用筛选</button>
+				<fieldset disabled={historyMode}>
+					<label>
+						时间范围
+						<select
+							aria-label="时间范围"
+							disabled={historyMode}
+							value={draft.window}
+							onChange={(event) =>
+								setDraft({
+									...draft,
+									window: event.target.value as PerformanceFilters["window"],
+								})
+							}
+						>
+							<option value="1h">最近 1 小时</option>
+							<option value="24h">最近 24 小时</option>
+							<option value="7d">最近 7 天</option>
+						</select>
+					</label>
+					<label>
+						页面路径
+						<input
+							aria-label="页面路径"
+							disabled={historyMode}
+							value={draft.route ?? ""}
+							onChange={(event) =>
+								setDraft({ ...draft, route: event.target.value || undefined })
+							}
+							placeholder="全部页面"
+						/>
+					</label>
+					<label>
+						运行环境
+						<input
+							aria-label="运行环境"
+							disabled={historyMode}
+							value={draft.environment ?? ""}
+							onChange={(event) =>
+								setDraft({
+									...draft,
+									environment: event.target.value || undefined,
+								})
+							}
+							placeholder="全部环境"
+						/>
+					</label>
+					<label>
+						发布版本
+						<input
+							aria-label="发布版本"
+							disabled={historyMode}
+							value={draft.version ?? ""}
+							onChange={(event) =>
+								setDraft({ ...draft, version: event.target.value || undefined })
+							}
+							placeholder="全部版本"
+						/>
+					</label>
+					<button type="submit" disabled={historyMode}>
+						应用筛选
+					</button>
+				</fieldset>
 			</form>
-
-			{status === "loading" ? (
-				<p className="performance-state">正在读取已清洗样本…</p>
-			) : null}
-			{status === "error" ? (
-				<div className="performance-state performance-state--error">
-					<strong>性能数据暂不可用</strong>
-					<span>页面不会用模拟数据掩盖链路故障，请稍后重试。</span>
-				</div>
-			) : null}
-			{status === "stale" ? (
-				<p className="performance-state performance-state--warning">
-					正在显示上一次真实结果
-				</p>
-			) : null}
-			{(status === "ready" || status === "stale") && overview ? (
-				<>
+			<fieldset className="performance-mode-controls" aria-label="数据模式">
+				<button
+					type="button"
+					aria-pressed={mode === "live"}
+					onClick={() => {
+						writeFilters(filters, "live");
+						setMode("live");
+						setReload((value) => value + 1);
+					}}
+				>
+					Live 数据
+				</button>
+				<button
+					type="button"
+					aria-pressed={historyMode}
+					onClick={() => {
+						const fixed = {
+							window: VERIFIED_PERFORMANCE_DASHBOARD.window,
+						} as PerformanceFilters;
+						writeFilters(fixed, "history");
+						setFilters(fixed);
+						setDraft(fixed);
+						setMode("history");
+					}}
+				>
+					历史快照
+				</button>
+			</fieldset>
+			<p
+				className="performance-state performance-state--compact"
+				role="status"
+				aria-live="polite"
+			>
+				{status === "loading"
+					? "正在读取性能观测…"
+					: status === "live"
+						? "Live · 实时数据"
+						: status === "api-snapshot"
+							? "历史 API 快照 · 非实时"
+							: status === "stale"
+								? "stale · 正在显示上一次真实结果"
+								: status === "bundled-history"
+									? "历史快照 · 非实时"
+									: "管线失败 · 历史快照 · 非实时"}
+			</p>
+			{isBundled ? (
+				<section
+					className="performance-verified-snapshot"
+					aria-labelledby="performance-snapshot-heading"
+				>
+					<header>
+						<div>
+							<p className="eyebrow">Verified cloud observation</p>
+							<h2 id="performance-snapshot-heading">最近一次真实闭环</h2>
+						</div>
+						<span className="evidence-status">历史快照 · 非实时</span>
+					</header>
 					<p className="performance-provenance">
-						真实 AWS 清洗结果 · 窗口 {overview.window.preset} ·{" "}
-						{overview.window.from} 至 {overview.window.to} · 样本不推算
+						{VERIFIED_PERFORMANCE_OBSERVATION.observedAt} · AWS{" "}
+						{VERIFIED_PERFORMANCE_OBSERVATION.region} · commit{" "}
+						{VERIFIED_PERFORMANCE_OBSERVATION.commit}
 					</p>
-					<div className="performance-kpis performance-kpis--overview">
-						<article>
-							<span>事件总量</span>
-							<strong>{overview.summary.totalEvents}</strong>
-							<small>当前筛选窗口</small>
-						</article>
-						<article>
-							<span>监测指标</span>
-							<strong>{overview.summary.metricCount} 项</strong>
-							<small>按单位独立聚合</small>
-						</article>
-						<article>
-							<span>错误率</span>
-							<strong>{(overview.summary.errorRate * 100).toFixed(1)}%</strong>
-							<small>{overview.summary.errorCount} 个错误事件</small>
-						</article>
-						<article>
-							<span>覆盖路由</span>
-							<strong>{overview.summary.routeCount}</strong>
-							<small>归一化页面路径</small>
-						</article>
-						<article>
-							<span>数据延迟</span>
-							<strong>
-								{latency === null
-									? "无"
-									: latency < 60_000
-										? `${Math.round(latency / 1000)} 秒`
-										: `${Math.round(latency / 60_000)} 分钟`}
-							</strong>
-							<small>
-								{overview.summary.latestEventAt
-									? new Date(overview.summary.latestEventAt).toLocaleString(
-											"zh-CN",
-										)
-									: "暂无事件"}
-							</small>
-						</article>
-					</div>
-					{overview.metrics.length > 0 && selected ? (
-						<div className="performance-visual-grid">
-							<MultiMetricChart
-								metrics={overview.metrics}
-								selectedMetric={selected.metric}
-								onSelect={setSelectedMetric}
-							/>
-							<PercentileTrend metric={selected} />
-							<RouteComparison metric={selected} />
-							<ErrorDistribution metrics={overview.metrics} />
+					<p>
+						临时项目资源已清理；下列未观测项保持无样本或不可用，不伪造 Live/AWS
+						状态。
+					</p>
+					<a
+						className="performance-link"
+						href={VERIFIED_PERFORMANCE_OBSERVATION.runUrl}
+						target="_blank"
+						rel="noreferrer"
+					>
+						查看 Run {VERIFIED_PERFORMANCE_OBSERVATION.runId}
+					</a>
+				</section>
+			) : null}
+			{data ? (
+				<div className="performance-cockpit">
+					<section className="performance-panel">
+						<h2>运行状态与总览</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.vitals)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.vitals)}
+						/>
+						<div className="performance-kpis">
+							<article>
+								<span>模式</span>
+								<strong>
+									{data.freshness.mode === "live" && !isBundled
+										? "Live"
+										: "历史"}
+								</strong>
+								<small>Run {data.freshness.runId ?? "已清理后不可用"}</small>
+							</article>
+							<article>
+								<span>Web Vitals 样本</span>
+								<strong>{totalSamples(data.vitals)}</strong>
+								<small>窗口 {data.window}</small>
+							</article>
+							<article>
+								<span>管道</span>
+								<strong>
+									{data.pipeline.status === "unavailable"
+										? "不可用"
+										: data.pipeline.status}
+								</strong>
+								<small>{data.pipeline.source}</small>
+							</article>
+							<article>
+								<span>版本 / 最慢页面</span>
+								<strong>{data.versions[0]?.version ?? "—"}</strong>
+								<small>
+									{data.routes.slice().sort((a, b) => b.p75 - a.p75)[0]
+										?.route ?? "无 route 样本"}
+								</small>
+							</article>
+							<article>
+								<span>错误样本</span>
+								<strong>{totalSamples(data.errors)}</strong>
+								<small>
+									{totalSamples(data.errors) === 0
+										? "无错误分类"
+										: data.errors
+												.slice()
+												.sort((a, b) => b.sampleCount - a.sampleCount)[0]?.name}
+								</small>
+							</article>
+							<article>
+								<span>响应 commit</span>
+								<strong>{data.freshness.commit ?? "—"}</strong>
+								<small>Run {data.freshness.runId ?? "—"}</small>
+							</article>
 						</div>
-					) : (
-						<div className="performance-state">
-							<strong>当前筛选窗口无可信指标</strong>
-							<span>不会生成模拟曲线。</span>
+					</section>
+					<section className="performance-panel">
+						<h2>Core Web Vitals</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.vitals)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.vitals)}
+						/>
+						<MetricTable
+							items={data.vitals}
+							caption="Core Web Vitals 百分位与覆盖状态"
+						/>
+					</section>
+					<section className="performance-panel">
+						<h2>导航阶段</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.navigation)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.navigation)}
+						/>
+						<MetricTable
+							items={data.navigation}
+							caption="导航阶段百分位与覆盖状态"
+						/>
+					</section>
+					<section className="performance-panel">
+						<h2>趋势与版本</h2>
+						<Meta
+							source={source}
+							samples={data.trend.reduce(
+								(total, item) => total + item.sampleCount,
+								0,
+							)}
+							freshness={freshness}
+							coverage={
+								data.trend.length ? "observed" : "instrumented-no-sample"
+							}
+						/>
+						<div className="performance-table-frame">
+							<table className="performance-table">
+								<caption>版本与趋势</caption>
+								<thead>
+									<tr>
+										<th scope="col">版本</th>
+										<th scope="col">样本</th>
+										<th scope="col">p75</th>
+										<th scope="col">p95</th>
+									</tr>
+								</thead>
+								<tbody>
+									{data.versions.length ? (
+										data.versions.map((item) => (
+											<tr key={item.version}>
+												<th scope="row">{item.version}</th>
+												<td>{item.sampleCount}</td>
+												<td>{item.p75} ms</td>
+												<td>{item.p95} ms</td>
+											</tr>
+										))
+									) : (
+										<tr>
+											<td colSpan={4}>已埋点，当前快照无样本</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
 						</div>
-					)}
-				</>
+						<div className="performance-table-frame">
+							<table className="performance-table">
+								<caption>真实趋势</caption>
+								<thead>
+									<tr>
+										<th scope="col">时间桶</th>
+										<th scope="col">指标</th>
+										<th scope="col">样本</th>
+										<th scope="col">p75</th>
+									</tr>
+								</thead>
+								<tbody>
+									{data.trend.length ? (
+										data.trend.map((item) => (
+											<tr key={`${item.bucketStart}-${item.name}`}>
+												<th scope="row">
+													{new Date(item.bucketStart).toLocaleString("zh-CN", {
+														hour12: false,
+													})}
+												</th>
+												<td>{item.name}</td>
+												<td>{item.sampleCount}</td>
+												<td>{item.p75} ms</td>
+											</tr>
+										))
+									) : (
+										<tr>
+											<td colSpan={4}>无趋势样本</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
+						</div>
+					</section>
+					<section className="performance-panel">
+						<h2>页面路径</h2>
+						<Meta
+							source={source}
+							samples={data.routes.reduce(
+								(total, item) => total + item.sampleCount,
+								0,
+							)}
+							freshness={freshness}
+							coverage={
+								data.routes.length ? "observed" : "instrumented-no-sample"
+							}
+						/>
+						<div className="performance-table-frame">
+							<table className="performance-table">
+								<caption>页面路径性能对比</caption>
+								<thead>
+									<tr>
+										<th scope="col">页面</th>
+										<th scope="col">样本</th>
+										<th scope="col">p75</th>
+										<th scope="col">p95</th>
+									</tr>
+								</thead>
+								<tbody>
+									{data.routes.length ? (
+										data.routes.map((item) => (
+											<tr key={item.route}>
+												<th scope="row">
+													<code>{item.route}</code>
+												</th>
+												<td>{item.sampleCount}</td>
+												<td>{item.p75} ms</td>
+												<td>{item.p95} ms</td>
+											</tr>
+										))
+									) : (
+										<tr>
+											<td colSpan={4}>已埋点，当前快照无样本</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
+						</div>
+					</section>
+					<section className="performance-panel">
+						<h2>资源与主线程</h2>
+						<Meta
+							source={source}
+							samples={
+								totalSamples(data.resources) +
+								data.longTasks.duration.sampleCount
+							}
+							freshness={freshness}
+							coverage={sectionCoverage([
+								...data.resources,
+								data.longTasks.duration,
+							])}
+						/>
+						<MetricTable items={data.resources} caption="资源性能与覆盖状态" />
+						<p className="performance-note">
+							Long Task：
+							{data.longTasks.coverage === "unavailable"
+								? "次数 — · 总计 — · 最长 —"
+								: `${data.longTasks.count} 次 · 总计 ${data.longTasks.totalDurationMs} ms · 最长 ${data.longTasks.maxDurationMs ?? "—"} ms`}{" "}
+							· <Coverage status={data.longTasks.coverage} />
+						</p>
+					</section>
+					<section className="performance-panel">
+						<h2>稳定性错误</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.errors)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.errors)}
+						/>
+						<div className="performance-list">
+							{data.errors.map((item) => (
+								<p key={item.name}>
+									<code>{item.name}</code>
+									<span>样本 {item.sampleCount}</span>
+									<span>
+										错误率{" "}
+										{item.rate === null
+											? "—"
+											: `${(item.rate * 100).toFixed(1)}%`}
+									</span>
+									<Coverage status={item.coverage} />
+								</p>
+							))}
+						</div>
+					</section>
+					<section className="performance-panel">
+						<h2>Web3 操作</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.web3)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.web3)}
+						/>
+						<div className="performance-list">
+							{data.web3.map((item) => (
+								<p key={item.name}>
+									<code>{item.name}</code>
+									<span>样本 {item.sampleCount}</span>
+									<span>p75 {display(item.p75, item.unit)}</span>
+									<span>
+										成功 {item.successCount} / 失败 {item.failureCount} / 成功率{" "}
+										{item.successRate === null
+											? "—"
+											: `${(item.successRate * 100).toFixed(1)}%`}
+									</span>
+									<Coverage status={item.coverage} />
+								</p>
+							))}
+						</div>
+					</section>
+					<section className="performance-panel">
+						<h2>AWS 管道健康</h2>
+						<Meta
+							source={data.pipeline.source}
+							samples={0}
+							freshness={freshness}
+							coverage="unavailable"
+						/>
+						<p className="performance-note">
+							Cloudflare → API → SQS/DLQ → ECS → PostgreSQL → Query
+						</p>
+						<p className="performance-note">
+							当前为 {data.pipeline.status}；Dashboard 不从数据库推测 AWS
+							控制面状态。
+						</p>
+					</section>
+					<section className="performance-panel">
+						<h2>Evidence 与口径</h2>
+						<Meta
+							source={isBundled ? "已验证工作流制品" : source}
+							samples={totalSamples(data.vitals)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.vitals)}
+						/>
+						<p className="performance-note">
+							只展示真实浏览器样本或经验证快照；小于 5
+							个样本不做变化百分比。DNS/TCP/TLS 在本地 HTTP
+							或连接复用时显示不可用，绝不显示伪造的 0 ms。
+						</p>
+						<p className="performance-note">
+							不采集 Cookie、Token、签名、钱包完整地址、请求正文或用户输入。
+						</p>
+					</section>
+				</div>
 			) : null}
 		</section>
 	);

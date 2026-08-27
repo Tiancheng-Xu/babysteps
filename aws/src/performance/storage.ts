@@ -1,4 +1,5 @@
 import type { SqlQueryable } from "../repositories/postgresCompletionJobs";
+import { quotePerformanceSchema } from "./databaseAccess";
 import type { StoredPerformanceEvent } from "./pipeline";
 
 export type PerformanceFilters = {
@@ -19,31 +20,42 @@ export class PostgresPerformanceStore {
 	constructor(
 		private readonly database: SqlQueryable,
 		private readonly now: () => number = Date.now,
-	) {}
+		runId: string,
+	) {
+		this.schema = quotePerformanceSchema(runId);
+	}
 
-	async insert(event: StoredPerformanceEvent): Promise<void> {
-		await this.database.query(
+	private readonly schema: string;
+
+	async insert(event: StoredPerformanceEvent) {
+		const events = `${this.schema}."events"`;
+		const aggregates = `${this.schema}."hourly_aggregates"`;
+		const result = await this.database.query(
 			`WITH inserted AS (
-			 INSERT INTO babysteps_performance.events
-			(event_id, timestamp_ms, type, name, value, unit, route, environment, version)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 INSERT INTO ${events}
+			(event_id, timestamp_ms, type, name, value, unit, category, outcome,
+			 route, environment, version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			ON CONFLICT (event_id) DO NOTHING
-			RETURNING timestamp_ms, type, name, value, unit, route, environment, version
+			RETURNING timestamp_ms, type, name, value, unit, category, outcome,
+			 route, environment, version
 			)
-			INSERT INTO babysteps_performance.hourly_aggregates
-			(bucket_start_ms, type, name, unit, route, environment, version,
+			INSERT INTO ${aggregates}
+			(bucket_start_ms, type, name, unit, category, outcome, route, environment, version,
 			 timestamps_ms, values, sample_count, error_count)
-			SELECT (timestamp_ms / 3600000) * 3600000, type, name, unit, route,
-			 environment, version, ARRAY[timestamp_ms]::BIGINT[],
+			SELECT (timestamp_ms / 3600000) * 3600000, type, name, unit,
+			 COALESCE(category, ''), COALESCE(outcome, ''), route, environment, version,
+			 ARRAY[timestamp_ms]::BIGINT[],
 			 ARRAY[value]::DOUBLE PRECISION[], 1,
 			 CASE WHEN type = 'error' THEN 1 ELSE 0 END
 			FROM inserted
-			ON CONFLICT (bucket_start_ms, type, name, unit, route, environment, version)
+			ON CONFLICT (bucket_start_ms, type, name, unit, category, outcome, route, environment, version)
 			DO UPDATE SET
-			 timestamps_ms = babysteps_performance.hourly_aggregates.timestamps_ms || EXCLUDED.timestamps_ms,
-			 values = babysteps_performance.hourly_aggregates.values || EXCLUDED.values,
-			 sample_count = babysteps_performance.hourly_aggregates.sample_count + 1,
-			 error_count = babysteps_performance.hourly_aggregates.error_count + EXCLUDED.error_count`,
+				 timestamps_ms = ${aggregates}.timestamps_ms || EXCLUDED.timestamps_ms,
+				 values = ${aggregates}.values || EXCLUDED.values,
+				 sample_count = ${aggregates}.sample_count + 1,
+				 error_count = ${aggregates}.error_count + EXCLUDED.error_count
+			RETURNING 1`,
 			[
 				event.eventId,
 				event.timestamp,
@@ -51,16 +63,22 @@ export class PostgresPerformanceStore {
 				event.name,
 				event.value,
 				event.unit,
+				event.category ?? null,
+				event.outcome ?? null,
 				event.route,
 				event.environment,
 				event.version,
 			],
 		);
+		return result.rowCount === 0 ? "deduplicated" : "inserted";
 	}
 
 	async query(filters: PerformanceFilters): Promise<StoredPerformanceEvent[]> {
 		const windowStart = this.now() - windowMilliseconds[filters.window];
-		const values: unknown[] = [Math.floor(windowStart / 3_600_000) * 3_600_000];
+		const values: unknown[] = [
+			Math.floor(windowStart / 3_600_000) * 3_600_000,
+			windowStart,
+		];
 		const clauses = ["bucket_start_ms >= $1"];
 		for (const [column, value] of [
 			["route", filters.route],
@@ -73,11 +91,24 @@ export class PostgresPerformanceStore {
 		}
 
 		const result = await this.database.query(
-			`SELECT bucket_start_ms AS "bucketStart", type, name, unit, route,
-			 environment, version, timestamps_ms AS timestamps, values
-			 FROM babysteps_performance.hourly_aggregates
+			`WITH bounded_samples AS (
+			 SELECT bucket_start_ms AS "bucketStart", type, name, unit,
+			  NULLIF(category, '') AS category, NULLIF(outcome, '') AS outcome,
+			  route, environment, version, sample.timestamp_ms AS timestamp,
+			  sample.value
+			 FROM ${this.schema}."hourly_aggregates"
+			 CROSS JOIN LATERAL unnest(timestamps_ms, values)
+			 AS sample(timestamp_ms, value)
 			 WHERE ${clauses.join(" AND ")}
-			 ORDER BY bucket_start_ms ASC`,
+			 AND sample.timestamp_ms >= $2
+			 LIMIT 10001
+			), counted_samples AS (
+			 SELECT *, COUNT(*) OVER () AS "totalCount"
+			 FROM bounded_samples
+			)
+			SELECT * FROM counted_samples
+			ORDER BY timestamp ASC
+			LIMIT 10000`,
 			values,
 		);
 		const rows = result.rows as Array<{
@@ -85,34 +116,30 @@ export class PostgresPerformanceStore {
 			type: StoredPerformanceEvent["type"];
 			name: string;
 			unit: StoredPerformanceEvent["unit"];
+			category: StoredPerformanceEvent["category"] | null;
+			outcome: StoredPerformanceEvent["outcome"] | null;
 			route: string;
 			environment: string;
 			version: string;
-			timestamps: Array<number | string>;
-			values: number[];
+			timestamp: number | string;
+			value: number | string;
+			totalCount: number | string;
 		}>;
-		const events = rows.flatMap((row, rowIndex) =>
-			row.values.flatMap((value, valueIndex) => {
-				const timestamp = Number(row.timestamps[valueIndex]);
-				if (timestamp < windowStart) return [];
-				return [
-					{
-						eventId: `${row.bucketStart}-${rowIndex}-${valueIndex}`,
-						timestamp,
-						type: row.type,
-						name: row.name,
-						value: Number(value),
-						unit: row.unit,
-						route: row.route,
-						environment: row.environment,
-						version: row.version,
-					},
-				];
-			}),
-		);
-		if (events.length > 10_000) {
+		if (Number(rows[0]?.totalCount ?? 0) > 10_000) {
 			throw new Error("STATISTICS_WINDOW_TOO_LARGE");
 		}
-		return events;
+		return rows.map((row, rowIndex) => ({
+			eventId: `${row.bucketStart}-${rowIndex}-${row.timestamp}`,
+			timestamp: Number(row.timestamp),
+			type: row.type,
+			name: row.name,
+			value: Number(row.value),
+			unit: row.unit,
+			...(row.category ? { category: row.category } : {}),
+			...(row.outcome ? { outcome: row.outcome } : {}),
+			route: row.route,
+			environment: row.environment,
+			version: row.version,
+		}));
 	}
 }

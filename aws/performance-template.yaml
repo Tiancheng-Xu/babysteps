@@ -3,6 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: BabySteps temporary performance observability runtime
 
 Parameters:
+  RunId: { Type: String, AllowedPattern: "^[0-9]+$" }
+  ApprovalReferenceHash: { Type: String, AllowedPattern: "^[a-f0-9]{64}$" }
   EnvironmentName: { Type: String, Default: performance-preview }
   ExpiresAt: { Type: String }
   SharedVpcId: { Type: AWS::EC2::VPC::Id }
@@ -23,6 +25,8 @@ Globals:
     Tags: &functionTags
       Project: babysteps-performance
       Environment: { Ref: EnvironmentName }
+      RunId: { Ref: RunId }
+      ApprovalReferenceHash: { Ref: ApprovalReferenceHash }
       ManagedBy: cloudformation
       ExpiresAt: { Ref: ExpiresAt }
 
@@ -34,13 +38,15 @@ Resources:
       Name: !Sub babysteps-performance-db-${EnvironmentName}
       Description: !Sub Temporary BabySteps performance database identity ${EnvironmentName}
       GenerateSecretString:
-        SecretStringTemplate: !Sub '{"host":"${SharedDatabaseHost}","port":5432,"username":"bs_perf_${EnvironmentName}","dbname":"${SharedDatabaseName}"}'
+        SecretStringTemplate: !Sub '{"host":"${SharedDatabaseHost}","port":5432,"username":"bs_perf_${RunId}","dbname":"${SharedDatabaseName}"}'
         GenerateStringKey: password
         PasswordLength: 32
         ExcludePunctuation: true
       Tags:
         - { Key: Project, Value: babysteps-performance }
         - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: RunId, Value: { Ref: RunId } }
+        - { Key: ApprovalReferenceHash, Value: { Ref: ApprovalReferenceHash } }
         - { Key: ManagedBy, Value: cloudformation }
         - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
 
@@ -54,6 +60,8 @@ Resources:
       Tags:
         - { Key: Project, Value: babysteps-performance }
         - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: RunId, Value: { Ref: RunId } }
+        - { Key: ApprovalReferenceHash, Value: { Ref: ApprovalReferenceHash } }
         - { Key: ManagedBy, Value: cloudformation }
         - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
 
@@ -66,6 +74,8 @@ Resources:
       Tags: &resourceTags
         - { Key: Project, Value: babysteps-performance }
         - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: RunId, Value: { Ref: RunId } }
+        - { Key: ApprovalReferenceHash, Value: { Ref: ApprovalReferenceHash } }
         - { Key: ManagedBy, Value: cloudformation }
         - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
 
@@ -103,8 +113,27 @@ Resources:
   PerformanceLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       LogGroupName: !Sub /babysteps/performance/${EnvironmentName}
+      RetentionInDays: 7
+      Tags: *resourceTags
+
+  IngestFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/babysteps-performance-ingest-${EnvironmentName}
+      RetentionInDays: 7
+      Tags: *resourceTags
+
+  QueryFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/babysteps-performance-query-${EnvironmentName}
       RetentionInDays: 7
       Tags: *resourceTags
 
@@ -118,6 +147,8 @@ Resources:
       Tags:
         - { Key: Project, Value: babysteps-performance }
         - { Key: Environment, Value: { Ref: EnvironmentName } }
+        - { Key: RunId, Value: { Ref: RunId } }
+        - { Key: ApprovalReferenceHash, Value: { Ref: ApprovalReferenceHash } }
         - { Key: ManagedBy, Value: cloudformation }
         - { Key: ExpiresAt, Value: { Ref: ExpiresAt } }
 
@@ -211,6 +242,7 @@ Resources:
           Environment:
             - { Name: QUEUE_URL, Value: { Ref: PerformanceQueue } }
             - { Name: PROJECT_DATABASE_SECRET_ARN, Value: { Ref: ProjectDatabaseSecret } }
+            - { Name: PERFORMANCE_RUN_ID, Value: { Ref: RunId } }
             - { Name: NODE_EXTRA_CA_CERTS, Value: /app/certificates/us-east-1-bundle.pem }
           LogConfiguration:
             LogDriver: awslogs
@@ -240,6 +272,7 @@ Resources:
             - { Name: QUEUE_URL, Value: { Ref: PerformanceQueue } }
             - { Name: MASTER_DATABASE_SECRET_ARN, Value: { Ref: SharedDatabaseSecretArn } }
             - { Name: PROJECT_DATABASE_SECRET_ARN, Value: { Ref: ProjectDatabaseSecret } }
+            - { Name: PERFORMANCE_RUN_ID, Value: { Ref: RunId } }
             - { Name: CLEANER_MODE, Value: initialize-schema }
             - { Name: NODE_EXTRA_CA_CERTS, Value: /app/certificates/us-east-1-bundle.pem }
           LogConfiguration:
@@ -254,12 +287,14 @@ Resources:
     Type: AWS::Serverless::HttpApi
     DeletionPolicy: Delete
     Properties:
+      Name: !Sub babysteps-performance-api-${EnvironmentName}
       StageName: $default
       Tags: *functionTags
 
   IngestFunction:
     Type: AWS::Serverless::Function
     DeletionPolicy: Delete
+    DependsOn: IngestFunctionLogGroup
     Properties:
       FunctionName: !Sub babysteps-performance-ingest-${EnvironmentName}
       CodeUri: .
@@ -275,6 +310,7 @@ Resources:
   QueryFunction:
     Type: AWS::Serverless::Function
     DeletionPolicy: Delete
+    DependsOn: QueryFunctionLogGroup
     Properties:
       FunctionName: !Sub babysteps-performance-query-${EnvironmentName}
       CodeUri: .
@@ -285,6 +321,7 @@ Resources:
       Environment:
         Variables:
           PROJECT_DATABASE_SECRET_ARN: { Ref: ProjectDatabaseSecret }
+          PERFORMANCE_RUN_ID: { Ref: RunId }
           ORIGIN_TOKEN: { Ref: OriginToken }
           NODE_EXTRA_CA_CERTS: /var/runtime/ca-cert.pem
       Events:

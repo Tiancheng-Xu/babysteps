@@ -53,6 +53,7 @@ jobs:
       PERFORMANCE_CONTROL_CALLBACK_URL: https://baby2b.online/api/performance/control/callback
       CLEANUP_STATE_PARAMETER: /babysteps/performance-control/cleanup-state
       ACTIVE_OPERATION_PARAMETER: /babysteps/performance-control/active-operation
+      RUN_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -238,10 +239,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Generate ephemeral origin token for this stack lifecycle
         if: steps.resolve.outputs.action == 'start'
+        env:
+          OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+          GENERATION: ${{ steps.resolve.outputs.generation }}
+          CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
         run: |
           origin_token="$(openssl rand -hex 32)"
           printf '::add-mask::%s\n' "$origin_token"
           echo "ORIGIN_TOKEN=$origin_token" >> "$GITHUB_ENV"
+          approval_context="control|$OPERATION_ID|$GENERATION|$CALLBACK_SOURCE"
+          echo "APPROVAL_REFERENCE_HASH=$(printf '%s' "$approval_context" | sha256sum | cut -d ' ' -f1)" >> "$GITHUB_ENV"
       - name: Deploy existing single performance stack
         if: steps.resolve.outputs.action == 'start'
         run: |
@@ -249,7 +256,7 @@ jobs:
             --stack-name "$STACK_NAME" --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}' \
             --s3-bucket '${{ vars.AWS_SHARED_ARTIFACT_BUCKET }}' --capabilities CAPABILITY_NAMED_IAM \
             --no-confirm-changeset --no-fail-on-empty-changeset \
-            --parameter-overrides EnvironmentName="$ENVIRONMENT_NAME" ExpiresAt="$EXPIRES_AT" \
+            --parameter-overrides RunId="$RUN_ID" ApprovalReferenceHash="$APPROVAL_REFERENCE_HASH" EnvironmentName="$ENVIRONMENT_NAME" ExpiresAt="$EXPIRES_AT" \
             SharedVpcId='${{ vars.AWS_SHARED_VPC_ID }}' PrivateSubnetIds='${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}' \
             SharedDatabaseSecurityGroupId='${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}' \
             SharedDatabaseSecretArn='${{ vars.AWS_SHARED_DATABASE_SECRET_ARN }}' \
@@ -325,6 +332,31 @@ jobs:
           task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
           aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
           test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"
+          task_id="${task##*/}"
+          log_group="/babysteps/performance/$ENVIRONMENT_NAME"
+          log_stream="cleaner/cleaner/$task_id"
+          for attempt in $(seq 1 12); do
+            if aws logs get-log-events --log-group-name "$log_group" --log-stream-name "$log_stream" --output json > cleaner-log-events.json 2>/dev/null && jq -e '.events | length > 0' cleaner-log-events.json >/dev/null; then break; fi
+            sleep 5
+          done
+          node - <<'NODE'
+          const fs = require("fs");
+          const input = JSON.parse(fs.readFileSync("cleaner-log-events.json", "utf8"));
+          const keys = ["deduplicated", "discarded", "durationMs", "inserted", "processed", "retryableFailures", "writeDurationMs"];
+          const summaries = (input.events ?? []).flatMap(({ message }) => {
+            if (typeof message !== "string" || /[\r\n]/.test(message)) return [];
+            try {
+              const value = JSON.parse(message);
+              return value && typeof value === "object" && JSON.stringify(Object.keys(value).sort()) === JSON.stringify(keys) ? [value] : [];
+            } catch { return []; }
+          });
+          if (summaries.length !== 1) throw new Error("EXPECTED_ONE_CLEANER_SUMMARY");
+          const summary = summaries[0];
+          for (const key of keys) if (!Number.isSafeInteger(summary[key]) || summary[key] < 0) throw new Error(`INVALID_CLEANER_SUMMARY_${key}`);
+          if (summary.retryableFailures !== 0) throw new Error("CLEANER_RETRYABLE_FAILURES");
+          if (summary.processed !== summary.inserted + summary.deduplicated + summary.discarded + summary.retryableFailures) throw new Error("CLEANER_SUMMARY_TOTAL_MISMATCH");
+          fs.writeFileSync("evidence/cleaner-summary.json", `${JSON.stringify(summary, null, 2)}\n`);
+          NODE
           api="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)"
           echo "API_ID=$(printf '%s' "$api" | cut -d. -f1 | sed 's#https://##')" >> "$GITHUB_ENV"
           curl --fail-with-body --silent --show-error -H "x-babysteps-origin-token: $ORIGIN_TOKEN" "$api/stats?window=1h&metric=all&environment=production" > evidence/performance-overview.json
@@ -350,21 +382,30 @@ jobs:
           exit 1
       - name: Delete exact stable project stack
         id: delete-stack
-        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry')
+        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.schema-cleanup.outcome == 'success'
         run: |
           source scripts/aws-performance-control-state.sh
+          deleted=false
           for attempt in 1 2 3; do
             set +e
             AWS_CLASSIFY_RETRIES=1 aws_classify_to_file delete-stack.json cloudformation-stack aws cloudformation describe-stacks --stack-name "$STACK_NAME"
             stack_presence=$?
             set -e
-            if test "$stack_presence" = 3; then exit 0; fi
+            if test "$stack_presence" = 3; then deleted=true; break; fi
             test "$stack_presence" = 0 || { sleep 10; continue; }
             aws cloudformation delete-stack --stack-name "$STACK_NAME" --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}' || true
-            if aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"; then exit 0; fi
+            if aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"; then deleted=true; break; fi
             sleep 10
           done
-          exit 1
+          test "$deleted" = "true"
+          for family in babysteps-performance-cleaner-control babysteps-performance-db-admin-control; do
+            definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns' --output text)"
+            for definition in $definitions; do
+              actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+              test "$actual_family" = "$family"
+              aws ecs delete-task-definitions --task-definitions "$definition" >/dev/null
+            done
+          done
       - name: Read persistent cleanup marker for idempotent stop
         id: cleanup-marker
         if: steps.resolve.outputs.action == 'idempotent-stop'
@@ -407,7 +448,18 @@ jobs:
           }
           assert_absent cloudformation-stack residue-stack.json aws cloudformation describe-stacks --stack-name "$STACK_NAME"
           clusters="$(aws ecs describe-clusters --clusters babysteps-performance-control --output json)"
-          test "$(printf '%s' "$clusters" | jq '[.clusters[]? | select(.status != "INACTIVE")] | length')" = 0
+          active_clusters="$(printf '%s' "$clusters" | jq -r '.clusters[]? | select(.status != "INACTIVE") | .clusterArn')"
+          ecs_cluster_count=0
+          ecs_task_count=0
+          for cluster in $active_clusters; do
+            ecs_cluster_count=$((ecs_cluster_count + 1))
+            for status in RUNNING PENDING; do
+              count="$(aws ecs list-tasks --cluster "$cluster" --desired-status "$status" --query 'length(taskArns)' --output text)"
+              ecs_task_count=$((ecs_task_count + count))
+            done
+          done
+          test "$ecs_cluster_count" = 0
+          test "$ecs_task_count" = 0
           assert_absent ecr-repository residue-ecr.json aws ecr describe-repositories --repository-names babysteps-performance-cleaner-control
           for queue in babysteps-performance-events-control babysteps-performance-dlq-control; do
             assert_absent sqs-queue "residue-$queue.json" aws sqs get-queue-url --queue-name "$queue"
@@ -415,8 +467,13 @@ jobs:
           for function in babysteps-performance-ingest-control babysteps-performance-query-control; do
             assert_absent lambda-function "residue-$function.json" aws lambda get-function --function-name "$function"
           done
-          log_groups="$(aws logs describe-log-groups --log-group-name-prefix /babysteps/performance/control --output json)"
-          test "$(printf '%s' "$log_groups" | jq '[.logGroups[]? | select(.logGroupName == "/babysteps/performance/control")] | length')" = 0
+          log_group_count=0
+          for log_group in /babysteps/performance/control /aws/lambda/babysteps-performance-ingest-control /aws/lambda/babysteps-performance-query-control; do
+            log_groups="$(aws logs describe-log-groups --log-group-name-prefix "$log_group" --output json)"
+            count="$(printf '%s' "$log_groups" | jq --arg exact "$log_group" '[.logGroups[]? | select(.logGroupName == $exact)] | length')"
+            log_group_count=$((log_group_count + count))
+          done
+          test "$log_group_count" = 0
           assert_absent secret residue-db-secret.json aws secretsmanager describe-secret --secret-id babysteps-performance-db-control
           assert_absent secret residue-origin-secret.json aws secretsmanager describe-secret --secret-id babysteps-performance-origin-control
           if test -n "${API_ID:-}"; then
@@ -425,20 +482,30 @@ jobs:
           tagged_apis="$(aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=babysteps-performance Key=Environment,Values=control --resource-type-filters apigateway:apis --output json)"
           orphan_api_count="$(printf '%s' "$tagged_apis" | jq '.ResourceTagMappingList | length')"
           test "$orphan_api_count" = "0"
-          for family in babysteps-performance-cleaner-control babysteps-performance-db-admin-control; do
-            set +e
-            aws_classify_to_file "residue-$family.json" ecs-task-definition aws ecs describe-task-definition --task-definition "$family"
-            task_presence=$?
-            set -e
-            if test "$task_presence" = 0; then
-              test "$(jq -r '.taskDefinition.status' "residue-$family.json")" != ACTIVE
-            else
-              test "$task_presence" = 3
-            fi
+          task_definition_count=0
+          for status in ACTIVE INACTIVE; do
+            for family in babysteps-performance-cleaner-control babysteps-performance-db-admin-control; do
+              definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status "$status" --query 'taskDefinitionArns' --output text)"
+              for definition in $definitions; do
+                actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+                test "$actual_family" = "$family"
+                task_definition_count=$((task_definition_count + 1))
+              done
+            done
           done
+          test "$task_definition_count" = 0
+          iam_role_count="$(aws iam list-roles --query "length(Roles[?starts_with(RoleName, 'babysteps-performance-') && contains(RoleName, '-control')])" --output text)"
+          test "$iam_role_count" = 0
           schema_deleted=unknown
           if test "$SCHEMA_CLEANUP_OUTCOME" = "success"; then schema_deleted=true; fi
-          jq -nc --arg schemaDeleted "$schema_deleted" '{cloudFormationStackAbsent:true,schemaDeleted:(if $schemaDeleted=="true" then true else $schemaDeleted end),remainingRunnableProjectResources:0,sharedFoundationProtected:true}' > evidence/cleanup-readback.json
+          jq -nc \
+            --arg schemaDeleted "$schema_deleted" \
+            --argjson ecsClusters "$ecs_cluster_count" \
+            --argjson ecsTasks "$ecs_task_count" \
+            --argjson taskDefinitions "$task_definition_count" \
+            --argjson iamRoles "$iam_role_count" \
+            --argjson cloudWatchLogGroups "$log_group_count" \
+            '{cloudFormationStackAbsent:true,schemaDeleted:(if $schemaDeleted=="true" then true else $schemaDeleted end),remainingRunnableProjectResources:0,inventory:{ecsClusters:$ecsClusters,ecsTasks:$ecsTasks,taskDefinitions:$taskDefinitions,cloudWatchLogGroups:$cloudWatchLogGroups,iamRoles:$iamRoles},sharedFoundationProtected:true}' > evidence/cleanup-readback.json
       - name: Mark persistent cleanup state required
         id: marker-required
         if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.schema-cleanup.outcome != 'success' || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && steps.cleanup-marker.outputs.state != 'cleanup_verified') || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))

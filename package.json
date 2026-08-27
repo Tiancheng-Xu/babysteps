@@ -25,6 +25,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",
 		"multiformats": "14.0.5",
+		"playwright": "1.55.0",
 		"yaml": "^2.8.1"
 	}
 }

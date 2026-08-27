@@ -2,11 +2,13 @@ import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { z } from "zod";
 import {
 	acceptPerformanceBatch,
+	computePerformanceDashboard,
 	computePerformanceOverview,
-	computePerformanceStats,
+	isAllowedPerformanceMetricName,
 	type PerformanceEvent,
 	PerformanceRequestError,
 	type StoredPerformanceEvent,
+	secureEqual,
 } from "./pipeline";
 import type { PerformanceFilters } from "./storage";
 
@@ -17,10 +19,34 @@ type JsonResponse = {
 };
 const filtersSchema = z.object({
 	window: z.enum(["1h", "24h", "7d"]).default("24h"),
-	route: z.string().max(160).optional(),
-	metric: z.string().max(64).default("LCP"),
-	environment: z.string().max(32).optional(),
-	version: z.string().max(64).optional(),
+	route: z
+		.enum([
+			"/",
+			"/home",
+			"/marketplace",
+			"/parent",
+			"/keepsakes",
+			"/provider",
+			"/exchange",
+			"/profile",
+			"/performance",
+			"/evidence",
+			"/tasks",
+			"/tasks/:id",
+		])
+		.optional(),
+	metric: z
+		.string()
+		.max(64)
+		.refine((name) => name === "all" || isAllowedPerformanceMetricName(name))
+		.default("LCP"),
+	environment: z
+		.enum(["production", "development", "preview", "test", "evidence"])
+		.optional(),
+	version: z
+		.string()
+		.regex(/^[a-z0-9._-]{1,64}$/iu)
+		.optional(),
 });
 
 const windowMilliseconds = {
@@ -84,7 +110,10 @@ export function createPerformanceQueryHandler(dependencies: {
 		const providedToken = Object.entries(event.headers).find(
 			([key]) => key.toLowerCase() === "x-babysteps-origin-token",
 		)?.[1];
-		if (!providedToken || providedToken !== dependencies.originToken) {
+		if (
+			!providedToken ||
+			!secureEqual(providedToken, dependencies.originToken)
+		) {
 			return response(401, { error: "origin authentication failed" });
 		}
 		const parsed = filtersSchema.safeParse(event.queryStringParameters ?? {});
@@ -112,7 +141,11 @@ export function createPerformanceQueryHandler(dependencies: {
 			}
 			return response(200, {
 				window: parsed.data.window,
-				...computePerformanceStats(events, parsed.data.metric),
+				...computePerformanceDashboard(
+					events,
+					parsed.data.metric,
+					dependencies.now?.() ?? Date.now(),
+				),
 			});
 		} catch {
 			return response(503, { error: "statistics unavailable" });
