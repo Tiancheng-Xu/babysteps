@@ -202,11 +202,30 @@ export function PerformanceDashboardPage({
 	}, []);
 
 	useEffect(() => {
+		void reload;
 		let active = true;
 		if (historyMode) {
-			window.history.replaceState({}, "", `${window.location.pathname}?mode=history`);
-			setFilters((current) => current.window === VERIFIED_PERFORMANCE_DASHBOARD.window && !current.route && !current.environment && !current.version ? current : { window: VERIFIED_PERFORMANCE_DASHBOARD.window });
-			setDraft((current) => current.window === VERIFIED_PERFORMANCE_DASHBOARD.window && !current.route && !current.environment && !current.version ? current : { window: VERIFIED_PERFORMANCE_DASHBOARD.window });
+			window.history.replaceState(
+				{},
+				"",
+				`${window.location.pathname}?mode=history`,
+			);
+			setFilters((current) =>
+				current.window === VERIFIED_PERFORMANCE_DASHBOARD.window &&
+				!current.route &&
+				!current.environment &&
+				!current.version
+					? current
+					: { window: VERIFIED_PERFORMANCE_DASHBOARD.window },
+			);
+			setDraft((current) =>
+				current.window === VERIFIED_PERFORMANCE_DASHBOARD.window &&
+				!current.route &&
+				!current.environment &&
+				!current.version
+					? current
+					: { window: VERIFIED_PERFORMANCE_DASHBOARD.window },
+			);
 			setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
 			setStatus("bundled-history");
 			return () => {
@@ -280,9 +299,9 @@ export function PerformanceDashboardPage({
 				<fieldset disabled={historyMode}>
 					<label>
 						时间范围
-					<select
-						aria-label="时间范围"
-						disabled={historyMode}
+						<select
+							aria-label="时间范围"
+							disabled={historyMode}
 							value={draft.window}
 							onChange={(event) =>
 								setDraft({
@@ -299,8 +318,8 @@ export function PerformanceDashboardPage({
 					<label>
 						页面路径
 						<input
-						aria-label="页面路径"
-						disabled={historyMode}
+							aria-label="页面路径"
+							disabled={historyMode}
 							value={draft.route ?? ""}
 							onChange={(event) =>
 								setDraft({ ...draft, route: event.target.value || undefined })
@@ -311,8 +330,8 @@ export function PerformanceDashboardPage({
 					<label>
 						运行环境
 						<input
-						aria-label="运行环境"
-						disabled={historyMode}
+							aria-label="运行环境"
+							disabled={historyMode}
 							value={draft.environment ?? ""}
 							onChange={(event) =>
 								setDraft({
@@ -326,8 +345,8 @@ export function PerformanceDashboardPage({
 					<label>
 						发布版本
 						<input
-						aria-label="发布版本"
-						disabled={historyMode}
+							aria-label="发布版本"
+							disabled={historyMode}
 							value={draft.version ?? ""}
 							onChange={(event) =>
 								setDraft({ ...draft, version: event.target.value || undefined })
@@ -335,10 +354,12 @@ export function PerformanceDashboardPage({
 							placeholder="全部版本"
 						/>
 					</label>
-					<button type="submit" disabled={historyMode}>应用筛选</button>
+					<button type="submit" disabled={historyMode}>
+						应用筛选
+					</button>
 				</fieldset>
 			</form>
-			<div className="performance-mode-controls" aria-label="数据模式">
+			<fieldset className="performance-mode-controls" aria-label="数据模式">
 				<button
 					type="button"
 					aria-pressed={mode === "live"}
@@ -365,7 +386,7 @@ export function PerformanceDashboardPage({
 				>
 					历史快照
 				</button>
-			</div>
+			</fieldset>
 			<p
 				className="performance-state performance-state--compact"
 				role="status"

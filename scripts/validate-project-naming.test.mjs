@@ -24,13 +24,9 @@ test("rejects academic tokens in project paths, refs, and ordinary content", () 
 	);
 });
 
-test("allows only exact protected AWS legacy identifiers in approved files", () => {
+test("allows exact historical AWS identifiers only in immutable evidence", () => {
 	const violations = validateProjectNaming({
 		contents: new Map([
-			[
-				"aws/bootstrap.yaml",
-				`Default: babysteps-${aliases[0]}-readiness\nTag: ${aliases[0]}-readiness`,
-			],
 			[
 				"docs/evidence/deployment/2026-08-11-aws-pausable.json",
 				`{"stack":"babysteps-${aliases[0]}-readiness","db":"babysteps-${aliases[0]}-readiness-postgres"}`,
@@ -41,6 +37,23 @@ test("allows only exact protected AWS legacy identifiers in approved files", () 
 	});
 
 	assert.deepEqual(violations, []);
+});
+
+test("rejects legacy academic identifiers in active AWS templates", () => {
+	const violations = validateProjectNaming({
+		contents: new Map([
+			[
+				"aws/bootstrap.yaml",
+				`Default: babysteps-${aliases[0]}-readiness\nTag: ${aliases[0]}-readiness`,
+			],
+		]),
+		paths: [],
+		refs: [],
+	});
+
+	assert.deepEqual(violations, [
+		{ path: "aws/bootstrap.yaml", scope: "content" },
+	]);
 });
 
 test("rejects protected identifiers outside the exact allowlisted files", () => {

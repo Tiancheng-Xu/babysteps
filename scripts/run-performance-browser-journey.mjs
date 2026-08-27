@@ -1,7 +1,14 @@
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-const expectedRoutes = ["/", "/tasks", "/profile", "/performance", "/evidence"];
+export const journeyRoutes = [
+	{ path: "/", heading: "BabySteps · 成长星球" },
+	{ path: "/tasks", heading: "成长任务市集" },
+	{ path: "/profile", heading: "个人中心" },
+	{ path: "/performance", heading: "BabySteps 性能观测站" },
+	{ path: "/evidence", heading: "链上工作证据" },
+];
+const expectedRoutes = journeyRoutes.map(({ path }) => path);
 const unavailableCoverage = ["navigation.dns", "navigation.tls"];
 
 function boundedCount(value) {
@@ -81,7 +88,7 @@ async function runJourney() {
 			}
 		});
 
-		for (const route of expectedRoutes) {
+		for (const { path: route, heading } of journeyRoutes) {
 			const response = await page.goto(
 				new URL(route, parsedOrigin).toString(),
 				{
@@ -90,6 +97,15 @@ async function runJourney() {
 			);
 			if (!response?.ok())
 				throw new Error(`ROUTE_FAILED_${route.replaceAll("/", "_")}`);
+			await page
+				.getByRole("heading", { name: heading, exact: true })
+				.waitFor({ state: "visible" });
+			if (route === "/tasks") {
+				await page
+					.locator(".marketplace-task-card, .empty-state")
+					.first()
+					.waitFor({ state: "visible" });
+			}
 			observedRoutes.add(route);
 			await page.locator("body").click({ position: { x: 24, y: 24 } });
 			await page.keyboard.press("Tab");

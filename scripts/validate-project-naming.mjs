@@ -19,9 +19,6 @@ const FORBIDDEN_PROJECT_TOKEN = tokenPattern(ACADEMIC_ALIASES.slice(0, 2));
 const FORBIDDEN_REF_TOKEN = tokenPattern(ACADEMIC_ALIASES);
 
 const LEGACY_AWS_IDENTIFIER_PATHS = new Set([
-	"aws/bootstrap.yaml",
-	"aws/pausable-template.yaml",
-	"aws/template.yaml",
 	"docs/evidence/deployment/2026-08-11-aws-pausable.json",
 	"docs/evidence/deployment/2026-08-11-aws-pausable.md",
 ]);

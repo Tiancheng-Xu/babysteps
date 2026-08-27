@@ -68,11 +68,14 @@ jobs:
           role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
           aws-region: us-east-1
       - name: Open ephemeral origin boundary
+        env:
+          APPROVAL_REFERENCE: ${{ inputs.approval_reference }}
         run: |
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
           echo "ORIGIN_TOKEN=$token" >> "$GITHUB_ENV"
-          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const c=require("crypto");process.stdout.write(`APPROVAL_REFERENCE_HASH=${c.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")}\n`)' >> "$GITHUB_ENV"
+          test -n "$APPROVAL_REFERENCE"
+          node -e 'const c=require("crypto");process.stdout.write(`APPROVAL_REFERENCE_HASH=${c.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")}\n`)' >> "$GITHUB_ENV"
           echo "EXPIRES_AT=$(date -u -v+4H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+4 hours' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Validate budget and source
         run: |
@@ -172,7 +175,7 @@ jobs:
           exit 1
       - name: Browser journey through real Chromium
         run: |
-          pnpm exec playwright install chromium
+          pnpm exec playwright install --with-deps chromium
           node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --output evidence/browser-journey.json
       - name: Run one on-demand ECS cleaning task
         id: cleaner
@@ -287,17 +290,34 @@ jobs:
           fi
           for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
             definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns' --output text)"
-            if test -n "$definitions"; then aws ecs delete-task-definitions --task-definitions $definitions >/dev/null; fi
+            for definition in $definitions; do
+              actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+              test "$actual_family" = "$family"
+              aws ecs delete-task-definitions --task-definitions "$definition" >/dev/null
+            done
           done
           if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then exit 1; fi
           ecr_remaining=0
           aws ecr describe-repositories --repository-names "babysteps-performance-cleaner-$ENVIRONMENT_NAME" >/dev/null 2>&1 && ecr_remaining=1
-          ecs_cluster_remaining="$(aws ecs list-clusters --query "clusterArns[?contains(@, 'babysteps-performance-$ENVIRONMENT_NAME')] | length(@)" --output text)"
+          ecs_clusters="$(aws ecs list-clusters --query "clusterArns[?contains(@, 'babysteps-performance-$ENVIRONMENT_NAME')]" --output text)"
+          ecs_cluster_remaining=0
+          ecs_task_remaining=0
+          for cluster in $ecs_clusters; do
+            ecs_cluster_remaining=$((ecs_cluster_remaining + 1))
+            for status in RUNNING PENDING; do
+              count="$(aws ecs list-tasks --cluster "$cluster" --desired-status "$status" --query 'length(taskArns)' --output text)"
+              ecs_task_remaining=$((ecs_task_remaining + count))
+            done
+          done
           task_definition_remaining=0
           for status in ACTIVE INACTIVE; do
             for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
-              count="$(aws ecs list-task-definitions --family-prefix "$family" --status "$status" --query 'length(taskDefinitionArns)' --output text)"
-              task_definition_remaining=$((task_definition_remaining + count))
+              definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status "$status" --query 'taskDefinitionArns' --output text)"
+              for definition in $definitions; do
+                actual_family="$(aws ecs describe-task-definition --task-definition "$definition" --query 'taskDefinition.family' --output text)"
+                test "$actual_family" = "$family"
+                task_definition_remaining=$((task_definition_remaining + 1))
+              done
             done
           done
           sqs_remaining=0
@@ -314,15 +334,15 @@ jobs:
             ingress_remaining="$(aws ec2 describe-security-group-rules --filters Name=group-id,Values='${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}' --query "length(SecurityGroupRules[?ReferencedGroupInfo.GroupId=='$RUNTIME_SECURITY_GROUP_ID'])" --output text)"
           fi
           iam_remaining="$(aws iam list-roles --query "length(Roles[?starts_with(RoleName, 'babysteps-performance-') && contains(RoleName, '$ENVIRONMENT_NAME')])" --output text)"
-          remaining=$((ecr_remaining + ecs_cluster_remaining + task_definition_remaining + sqs_remaining + api_remaining + lambda_remaining + log_remaining + secret_remaining + security_group_remaining + ingress_remaining + iam_remaining))
-          export remaining ecr_remaining ecs_cluster_remaining task_definition_remaining sqs_remaining api_remaining lambda_remaining log_remaining secret_remaining security_group_remaining ingress_remaining iam_remaining
+          remaining=$((ecr_remaining + ecs_cluster_remaining + ecs_task_remaining + task_definition_remaining + sqs_remaining + api_remaining + lambda_remaining + log_remaining + secret_remaining + security_group_remaining + ingress_remaining + iam_remaining))
+          export remaining ecr_remaining ecs_cluster_remaining ecs_task_remaining task_definition_remaining sqs_remaining api_remaining lambda_remaining log_remaining secret_remaining security_group_remaining ingress_remaining iam_remaining
           node - <<'NODE'
           const fs = require("fs");
           const n = (key) => Number(process.env[key]);
           fs.writeFileSync("evidence/cleanup.json", JSON.stringify({
             cloudFormationStackAbsent: true,
             remainingProjectResources: n("remaining"),
-            inventory: { ecr: n("ecr_remaining"), ecsClustersAndTasks: n("ecs_cluster_remaining"), taskDefinitions: n("task_definition_remaining"), sqsAndDlq: n("sqs_remaining"), apiGateway: n("api_remaining"), lambda: n("lambda_remaining"), cloudWatchLogGroups: n("log_remaining"), secrets: n("secret_remaining"), securityGroups: n("security_group_remaining"), securityGroupIngress: n("ingress_remaining"), iamRoles: n("iam_remaining") },
+            inventory: { ecr: n("ecr_remaining"), ecsClusters: n("ecs_cluster_remaining"), ecsTasks: n("ecs_task_remaining"), taskDefinitions: n("task_definition_remaining"), sqsAndDlq: n("sqs_remaining"), apiGateway: n("api_remaining"), lambda: n("lambda_remaining"), cloudWatchLogGroups: n("log_remaining"), secrets: n("secret_remaining"), securityGroups: n("security_group_remaining"), securityGroupIngress: n("ingress_remaining"), iamRoles: n("iam_remaining") },
             sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
           }, null, 2));
           NODE
@@ -330,7 +350,7 @@ jobs:
       - name: Record incomplete cleanup without claiming success
         if: always() && steps.delete-stack.outcome != 'success'
         run: |
-          printf '{"cloudFormationStackAbsent":false,"remainingProjectResources":-1,"schemaCleanupCertain":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
+          printf '{"cloudFormationStackAbsent":false,"remainingProjectResources":-1,"schemaCleanupCertain":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup-incomplete.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

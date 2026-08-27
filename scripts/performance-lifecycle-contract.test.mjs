@@ -403,6 +403,9 @@ test("final aggregation is best effort while schema and stack cleanup retry inde
 	const { steps } = await loadWorkflow();
 	const aggregate = stepByName(steps, "Run final-aggregate");
 	assert.equal(aggregate["continue-on-error"], true);
+	assert.match(aggregate.run, /stats\?window=1h&metric=all&environment=production/);
+	assert.match(aggregate.run, /build-performance-snapshot\.mjs/);
+	assert.match(aggregate.run, /schemaVersion!==2/);
 
 	const schema = stepByName(steps, "DROP SCHEMA using exact schema-cleanup task");
 	assert.match(schema.if, /^always\(\)/);
@@ -505,5 +508,14 @@ test("zero residue checks orphaned API Gateway resources by fixed tags and fails
 	assert.match(residue.run, /Key=Environment,Values=control/);
 	assert.match(residue.run, /resource-type-filters apigateway:apis/);
 	assert.match(residue.run, /test "\$orphan_api_count" = "0"/);
+	assert.match(residue.run, /ecs list-tasks/);
+	assert.match(residue.run, /ecs_task_count/);
+	assert.match(residue.run, /ecs list-task-definitions/);
+	assert.match(residue.run, /iam list-roles/);
+	assert.match(residue.run, /iam_role_count/);
+	assert.match(residue.run, /remainingRunnableProjectResources/);
+	assert.match(residue.run, /inventory/);
+	const deletion = stepByName(steps, "Delete exact stable project stack");
+	assert.match(deletion.run, /delete-task-definitions/);
 	assert.doesNotMatch(residue.run, /\|\|\s*true/);
 });

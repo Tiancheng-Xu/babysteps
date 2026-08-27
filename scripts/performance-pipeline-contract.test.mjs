@@ -33,7 +33,18 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 		".github/workflows/aws-performance.yml",
 		"utf8",
 	);
-	assert.doesNotThrow(() => parse(source));
+	const workflow = parse(source);
+	assert.ok(workflow);
+	for (const job of Object.values(workflow.jobs)) {
+		for (const step of job.steps ?? []) {
+			assert.doesNotMatch(
+				step.run ?? "",
+				/\$\{\{\s*inputs\./,
+				`${step.name ?? "unnamed step"} interpolates an untrusted input into shell`,
+			);
+		}
+	}
+	assert.match(source, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
 	assert.match(source, /workflow_dispatch:/);
 	assert.match(source, /environment: aws-performance/);
 	assert.match(source, /id-token: write/);
@@ -46,6 +57,9 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /github\.run_id/);
 	assert.match(source, /schema-cleanup/);
 	assert.match(source, /schemaDeleted.*true/s);
+	assert.match(source, /ecs list-tasks/);
+	assert.match(source, /ecsTasks/);
+	assert.match(source, /cleanup-incomplete\.json/);
 	assert.match(source, /data-retention verification/);
 	assert.match(source, /DatabaseAdminTaskDefinitionArn/);
 	assert.match(source, /id: deploy/);
@@ -56,7 +70,7 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /Start temporary Worker proxy/);
 	assert.match(source, /wrangler dev --local/);
 	assert.match(source, /run-performance-browser-journey\.mjs/);
-	assert.match(source, /playwright install chromium/);
+	assert.match(source, /playwright install --with-deps chromium/);
 	assert.match(source, /APP_URI=http:\/\/127\.0\.0\.1:/);
 	assert.match(source, /Browser journey/);
 	assert.match(source, /PERFORMANCE_ORIGIN_TOKEN/);
@@ -97,9 +111,25 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 });
 
 test("the Chromium journey emits only a bounded sanitized summary", async () => {
-	const { sanitizeJourneySummary } = await import(
+	const { journeyRoutes, sanitizeJourneySummary } = await import(
 		"./run-performance-browser-journey.mjs"
 	);
+	assert.deepEqual(
+		journeyRoutes.map(({ path, heading }) => [path, heading]),
+		[
+			["/", "BabySteps · 成长星球"],
+			["/tasks", "成长任务市集"],
+			["/profile", "个人中心"],
+			["/performance", "BabySteps 性能观测站"],
+			["/evidence", "链上工作证据"],
+		],
+	);
+	const journeySource = await readFile(
+		"scripts/run-performance-browser-journey.mjs",
+		"utf8",
+	);
+	assert.match(journeySource, /getByRole\("heading"/);
+	assert.match(journeySource, /marketplace-task-card, \.empty-state/);
 	const summary = sanitizeJourneySummary({
 		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
 		coverage: ["LCP", "navigation.dns", "navigation.tls"],
@@ -154,7 +184,22 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		".github/workflows/aws-performance-recovery.yml",
 		"utf8",
 	).catch(() => "");
-	assert.doesNotThrow(() => parse(recovery));
+	const workflow = parse(recovery);
+	assert.ok(workflow);
+	const steps = workflow.jobs["recover-exact-stack"].steps;
+	for (const step of steps) {
+		assert.doesNotMatch(
+			step.run ?? "",
+			/\$\{\{\s*inputs\./,
+			`${step.name ?? "unnamed step"} interpolates an untrusted input into shell`,
+		);
+	}
+	const stepByName = (name) => steps.find((step) => step.name === name);
+	assert.match(stepByName("Drop and verify exact run-scoped schema").if, /^always\(\)/);
+	assert.match(stepByName("Delete exact failed project stack").if, /^always\(\)/);
+	assert.match(stepByName("Verify exact prefix and tag inventory is zero").if, /^always\(\)/);
+	assert.match(recovery, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
+	assert.match(recovery, /ecs list-tasks/);
 	assert.match(recovery, /workflow_dispatch:/);
 	assert.match(recovery, /environment: aws-performance/);
 	assert.match(recovery, /id-token: write/);
@@ -175,4 +220,40 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(recovery, /test "\$remaining" = "0"/);
 	assert.match(recovery, /shared.*(?:explicit deny|protected)/is);
 	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
+});
+
+test("a scheduled TTL janitor dispatches the existing exact recovery deep module", async () => {
+	const source = await readFile(
+		".github/workflows/aws-performance-recovery.yml",
+		"utf8",
+	);
+	const workflow = parse(source);
+	assert.match(JSON.stringify(workflow.on.schedule), /\*\/15 \* \* \* \*/);
+	const janitor = workflow.jobs["dispatch-expired-recovery"];
+	assert.equal(janitor.if, "github.event_name == 'schedule'");
+	assert.equal(janitor.permissions.actions, "write");
+	assert.equal(janitor.permissions["id-token"], "write");
+	const run = janitor.steps.find((step) => step.name === "Dispatch one exact expired recovery").run;
+	assert.match(run, /gh run list/);
+	assert.match(run, /databaseId/);
+	assert.match(run, /--arg current "\$GITHUB_RUN_ID"/);
+	assert.match(run, /databaseId\s*\|\s*tostring/);
+	assert.match(run, /babysteps-performance-\[0-9\]\+/);
+	assert.match(run, /Project/);
+	assert.match(run, /RunId/);
+	assert.match(run, /ExpiresAt/);
+	assert.match(run, /aws-performance-recovery\.yml/);
+	assert.match(run, /database_state=schema-initialized/);
+	assert.doesNotMatch(run, /cloudformation (?:delete-stack|update-stack|create-stack)/);
+	assert.doesNotMatch(run, /ecs run-task/);
+});
+test("the browser journey installs Chromium with runner dependencies", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const workflow = await readFile(
+    new URL("../.github/workflows/aws-performance.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(workflow, /pnpm exec playwright install --with-deps chromium/);
+  assert.doesNotMatch(workflow, /pnpm exec playwright install chromium/);
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
 	acceptPerformanceBatch,
 	computePerformanceDashboard,
+	computePerformanceOverview,
 	isAllowedPerformanceMetricName,
 	type PerformanceEvent,
 	PerformanceRequestError,
@@ -37,7 +38,7 @@ const filtersSchema = z.object({
 	metric: z
 		.string()
 		.max(64)
-		.refine(isAllowedPerformanceMetricName)
+		.refine((name) => name === "all" || isAllowedPerformanceMetricName(name))
 		.default("LCP"),
 	environment: z
 		.enum(["production", "development", "preview", "test", "evidence"])
@@ -47,6 +48,12 @@ const filtersSchema = z.object({
 		.regex(/^[a-z0-9._-]{1,64}$/iu)
 		.optional(),
 });
+
+const windowMilliseconds = {
+	"1h": 3_600_000,
+	"24h": 86_400_000,
+	"7d": 604_800_000,
+} as const;
 
 const response = (statusCode: number, body: unknown): JsonResponse => ({
 	statusCode,
@@ -113,6 +120,25 @@ export function createPerformanceQueryHandler(dependencies: {
 		if (!parsed.success) return response(400, { error: "invalid filters" });
 		try {
 			const events = await dependencies.query(parsed.data);
+			if (parsed.data.metric === "all") {
+				const now = dependencies.now?.() ?? Date.now();
+				return response(200, {
+					schemaVersion: "performance-overview/v2",
+					window: {
+						preset: parsed.data.window,
+						from: new Date(
+							now - windowMilliseconds[parsed.data.window],
+						).toISOString(),
+						to: new Date(now).toISOString(),
+					},
+					filters: Object.fromEntries(
+						Object.entries(parsed.data).filter(
+							([key, value]) => key !== "metric" && value !== undefined,
+						),
+					),
+					...computePerformanceOverview(events),
+				});
+			}
 			return response(200, {
 				window: parsed.data.window,
 				...computePerformanceDashboard(

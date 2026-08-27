@@ -87,6 +87,7 @@ import { CourseEvidenceFooter } from "./components/CourseEvidenceFooter";
 
 const account = "0x1111111111111111111111111111111111111111" as Address;
 const transactionHash = `0x${"c".repeat(64)}` as Hash;
+const lazyRouteTimeout = { timeout: 5_000 };
 
 let growthState: Record<string, unknown>;
 let babyCoinGrowthState: Record<string, unknown>;
@@ -368,13 +369,21 @@ describe("BabySteps App", () => {
 
 		fireEvent.click(within(navigation).getByRole("link", { name: "成长任务" }));
 		expect(
-			await screen.findByRole("heading", { name: "成长任务市集" }),
+			await screen.findByRole(
+				"heading",
+				{ name: "成长任务市集" },
+				lazyRouteTimeout,
+			),
 		).toBeTruthy();
 		expect(screen.getByText("暂无已激活的成长任务")).toBeTruthy();
 
 		fireEvent.click(within(navigation).getByRole("link", { name: "家长中心" }));
 		expect(
-			await screen.findByRole("heading", { name: "家长成长中心" }),
+			await screen.findByRole(
+				"heading",
+				{ name: "家长成长中心" },
+				lazyRouteTimeout,
+			),
 		).toBeTruthy();
 		expect(
 			screen.getByRole("heading", { name: "链上成长与可用余额" }),
@@ -406,12 +415,20 @@ describe("BabySteps App", () => {
 			within(navigation).getByRole("link", { name: "Provider 控制台" }),
 		);
 		expect(
-			await screen.findByRole("heading", { name: "机构与育婴师控制台" }),
+			await screen.findByRole(
+				"heading",
+				{ name: "机构与育婴师控制台" },
+				lazyRouteTimeout,
+			),
 		).toBeTruthy();
 
 		fireEvent.click(within(navigation).getByRole("link", { name: "兑换" }));
 		expect(
-			await screen.findByRole("heading", { name: "BabyCoin 兑换" }),
+			await screen.findByRole(
+				"heading",
+				{ name: "BabyCoin 兑换" },
+				lazyRouteTimeout,
+			),
 		).toBeTruthy();
 		expect(screen.getByText("不部署 MockUSDC")).toBeTruthy();
 		expect(screen.getByText("10.6502")).toBeTruthy();
