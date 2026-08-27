@@ -494,7 +494,22 @@ jobs:
             done
           done
           test "$task_definition_count" = 0
-          iam_role_count="$(aws iam list-roles --query "length(Roles[?starts_with(RoleName, 'babysteps-performance-') && contains(RoleName, '-control')])" --output text)"
+          iam_role_count=0
+          for role in \
+            babysteps-performance-db-admin-control \
+            babysteps-performance-execution-control \
+            babysteps-performance-query-control \
+            babysteps-performance-task-control; do
+            set +e
+            aws_classify_to_file "residue-$role.json" iam-role aws iam get-role --role-name "$role"
+            role_presence=$?
+            set -e
+            if test "$role_presence" = 0; then
+              iam_role_count=$((iam_role_count + 1))
+            else
+              test "$role_presence" = 3
+            fi
+          done
           test "$iam_role_count" = 0
           schema_deleted=unknown
           if test "$SCHEMA_CLEANUP_OUTCOME" = "success"; then schema_deleted=true; fi

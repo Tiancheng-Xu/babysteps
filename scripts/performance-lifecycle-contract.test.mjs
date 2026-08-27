@@ -544,7 +544,9 @@ test("zero residue checks orphaned API Gateway resources by fixed tags and fails
 	assert.match(residue.run, /ecs list-tasks/);
 	assert.match(residue.run, /ecs_task_count/);
 	assert.match(residue.run, /ecs list-task-definitions/);
-	assert.match(residue.run, /iam list-roles/);
+	assert.match(residue.run, /iam get-role/);
+	assert.doesNotMatch(residue.run, /iam list-roles/);
+	assert.match(residue.run, /babysteps-performance-execution-control/);
 	assert.match(residue.run, /iam_role_count/);
 	assert.match(residue.run, /remainingRunnableProjectResources/);
 	assert.match(residue.run, /inventory/);

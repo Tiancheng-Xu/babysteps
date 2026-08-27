@@ -9,6 +9,7 @@ aws_absence_pattern() {
     sqs-queue) printf '%s' 'AWS\.SimpleQueueService\.NonExistentQueue|QueueDoesNotExist' ;;
     lambda-function|secret) printf '%s' 'ResourceNotFoundException' ;;
     apigateway-api) printf '%s' 'NotFoundException' ;;
+    iam-role) printf '%s' 'NoSuchEntity' ;;
     ssm-parameter) printf '%s' 'ParameterNotFound' ;;
     ecs-task-definition) printf '%s' 'ClientException.*(does not exist|Unable to describe task definition)' ;;
     *) return 2 ;;

@@ -8,6 +8,9 @@ const expectedReadActions = [
 	"ecr:DescribeRepositories",
 	"ecs:DescribeClusters",
 	"ecs:DescribeTaskDefinition",
+	"ecs:ListTaskDefinitions",
+	"ecs:ListTasks",
+	"iam:GetRole",
 	"lambda:GetFunction",
 	"logs:DescribeLogGroups",
 	"secretsmanager:DescribeSecret",
@@ -18,6 +21,10 @@ const expectedReadActions = [
 test("preflight readback policy covers every zero-residue AWS read and no mutation", async () => {
 	const workflow = await readFile(
 		".github/workflows/aws-performance-control.yml",
+		"utf8",
+	);
+	const classifier = await readFile(
+		"scripts/aws-performance-control-state.sh",
 		"utf8",
 	);
 	const policy = JSON.parse(
@@ -40,6 +47,9 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"secretsmanager describe-secret",
 		"resourcegroupstaggingapi get-resources",
 		"ecs describe-task-definition",
+		"ecs list-task-definitions",
+		"ecs list-tasks",
+		"iam get-role",
 	]) {
 		assert.match(workflow, new RegExp(command.replaceAll("-", "\\-")));
 	}
@@ -50,6 +60,19 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		);
 	}
 	assert.equal(policy.Statement.at(-1).Resource, "arn:aws:apigateway:us-east-1::/apis/*");
+	assert.doesNotMatch(workflow, /iam list-roles/);
+	assert.match(classifier, /iam-role\) printf '%s' 'NoSuchEntity'/);
+	const roleStatement = policy.Statement.find((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
+			"iam:GetRole",
+		),
+	);
+	assert.deepEqual(roleStatement?.Resource, [
+		"arn:aws:iam::782086108248:role/babysteps-performance-db-admin-control",
+		"arn:aws:iam::782086108248:role/babysteps-performance-execution-control",
+		"arn:aws:iam::782086108248:role/babysteps-performance-query-control",
+		"arn:aws:iam::782086108248:role/babysteps-performance-task-control",
+	]);
 	assert.ok(
 		policy.Statement.filter((statement) => statement.Resource === "*").every(
 			(statement) =>
