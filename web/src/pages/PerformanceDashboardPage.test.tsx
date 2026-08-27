@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type {
 	PerformanceDashboardResponse,
+	PerformanceFilters,
 	PerformanceMetricSummary,
 } from "../performance/api";
 import { PerformanceDashboardPage } from "./PerformanceDashboardPage";
@@ -257,7 +258,7 @@ describe("PerformanceDashboardPage", () => {
 		);
 		expect(await screen.findByText("历史 API 快照 · 非实时")).toBeTruthy();
 		expect(screen.queryByText("最近一次真实闭环")).toBeNull();
-		expect(screen.getByText("api-run", { exact: false })).toBeTruthy();
+		expect(screen.getAllByText("api-run", { exact: false }).length).toBeGreaterThan(0);
 	});
 
 	it("uses the bundled snapshot only in history mode and shares mode in the URL", async () => {

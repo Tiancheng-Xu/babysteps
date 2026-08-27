@@ -21,6 +21,7 @@ type DashboardStatus =
 	| "pipeline-failure"
 	| "bundled-history";
 type DashboardMode = "live" | "history";
+type SectionCoverage = PerformanceCoverageStatus | "partial";
 
 const COVERAGE_LABEL: Record<PerformanceCoverageStatus, string> = {
 	observed: "已观测",
@@ -47,6 +48,11 @@ function modeFromUrl(): DashboardMode {
 
 function writeFilters(filters: PerformanceFilters, mode: DashboardMode) {
 	const query = new URLSearchParams();
+	if (mode === "history") {
+		query.set("mode", "history");
+		window.history.pushState({}, "", `${window.location.pathname}?${query}`);
+		return;
+	}
 	query.set("window", filters.window);
 	for (const key of ["route", "environment", "version"] as const) {
 		if (filters[key]) query.set(key, filters[key]);
@@ -133,29 +139,30 @@ function Meta({
 	source: string;
 	samples: number;
 	freshness: string;
-	coverage: PerformanceCoverageStatus;
+	coverage: SectionCoverage;
 }) {
 	return (
 		<p className="performance-meta">
 			<span>来源：{source}</span>
 			<span>样本：{samples}</span>
 			<span>新鲜度：{freshness}</span>
-			{coverage === "instrumented-no-sample" && samples > 0 ? (
-				<span>部分覆盖</span>
-			) : null}
-			<Coverage status={coverage} />
+			{coverage === "partial" ? (
+				<span className="performance-coverage">部分覆盖</span>
+			) : (
+				<Coverage status={coverage} />
+			)}
 		</p>
 	);
 }
 
 function sectionCoverage(
 	items: Array<{ coverage: PerformanceCoverageStatus }>,
-): PerformanceCoverageStatus {
+): SectionCoverage {
 	if (
 		items.some((item) => item.coverage === "observed") &&
 		items.some((item) => item.coverage !== "observed")
 	)
-		return "instrumented-no-sample";
+		return "partial";
 	return items[0]?.coverage ?? "unavailable";
 }
 
@@ -177,12 +184,18 @@ export function PerformanceDashboardPage({
 		useState<PerformanceDashboardResponse | null>(null);
 	const [status, setStatus] = useState<DashboardStatus>("loading");
 	const [mode, setMode] = useState<DashboardMode>(modeFromUrl);
-	const priorLive = useRef<PerformanceDashboardResponse | null>(null);
+	const priorLive = useRef<{
+		key: string;
+		data: PerformanceDashboardResponse;
+	} | null>(null);
 	const [reload, setReload] = useState(0);
 
 	useEffect(() => {
 		const restore = () => {
-			const next = filtersFromUrl();
+			const next =
+				modeFromUrl() === "history"
+					? { window: VERIFIED_PERFORMANCE_DASHBOARD.window }
+					: filtersFromUrl();
 			setFilters(next);
 			setDraft(next);
 			setMode(modeFromUrl());
@@ -207,12 +220,13 @@ export function PerformanceDashboardPage({
 				const next = await fetchStats(filters, publicAppConfig.apiUrl);
 				if (!active) return;
 				setDashboard(next);
-				if (next.freshness.mode === "live") priorLive.current = next;
+				if (next.freshness.mode === "live")
+					priorLive.current = { key: JSON.stringify(filters), data: next };
 				setStatus(next.freshness.mode === "live" ? "live" : "api-snapshot");
 			} catch {
 				if (!active) return;
-				if (priorLive.current) {
-					setDashboard(priorLive.current);
+				if (priorLive.current?.key === JSON.stringify(filters)) {
+					setDashboard(priorLive.current.data);
 					setStatus("stale");
 				} else {
 					setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
@@ -263,60 +277,62 @@ export function PerformanceDashboardPage({
 					setFilters(draft);
 				}}
 			>
-				<label>
-					时间范围
-					<select
-						aria-label="时间范围"
-						value={draft.window}
-						onChange={(event) =>
-							setDraft({
-								...draft,
-								window: event.target.value as PerformanceFilters["window"],
-							})
-						}
-					>
-						<option value="1h">最近 1 小时</option>
-						<option value="24h">最近 24 小时</option>
-						<option value="7d">最近 7 天</option>
-					</select>
-				</label>
-				<label>
-					页面路径
-					<input
-						aria-label="页面路径"
-						value={draft.route ?? ""}
-						onChange={(event) =>
-							setDraft({ ...draft, route: event.target.value || undefined })
-						}
-						placeholder="全部页面"
-					/>
-				</label>
-				<label>
-					运行环境
-					<input
-						aria-label="运行环境"
-						value={draft.environment ?? ""}
-						onChange={(event) =>
-							setDraft({
-								...draft,
-								environment: event.target.value || undefined,
-							})
-						}
-						placeholder="全部环境"
-					/>
-				</label>
-				<label>
-					发布版本
-					<input
-						aria-label="发布版本"
-						value={draft.version ?? ""}
-						onChange={(event) =>
-							setDraft({ ...draft, version: event.target.value || undefined })
-						}
-						placeholder="全部版本"
-					/>
-				</label>
-				<button type="submit">应用筛选</button>
+				<fieldset disabled={mode === "history"}>
+					<label>
+						时间范围
+						<select
+							aria-label="时间范围"
+							value={draft.window}
+							onChange={(event) =>
+								setDraft({
+									...draft,
+									window: event.target.value as PerformanceFilters["window"],
+								})
+							}
+						>
+							<option value="1h">最近 1 小时</option>
+							<option value="24h">最近 24 小时</option>
+							<option value="7d">最近 7 天</option>
+						</select>
+					</label>
+					<label>
+						页面路径
+						<input
+							aria-label="页面路径"
+							value={draft.route ?? ""}
+							onChange={(event) =>
+								setDraft({ ...draft, route: event.target.value || undefined })
+							}
+							placeholder="全部页面"
+						/>
+					</label>
+					<label>
+						运行环境
+						<input
+							aria-label="运行环境"
+							value={draft.environment ?? ""}
+							onChange={(event) =>
+								setDraft({
+									...draft,
+									environment: event.target.value || undefined,
+								})
+							}
+							placeholder="全部环境"
+						/>
+					</label>
+					<label>
+						发布版本
+						<input
+							aria-label="发布版本"
+							value={draft.version ?? ""}
+							onChange={(event) =>
+								setDraft({ ...draft, version: event.target.value || undefined })
+							}
+							placeholder="全部版本"
+						/>
+					</label>
+					<button type="submit">应用筛选</button>
+				</fieldset>
 			</form>
 			<div className="performance-mode-controls" aria-label="数据模式">
 				<button
@@ -334,7 +350,12 @@ export function PerformanceDashboardPage({
 					type="button"
 					aria-pressed={mode === "history"}
 					onClick={() => {
-						writeFilters(filters, "history");
+						const fixed = {
+							window: VERIFIED_PERFORMANCE_DASHBOARD.window,
+						} as PerformanceFilters;
+						writeFilters(fixed, "history");
+						setFilters(fixed);
+						setDraft(fixed);
 						setMode("history");
 					}}
 				>
@@ -432,13 +453,19 @@ export function PerformanceDashboardPage({
 								</small>
 							</article>
 							<article>
-								<span>错误率</span>
-								<strong>
-									{data.errors.some((item) => item.rate !== null)
-										? `${((data.errors.find((item) => item.rate !== null)?.rate ?? 0) * 100).toFixed(1)}%`
-										: "—"}
-								</strong>
-								<small>按返回的错误聚合</small>
+								<span>错误样本</span>
+								<strong>{totalSamples(data.errors)}</strong>
+								<small>
+									{data.errors
+										.slice()
+										.sort((a, b) => b.sampleCount - a.sampleCount)[0]?.name ??
+										"无错误分类"}
+								</small>
+							</article>
+							<article>
+								<span>响应 commit</span>
+								<strong>{data.freshness.commit ?? "—"}</strong>
+								<small>Run {data.freshness.runId ?? "—"}</small>
 							</article>
 						</div>
 					</section>
@@ -605,10 +632,11 @@ export function PerformanceDashboardPage({
 						/>
 						<MetricTable items={data.resources} caption="资源性能与覆盖状态" />
 						<p className="performance-note">
-							Long Task：{data.longTasks.count} 次 · 总计{" "}
-							{data.longTasks.totalDurationMs} ms · 最长{" "}
-							{data.longTasks.maxDurationMs ?? "—"} ms ·{" "}
-							<Coverage status={data.longTasks.coverage} />
+							Long Task：
+							{data.longTasks.coverage === "unavailable"
+								? "—"
+								: `${data.longTasks.count} 次 · 总计 ${data.longTasks.totalDurationMs} ms · 最长 ${data.longTasks.maxDurationMs ?? "—"} ms`}{" "}
+							· <Coverage status={data.longTasks.coverage} />
 						</p>
 					</section>
 					<section className="performance-panel">
