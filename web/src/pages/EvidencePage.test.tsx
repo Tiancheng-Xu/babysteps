@@ -61,15 +61,12 @@ describe("EvidencePage", () => {
 			screen.getAllByText(/项目 ECS Cluster 为 0/u).length,
 		).toBeGreaterThan(0);
 		expect(screen.getByRole("link", { name: "查看机器可读证据" })).toBeTruthy();
+		expect(screen.getByText("历史闭环已验证 · 新合同待云端复验")).toBeTruthy();
 		expect(
-			screen.getByText("历史闭环已验证 · 新合同待云端复验"),
-		).toBeTruthy();
-		expect(screen.getAllByText(/0301a670 \+\s*a355227/u).length).toBeGreaterThan(
-			0,
-		);
+			screen.getAllByText(/0301a670 \+\s*a355227/u).length,
+		).toBeGreaterThan(0);
 		expect(
-			screen.getAllByText(/新合同仍待云端复验|新合同已经完成云端验收/u)
-				.length,
+			screen.getAllByText(/新合同仍待云端复验|新合同已经完成云端验收/u).length,
 		).toBeGreaterThan(0);
 		expect(screen.getByText("历史快照 · 非实时")).toBeTruthy();
 		expect(

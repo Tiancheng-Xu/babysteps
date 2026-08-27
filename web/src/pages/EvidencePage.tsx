@@ -540,9 +540,9 @@ export function EvidencePage() {
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
 					清洗、共享数据库和真实统计拆成独立信任边界。历史 GitHub Actions Run
 					32626397427 已在 commit acd4898f61fc
-					上用一条受控事件复验旧版完整闭环，并在取证后自动删除临时资源。PR
-					#36 的新实现（commits 0301a670 +
-					a355227）已通过代码 Gate，但仍待新的云端 Run、故障恢复与零残留读回。
+					上用一条受控事件复验旧版完整闭环，并在取证后自动删除临时资源。PR #36
+					的新实现（commits 0301a670 + a355227）已通过代码 Gate，但仍待新的云端
+					Run、故障恢复与零残留读回。
 				</p>
 				<section
 					className="evidence-requirement-map"
