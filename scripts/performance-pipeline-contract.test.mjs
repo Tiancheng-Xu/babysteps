@@ -4,28 +4,14 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
 
-test("the performance event contract accepts bounded v1 and v2 names only", () => {
-	const script = `
-		import { parsePerformanceBatch } from "./src/performance/pipeline.ts";
-		const event = (type, name, unit, extra = {}) => ({
-			eventId: "00000000-0000-4000-8000-000000000001", timestamp: 1,
-			type, name, value: 1, unit, route: "/", environment: "test", version: "test", ...extra,
-		});
-		parsePerformanceBatch({ schemaVersion: 1, events: [event("web3", "contract.write", "ms")] });
-		parsePerformanceBatch({ schemaVersion: 2, events: [event("resource", "resource.image.duration", "ms", { category: "image" })] });
-		let rejected = false;
-		try { parsePerformanceBatch({ schemaVersion: 2, events: [event("resource", "https://private.example/a?token=x", "ms")] }); } catch { rejected = true; }
-		if (!rejected) process.exit(1);
-	`;
-	const result = spawnSync(
-		"pnpm",
-		["--filter", "@babysteps/aws", "exec", "tsx", "-e", script],
-		{
-			cwd: process.cwd(),
-			encoding: "utf8",
-		},
-	);
-	assert.equal(result.status, 0, result.stderr);
+test("the AWS unit suite owns the executable performance event contract", async () => {
+	const source = await readFile("aws/test/performancePipeline.test.ts", "utf8");
+
+	assert.match(source, /parsePerformanceBatch/);
+	assert.match(source, /accepts v1 and v2 whitelisted events/);
+	assert.match(source, /schemaVersion:\s*1/);
+	assert.match(source, /schemaVersion:\s*2/);
+	assert.match(source, /https:\/\/private\.example\/a\?token=x/);
 });
 
 test("performance workflow is manual, OIDC-only, validated and self-cleaning", async () => {
