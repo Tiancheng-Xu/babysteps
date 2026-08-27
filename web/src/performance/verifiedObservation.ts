@@ -100,27 +100,21 @@ function noSample(
 		p50: null,
 		p75: null,
 		p95: null,
-		coverage: "instrumented-no-sample",
+		coverage: "unavailable",
 	};
 }
 
 function coverageFor(name: string): PerformanceCoverageStatus {
-	if (name === "LCP") return "observed";
-	if (
-		name === "navigation.dns" ||
-		name === "navigation.tcp" ||
-		name === "navigation.tls"
-	)
-		return "unavailable";
-	return "instrumented-no-sample";
+	return name === "LCP" ? "observed" : "unavailable";
 }
 
 /** A truthful adapter: the verified run observed one LCP event, not a fabricated full live dataset. */
 export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 	window: "1h",
 	freshness: {
+		// The artifact records a date, not a sample time. observedAt is ordering-only.
 		observedAt: Date.parse(`${observation.observedAt}T00:00:00Z`),
-		latestSampleAt: Date.parse(`${observation.observedAt}T00:00:00Z`),
+		latestSampleAt: null,
 		mode: "snapshot",
 		source: "verified-snapshot",
 		runId: String(observation.workflow.runId),
@@ -150,13 +144,13 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 		totalDurationMs: 0,
 		maxDurationMs: null,
 		duration: noSample("longtask.duration"),
-		coverage: "instrumented-no-sample",
+		coverage: "unavailable",
 	},
 	errors: errorNames.map((name) => ({
 		name,
 		sampleCount: 0,
 		rate: null,
-		coverage: "instrumented-no-sample" as const,
+		coverage: "unavailable" as const,
 	})),
 	web3: web3Names.map((name) => ({
 		name,
@@ -168,7 +162,7 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 		p50: null,
 		p75: null,
 		p95: null,
-		coverage: "instrumented-no-sample" as const,
+		coverage: "unavailable" as const,
 	})),
 	routes: [
 		{

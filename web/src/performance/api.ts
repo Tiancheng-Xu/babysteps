@@ -233,11 +233,14 @@ function isFreshness(
 	value: unknown,
 ): value is PerformanceDashboardResponse["freshness"] {
 	if (!isRecord(value)) return false;
+	const pairedSource =
+		(value.mode === "live" && value.source === "live-api") ||
+		(value.mode === "snapshot" && value.source === "verified-snapshot");
 	return (
 		isNullableNumber(value.observedAt) &&
 		isNullableNumber(value.latestSampleAt) &&
 		(value.mode === "live" || value.mode === "snapshot") &&
-		(value.source === "live-api" || value.source === "verified-snapshot") &&
+		pairedSource &&
 		(value.runId === null || typeof value.runId === "string") &&
 		(value.commit === null || typeof value.commit === "string")
 	);

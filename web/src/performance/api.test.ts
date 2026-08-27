@@ -173,6 +173,24 @@ describe("performance query API", () => {
 	});
 
 	it.each([
+		[
+			"live mode with snapshot source",
+			{ mode: "live", source: "verified-snapshot" },
+		],
+		[
+			"snapshot mode with live source",
+			{ mode: "snapshot", source: "live-api" },
+		],
+	])("rejects %s freshness provenance", (_name, freshness) => {
+		expect(
+			isPerformanceDashboardResponse({
+				...response,
+				freshness: { ...response.freshness, ...freshness },
+			}),
+		).toBe(false);
+	});
+
+	it.each([
 		["empty vitals", { ...response, vitals: [] }],
 		[
 			"duplicate navigation",

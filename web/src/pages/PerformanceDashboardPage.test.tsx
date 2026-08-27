@@ -239,4 +239,82 @@ describe("PerformanceDashboardPage", () => {
 		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
 		expect(screen.getByRole("status").textContent).toContain("管线失败");
 	});
+
+	it("renders a valid API snapshot without attaching the bundled evidence banner", async () => {
+		render(
+			<PerformanceDashboardPage
+				fetchStats={async () => ({
+					...liveStats,
+					freshness: {
+						...liveStats.freshness,
+						mode: "snapshot",
+						source: "verified-snapshot",
+						runId: "api-run",
+						commit: "api-commit",
+					},
+				})}
+			/>,
+		);
+		expect(await screen.findByText("历史 API 快照 · 非实时")).toBeTruthy();
+		expect(screen.queryByText("最近一次真实闭环")).toBeNull();
+		expect(screen.getByText("api-run", { exact: false })).toBeTruthy();
+	});
+
+	it("uses the bundled snapshot only in history mode and shares mode in the URL", async () => {
+		const fetchStats = async () => liveStats;
+		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
+		await screen.findAllByText("42");
+		fireEvent.click(screen.getByRole("button", { name: "历史快照" }));
+		expect(window.location.search).toContain("mode=history");
+		expect(await screen.findByText("最近一次真实闭环")).toBeTruthy();
+	});
+
+	it("ignores a late response from an earlier filter request", async () => {
+		let resolveFirst:
+			| ((value: PerformanceDashboardResponse) => void)
+			| undefined;
+		let resolveSecond:
+			| ((value: PerformanceDashboardResponse) => void)
+			| undefined;
+		const fetchStats = (filters: PerformanceFilters) =>
+			new Promise<PerformanceDashboardResponse>((resolve) => {
+				if (filters.route === "/new") resolveSecond = resolve;
+				else resolveFirst = resolve;
+			});
+		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
+		fireEvent.change(screen.getByLabelText("页面路径"), {
+			target: { value: "/new" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+		await act(async () => {
+			resolveSecond?.({
+				...liveStats,
+				routes: [{ route: "/new", sampleCount: 42, p75: 180, p95: 410 }],
+			});
+		});
+		await act(async () => {
+			resolveFirst?.({
+				...liveStats,
+				routes: [{ route: "/old", sampleCount: 42, p75: 180, p95: 410 }],
+			});
+		});
+		expect(screen.getAllByText("/new").length).toBeGreaterThan(0);
+		expect(screen.queryByText("/old")).toBeNull();
+	});
+
+	it("keeps a prior live response visibly stale after a refresh failure", async () => {
+		let calls = 0;
+		render(
+			<PerformanceDashboardPage
+				fetchStats={async () => {
+					calls += 1;
+					if (calls === 1) return liveStats;
+					throw new Error("offline");
+				}}
+			/>,
+		);
+		await screen.findAllByText("42");
+		fireEvent.click(screen.getByRole("button", { name: "Live 数据" }));
+		expect(await screen.findByText(/stale/)).toBeTruthy();
+	});
 });

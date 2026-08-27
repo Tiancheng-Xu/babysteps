@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { publicAppConfig } from "../contracts/web3Contracts";
 import {
@@ -13,7 +13,14 @@ import {
 	VERIFIED_PERFORMANCE_OBSERVATION,
 } from "../performance/verifiedObservation";
 
-type DashboardStatus = "loading" | "live" | "stale" | "snapshot";
+type DashboardStatus =
+	| "loading"
+	| "live"
+	| "api-snapshot"
+	| "stale"
+	| "pipeline-failure"
+	| "bundled-history";
+type DashboardMode = "live" | "history";
 
 const COVERAGE_LABEL: Record<PerformanceCoverageStatus, string> = {
 	observed: "已观测",
@@ -32,12 +39,19 @@ function filtersFromUrl(): PerformanceFilters {
 	};
 }
 
-function writeFilters(filters: PerformanceFilters) {
+function modeFromUrl(): DashboardMode {
+	return new URLSearchParams(window.location.search).get("mode") === "history"
+		? "history"
+		: "live";
+}
+
+function writeFilters(filters: PerformanceFilters, mode: DashboardMode) {
 	const query = new URLSearchParams();
 	query.set("window", filters.window);
 	for (const key of ["route", "environment", "version"] as const) {
 		if (filters[key]) query.set(key, filters[key]);
 	}
+	query.set("mode", mode);
 	window.history.pushState(
 		{},
 		"",
@@ -52,7 +66,9 @@ function display(value: number | null, unit: "ms" | "score" | "count") {
 	return `${Math.round(value)} ms`;
 }
 
-function freshnessText(value: number | null) {
+function freshnessText(value: number | null, isBundled: boolean) {
+	if (isBundled)
+		return `仅日期：${VERIFIED_PERFORMANCE_OBSERVATION.observedAt}`;
 	return value
 		? new Date(value).toLocaleString("zh-CN", { hour12: false })
 		: "未提供";
@@ -160,12 +176,16 @@ export function PerformanceDashboardPage({
 	const [dashboard, setDashboard] =
 		useState<PerformanceDashboardResponse | null>(null);
 	const [status, setStatus] = useState<DashboardStatus>("loading");
+	const [mode, setMode] = useState<DashboardMode>(modeFromUrl);
+	const priorLive = useRef<PerformanceDashboardResponse | null>(null);
+	const [reload, setReload] = useState(0);
 
 	useEffect(() => {
 		const restore = () => {
 			const next = filtersFromUrl();
 			setFilters(next);
 			setDraft(next);
+			setMode(modeFromUrl());
 		};
 		window.addEventListener("popstate", restore);
 		return () => window.removeEventListener("popstate", restore);
@@ -173,33 +193,51 @@ export function PerformanceDashboardPage({
 
 	useEffect(() => {
 		let active = true;
+		if (mode === "history") {
+			setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
+			setStatus("bundled-history");
+			return () => {
+				active = false;
+			};
+		}
+		setDashboard(null);
+		setStatus("loading");
 		const load = async () => {
 			try {
 				const next = await fetchStats(filters, publicAppConfig.apiUrl);
 				if (!active) return;
 				setDashboard(next);
-				setStatus(next.freshness.mode === "live" ? "live" : "snapshot");
+				if (next.freshness.mode === "live") priorLive.current = next;
+				setStatus(next.freshness.mode === "live" ? "live" : "api-snapshot");
 			} catch {
 				if (!active) return;
-				setDashboard((current) => current ?? VERIFIED_PERFORMANCE_DASHBOARD);
-				setStatus((current) => (current === "live" ? "stale" : "snapshot"));
+				if (priorLive.current) {
+					setDashboard(priorLive.current);
+					setStatus("stale");
+				} else {
+					setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
+					setStatus("pipeline-failure");
+				}
 			}
 		};
 		void load();
 		return () => {
 			active = false;
 		};
-	}, [fetchStats, filters]);
+	}, [fetchStats, filters, mode, reload]);
 
 	const data = dashboard;
-	const source =
-		status === "snapshot"
-			? "已验证历史快照"
-			: data?.freshness.source === "live-api"
-				? "实时 API"
-				: "已验证历史快照";
-	const freshness = freshnessText(data?.freshness.latestSampleAt ?? null);
-	const isSnapshot = status === "snapshot";
+	const isBundled =
+		status === "bundled-history" || status === "pipeline-failure";
+	const source = isBundled
+		? "已验证历史快照"
+		: data?.freshness.source === "live-api"
+			? "实时 API"
+			: "已验证历史快照";
+	const freshness = freshnessText(
+		data?.freshness.latestSampleAt ?? null,
+		isBundled,
+	);
 
 	return (
 		<section
@@ -221,7 +259,7 @@ export function PerformanceDashboardPage({
 				className="performance-filters"
 				onSubmit={(event) => {
 					event.preventDefault();
-					writeFilters(draft);
+					writeFilters(draft, mode);
 					setFilters(draft);
 				}}
 			>
@@ -280,6 +318,29 @@ export function PerformanceDashboardPage({
 				</label>
 				<button type="submit">应用筛选</button>
 			</form>
+			<div className="performance-mode-controls" aria-label="数据模式">
+				<button
+					type="button"
+					aria-pressed={mode === "live"}
+					onClick={() => {
+						writeFilters(filters, "live");
+						setMode("live");
+						setReload((value) => value + 1);
+					}}
+				>
+					Live 数据
+				</button>
+				<button
+					type="button"
+					aria-pressed={mode === "history"}
+					onClick={() => {
+						writeFilters(filters, "history");
+						setMode("history");
+					}}
+				>
+					历史快照
+				</button>
+			</div>
 			<p
 				className="performance-state performance-state--compact"
 				role="status"
@@ -289,11 +350,15 @@ export function PerformanceDashboardPage({
 					? "正在读取性能观测…"
 					: status === "live"
 						? "Live · 实时数据"
-						: status === "stale"
-							? "stale · 正在显示上一次真实结果"
-							: "管线失败 · 历史快照 · 非实时"}
+						: status === "api-snapshot"
+							? "历史 API 快照 · 非实时"
+							: status === "stale"
+								? "stale · 正在显示上一次真实结果"
+								: status === "bundled-history"
+									? "历史快照 · 非实时"
+									: "管线失败 · 历史快照 · 非实时"}
 			</p>
-			{isSnapshot ? (
+			{isBundled ? (
 				<section
 					className="performance-verified-snapshot"
 					aria-labelledby="performance-snapshot-heading"
@@ -338,7 +403,7 @@ export function PerformanceDashboardPage({
 							<article>
 								<span>模式</span>
 								<strong>
-									{data.freshness.mode === "live" && !isSnapshot
+									{data.freshness.mode === "live" && !isBundled
 										? "Live"
 										: "历史"}
 								</strong>
@@ -357,6 +422,23 @@ export function PerformanceDashboardPage({
 										: data.pipeline.status}
 								</strong>
 								<small>{data.pipeline.source}</small>
+							</article>
+							<article>
+								<span>版本 / 最慢页面</span>
+								<strong>{data.versions[0]?.version ?? "—"}</strong>
+								<small>
+									{data.routes.slice().sort((a, b) => b.p75 - a.p75)[0]
+										?.route ?? "无 route 样本"}
+								</small>
+							</article>
+							<article>
+								<span>错误率</span>
+								<strong>
+									{data.errors.some((item) => item.rate !== null)
+										? `${((data.errors.find((item) => item.rate !== null)?.rate ?? 0) * 100).toFixed(1)}%`
+										: "—"}
+								</strong>
+								<small>按返回的错误聚合</small>
 							</article>
 						</div>
 					</section>
@@ -423,6 +505,39 @@ export function PerformanceDashboardPage({
 									) : (
 										<tr>
 											<td colSpan={4}>已埋点，当前快照无样本</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
+						</div>
+						<div className="performance-table-frame">
+							<table className="performance-table">
+								<caption>真实趋势</caption>
+								<thead>
+									<tr>
+										<th scope="col">时间桶</th>
+										<th scope="col">指标</th>
+										<th scope="col">样本</th>
+										<th scope="col">p75</th>
+									</tr>
+								</thead>
+								<tbody>
+									{data.trend.length ? (
+										data.trend.map((item) => (
+											<tr key={`${item.bucketStart}-${item.name}`}>
+												<th scope="row">
+													{new Date(item.bucketStart).toLocaleString("zh-CN", {
+														hour12: false,
+													})}
+												</th>
+												<td>{item.name}</td>
+												<td>{item.sampleCount}</td>
+												<td>{item.p75} ms</td>
+											</tr>
+										))
+									) : (
+										<tr>
+											<td colSpan={4}>无趋势样本</td>
 										</tr>
 									)}
 								</tbody>
@@ -534,6 +649,12 @@ export function PerformanceDashboardPage({
 									<code>{item.name}</code>
 									<span>样本 {item.sampleCount}</span>
 									<span>p75 {display(item.p75, item.unit)}</span>
+									<span>
+										成功 {item.successCount} / 失败 {item.failureCount} / 成功率{" "}
+										{item.successRate === null
+											? "—"
+											: `${(item.successRate * 100).toFixed(1)}%`}
+									</span>
 									<Coverage status={item.coverage} />
 								</p>
 							))}
@@ -558,7 +679,7 @@ export function PerformanceDashboardPage({
 					<section className="performance-panel">
 						<h2>Evidence 与口径</h2>
 						<Meta
-							source={isSnapshot ? "已验证工作流制品" : source}
+							source={isBundled ? "已验证工作流制品" : source}
 							samples={totalSamples(data.vitals)}
 							freshness={freshness}
 							coverage={sectionCoverage(data.vitals)}

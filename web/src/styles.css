@@ -1168,6 +1168,28 @@ textarea[aria-invalid="true"] {
 	font: inherit;
 }
 
+.performance-mode-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.performance-mode-controls button {
+	min-height: 44px;
+	padding: 0 16px;
+	border: 1px solid rgba(78, 125, 85, 0.3);
+	border-radius: 999px;
+	background: #fffdf8;
+	color: var(--performance-ink);
+	font: inherit;
+	font-weight: 800;
+}
+
+.performance-mode-controls button[aria-pressed="true"] {
+	background: #263c31;
+	color: #fffef8;
+}
+
 .performance-filters button {
 	background: #4e7d55;
 	color: white;
