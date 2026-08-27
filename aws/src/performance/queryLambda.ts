@@ -5,7 +5,12 @@ import { PostgresPerformanceStore } from "./storage";
 let storePromise: Promise<PostgresPerformanceStore> | undefined;
 function store() {
 	storePromise ??= createPerformancePool().then(
-		(pool) => new PostgresPerformanceStore(pool),
+		(pool) =>
+			new PostgresPerformanceStore(
+				pool,
+				Date.now,
+				required("PERFORMANCE_RUN_ID"),
+			),
 	);
 	return storePromise;
 }

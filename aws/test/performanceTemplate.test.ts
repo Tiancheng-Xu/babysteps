@@ -38,6 +38,7 @@ describe("performance observability infrastructure", () => {
 	it("requires shared network and database boundaries as parameters", async () => {
 		const { source, template } = await load();
 		expect(template.Parameters).toMatchObject({
+			RunId: {},
 			SharedVpcId: {},
 			PrivateSubnetIds: {},
 			SharedDatabaseSecurityGroupId: {},
@@ -49,15 +50,17 @@ describe("performance observability infrastructure", () => {
 		expect(source).toContain("DeletionPolicy: Delete");
 		expect(source).toContain("AWS::SecretsManager::Secret");
 		expect(source).toContain(
-			"Name: !Sub babysteps-performance-db-${EnvironmentName}",
+			`Name: !Sub babysteps-performance-db-\${EnvironmentName}`,
 		);
 		expect(source).toContain("PROJECT_DATABASE_SECRET_ARN");
 		expect(source).toContain("OriginTokenSecret");
 		expect(source).toContain("OriginTokenSecretArn");
 		expect(source).toContain(
-			"Name: !Sub babysteps-performance-origin-${EnvironmentName}",
+			`Name: !Sub babysteps-performance-origin-\${EnvironmentName}`,
 		);
 		expect(source).toContain("MASTER_DATABASE_SECRET_ARN");
+		expect(source).toContain("PERFORMANCE_RUN_ID");
+		expect(source).toContain('AllowedPattern: "^[0-9]+$"');
 		expect(source).toContain("DatabaseAdminTaskRole");
 		expect(source).toContain("DatabaseAdminTaskDefinition");
 		expect(source).toContain("DatabaseAdminTaskDefinitionArn");
@@ -67,6 +70,14 @@ describe("performance observability infrastructure", () => {
 		);
 		expect(cleanerRole).toContain("ProjectDatabaseSecret");
 		expect(cleanerRole).not.toContain("SharedDatabaseSecretArn");
+	});
+
+	it("keeps paid resources short lived and ties every project resource to one run", async () => {
+		const { source } = await load();
+		expect(source).toContain("RunId: { Ref: RunId }");
+		expect(source).toContain("ExpiresAt: { Ref: ExpiresAt }");
+		expect(source).not.toContain("AWS::ECS::Service");
+		expect(source).not.toContain("AWS::RDS::DBInstance");
 	});
 
 	it("contains no account, credential or private endpoint literal", async () => {

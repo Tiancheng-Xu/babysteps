@@ -1,4 +1,5 @@
 import type { SqlQueryable } from "../repositories/postgresCompletionJobs";
+import { quotePerformanceSchema } from "./databaseAccess";
 import type { StoredPerformanceEvent } from "./pipeline";
 
 export type PerformanceFilters = {
@@ -19,12 +20,19 @@ export class PostgresPerformanceStore {
 	constructor(
 		private readonly database: SqlQueryable,
 		private readonly now: () => number = Date.now,
-	) {}
+		runId: string,
+	) {
+		this.schema = quotePerformanceSchema(runId);
+	}
 
-	async insert(event: StoredPerformanceEvent): Promise<void> {
-		await this.database.query(
+	private readonly schema: string;
+
+	async insert(event: StoredPerformanceEvent) {
+		const events = `${this.schema}."events"`;
+		const aggregates = `${this.schema}."hourly_aggregates"`;
+		const result = await this.database.query(
 			`WITH inserted AS (
-			 INSERT INTO babysteps_performance.events
+			 INSERT INTO ${events}
 			(event_id, timestamp_ms, type, name, value, unit, category, outcome,
 			 route, environment, version)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -32,7 +40,7 @@ export class PostgresPerformanceStore {
 			RETURNING timestamp_ms, type, name, value, unit, category, outcome,
 			 route, environment, version
 			)
-			INSERT INTO babysteps_performance.hourly_aggregates
+			INSERT INTO ${aggregates}
 			(bucket_start_ms, type, name, unit, category, outcome, route, environment, version,
 			 timestamps_ms, values, sample_count, error_count)
 			SELECT (timestamp_ms / 3600000) * 3600000, type, name, unit,
@@ -43,10 +51,11 @@ export class PostgresPerformanceStore {
 			FROM inserted
 			ON CONFLICT (bucket_start_ms, type, name, unit, category, outcome, route, environment, version)
 			DO UPDATE SET
-			 timestamps_ms = babysteps_performance.hourly_aggregates.timestamps_ms || EXCLUDED.timestamps_ms,
-			 values = babysteps_performance.hourly_aggregates.values || EXCLUDED.values,
-			 sample_count = babysteps_performance.hourly_aggregates.sample_count + 1,
-			 error_count = babysteps_performance.hourly_aggregates.error_count + EXCLUDED.error_count`,
+				 timestamps_ms = ${aggregates}.timestamps_ms || EXCLUDED.timestamps_ms,
+				 values = ${aggregates}.values || EXCLUDED.values,
+				 sample_count = ${aggregates}.sample_count + 1,
+				 error_count = ${aggregates}.error_count + EXCLUDED.error_count
+			RETURNING 1`,
 			[
 				event.eventId,
 				event.timestamp,
@@ -61,6 +70,7 @@ export class PostgresPerformanceStore {
 				event.version,
 			],
 		);
+		return result.rowCount === 0 ? "deduplicated" : "inserted";
 	}
 
 	async query(filters: PerformanceFilters): Promise<StoredPerformanceEvent[]> {
@@ -86,7 +96,7 @@ export class PostgresPerformanceStore {
 			  NULLIF(category, '') AS category, NULLIF(outcome, '') AS outcome,
 			  route, environment, version, sample.timestamp_ms AS timestamp,
 			  sample.value
-			 FROM babysteps_performance.hourly_aggregates
+			 FROM ${this.schema}."hourly_aggregates"
 			 CROSS JOIN LATERAL unnest(timestamps_ms, values)
 			 AS sample(timestamp_ms, value)
 			 WHERE ${clauses.join(" AND ")}

@@ -22,7 +22,7 @@ test("the performance event contract accepts bounded v1 and v2 names only", () =
 		["--filter", "@babysteps/aws", "exec", "tsx", "-e", script],
 		{
 			cwd: process.cwd(),
-		encoding: "utf8",
+			encoding: "utf8",
 		},
 	);
 	assert.equal(result.status, 0, result.stderr);
@@ -46,8 +46,7 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /github\.run_id/);
 	assert.match(source, /schema-cleanup/);
 	assert.match(source, /schemaDeleted.*true/s);
-	assert.match(source, /eventIds/);
-	assert.match(source, /Initialize exact project database schema/);
+	assert.match(source, /data-retention verification/);
 	assert.match(source, /DatabaseAdminTaskDefinitionArn/);
 	assert.match(source, /id: deploy/);
 	assert.match(source, /steps\.schema-cleanup\.outcome == 'success'/);
@@ -56,8 +55,32 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /describe-stacks --stack-name "\$STACK_NAME"/);
 	assert.match(source, /Start temporary Worker proxy/);
 	assert.match(source, /wrangler dev --local/);
+	assert.match(source, /run-performance-browser-journey\.mjs/);
+	assert.match(source, /playwright install chromium/);
+	assert.match(source, /APP_URI=http:\/\/127\.0\.0\.1:/);
+	assert.match(source, /Browser journey/);
 	assert.match(source, /PERFORMANCE_ORIGIN_TOKEN/);
 	assert.match(source, /approvalReferenceSha256/);
+	assert.doesNotMatch(source, /event\.json/);
+	assert.doesNotMatch(source, /value:\s*321|p50\s*!==\s*321/);
+	for (const inventory of [
+		"cloudformation",
+		"ecr",
+		"ecs",
+		"task-definition",
+		"sqs",
+		"apigatewayv2",
+		"lambda",
+		"logs",
+		"secretsmanager",
+		"security-groups",
+		"iam",
+	]) {
+		assert.match(source, new RegExp(inventory));
+	}
+	assert.match(source, /shared.*(?:explicit deny|protected)/is);
+	assert.match(source, /remainingProjectResources/);
+	assert.match(source, /test "\$remaining" = "0"/);
 	assert.doesNotMatch(
 		source,
 		/curl[^\n]*x-babysteps-origin-token[^\n]*\$api\/events/,
@@ -73,21 +96,56 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 	assert.match(packageJson.scripts["build:performance:cleaner"], /^esbuild /);
 });
 
+test("the Chromium journey emits only a bounded sanitized summary", async () => {
+	const { sanitizeJourneySummary } = await import(
+		"./run-performance-browser-journey.mjs"
+	);
+	const summary = sanitizeJourneySummary({
+		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
+		coverage: ["LCP", "navigation.dns", "navigation.tls"],
+		batchCount: 2,
+		eventCount: 14,
+		privateUrl: "https://private.example/a?token=redacted-fixture",
+		cookie: "session=redacted-fixture",
+		body: { authorization: "redacted-fixture" },
+	});
+	assert.deepEqual(summary, {
+		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
+		coverage: {
+			observed: ["LCP"],
+			unavailable: ["navigation.dns", "navigation.tls"],
+		},
+		batchCount: 2,
+		eventCount: 14,
+	});
+	assert.doesNotMatch(
+		JSON.stringify(summary),
+		/secret|private\.example|cookie|authorization/i,
+	);
+});
+
 test("the production cleaner bundle boots under Node without an ESM dynamic-require crash", async () => {
 	const packageJson = JSON.parse(await readFile("aws/package.json", "utf8"));
 	const buildScript = packageJson.scripts["build:performance:cleaner"];
 	const output = buildScript.match(/--outfile=([^\s]+)/)?.[1];
 	assert.ok(output, "cleaner build must declare an output file");
 
-	execFileSync("pnpm", ["--filter", "@babysteps/aws", "build:performance:cleaner"], {
-		stdio: "pipe",
-	});
+	execFileSync(
+		"pnpm",
+		["--filter", "@babysteps/aws", "build:performance:cleaner"],
+		{
+			stdio: "pipe",
+		},
+	);
 	const boot = spawnSync(process.execPath, [`aws/${output}`], {
 		encoding: "utf8",
-		env: { PATH: process.env.PATH },
+		env: { PATH: process.env.PATH, PERFORMANCE_RUN_ID: "123" },
 	});
 
-	assert.doesNotMatch(boot.stderr, /Dynamic require of "node:https" is not supported/);
+	assert.doesNotMatch(
+		boot.stderr,
+		/Dynamic require of "node:https" is not supported/,
+	);
 	assert.match(boot.stderr, /MISSING_QUEUE_URL/);
 });
 
@@ -105,13 +163,16 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(recovery, /delete-stack --stack-name "\$STACK_NAME"/);
 	assert.match(recovery, /stack-delete-complete/);
 	assert.match(recovery, /sqs get-queue-url --queue-name/);
-	assert.doesNotMatch(recovery, /sqs list-queues/);
-	assert.doesNotMatch(recovery, /lambda list-functions/);
-	assert.doesNotMatch(recovery, /apigatewayv2 get-apis/);
-	assert.doesNotMatch(recovery, /secretsmanager list-secrets/);
-	assert.doesNotMatch(recovery, /logs describe-log-groups/);
+	assert.match(recovery, /lambda list-functions/);
+	assert.match(recovery, /apigatewayv2 get-apis/);
+	assert.match(recovery, /secretsmanager list-secrets/);
+	assert.match(recovery, /logs describe-log-groups/);
+	assert.match(recovery, /ec2 describe-security-groups/);
+	assert.match(recovery, /iam list-roles/);
 	assert.match(recovery, /ecs describe-task-definition --task-definition/);
 	assert.match(recovery, /cloudFormationStackAbsent.*true/);
-	assert.match(recovery, /remainingRunnableProjectResources.*0/);
+	assert.match(recovery, /remainingProjectResources/);
+	assert.match(recovery, /test "\$remaining" = "0"/);
+	assert.match(recovery, /shared.*(?:explicit deny|protected)/is);
 	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });

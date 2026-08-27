@@ -53,6 +53,8 @@ jobs:
       AWS_REGION: us-east-1
       STACK_NAME: babysteps-performance-${{ github.run_id }}
       ENVIRONMENT_NAME: e${{ github.run_id }}
+      RUN_ID: ${{ github.run_id }}
+      WEB_ORIGIN: http://127.0.0.1:4173
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -70,6 +72,7 @@ jobs:
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
           echo "ORIGIN_TOKEN=$token" >> "$GITHUB_ENV"
+          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const c=require("crypto");process.stdout.write(`APPROVAL_REFERENCE_HASH=${c.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")}\n`)' >> "$GITHUB_ENV"
           echo "EXPIRES_AT=$(date -u -v+4H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+4 hours' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Validate budget and source
         run: |
@@ -103,18 +106,19 @@ jobs:
             --stack-name "$STACK_NAME" --role-arn "${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}" \
             --s3-bucket "${{ vars.AWS_SHARED_ARTIFACT_BUCKET }}" --capabilities CAPABILITY_NAMED_IAM \
             --no-confirm-changeset --no-fail-on-empty-changeset \
-            --parameter-overrides EnvironmentName="$ENVIRONMENT_NAME" ExpiresAt="$EXPIRES_AT" \
+            --parameter-overrides RunId="$RUN_ID" EnvironmentName="$ENVIRONMENT_NAME" ExpiresAt="$EXPIRES_AT" ApprovalReferenceHash="$APPROVAL_REFERENCE_HASH" \
             SharedVpcId="${{ vars.AWS_SHARED_VPC_ID }}" PrivateSubnetIds="${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}" \
             SharedDatabaseSecurityGroupId="${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}" \
             SharedDatabaseSecretArn="${{ vars.AWS_SHARED_DATABASE_SECRET_ARN }}" \
             SharedDatabaseHost="$SHARED_DATABASE_HOST" SharedDatabaseName="$SHARED_DATABASE_NAME" \
-            OriginToken="$ORIGIN_TOKEN" CleanerImageTag="${GITHUB_SHA}"
+            OriginToken="$ORIGIN_TOKEN" CleanerImageTag="${GITHUB_SHA}" \
+            --tags Project=babysteps-performance RunId="$RUN_ID" ExpiresAt="$EXPIRES_AT" ApprovalReferenceHash="$APPROVAL_REFERENCE_HASH"
       - name: Build and push immutable cleaner image
         run: |
           repository="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerRepositoryUri'].OutputValue" --output text)"
           aws ecr get-login-password | docker login --username AWS --password-stdin "${repository%%/*}"
           docker buildx build --platform linux/arm64 --provenance=false --push -t "$repository:$GITHUB_SHA" -f aws/performance.Dockerfile .
-      - name: Initialize exact project database schema
+      - name: Initialize and rerun migration with data-retention verification
         id: database-init
         run: |
           cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
@@ -124,6 +128,9 @@ jobs:
           echo "task=$task" >> "$GITHUB_OUTPUT"
           aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
           test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"
+          upgrade_verification_task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$upgrade_verification_task"
+          test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$upgrade_verification_task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"
       - name: Start temporary Worker proxy
         id: worker-proxy
         run: |
@@ -132,7 +139,8 @@ jobs:
           env_file="$RUNNER_TEMP/babysteps-performance.dev.vars"
           mkdir -p evidence "$state_dir"
           umask 077
-          printf 'PERFORMANCE_API_URL=%s\nPERFORMANCE_ORIGIN_TOKEN=%s\n' "$api" "$ORIGIN_TOKEN" > "$env_file"
+          test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
+          printf 'APP_URI=http://127.0.0.1:4173\nPERFORMANCE_API_URL=%s\nPERFORMANCE_ORIGIN_TOKEN=%s\n' "$api" "$ORIGIN_TOKEN" > "$env_file"
           pnpm --filter @babysteps/worker exec wrangler d1 migrations apply DB --local --persist-to "$state_dir"
           RUNNER_TRACKING_ID='' nohup pnpm --filter @babysteps/worker exec wrangler dev --local \
             --ip 127.0.0.1 --port 8788 --persist-to "$state_dir" --env-file "$env_file" \
@@ -147,12 +155,25 @@ jobs:
           done
           tail -n 40 "$RUNNER_TEMP/worker-proxy.log"
           exit 1
-      - name: Submit one controlled browser-shaped batch
+      - name: Start local Web at the exact Worker APP_URI origin
+        id: local-web
         run: |
-          node -e 'const fs=require("fs");fs.writeFileSync("event.json",JSON.stringify({schemaVersion:1,sentAt:Date.now(),events:[{eventId:crypto.randomUUID(),timestamp:Date.now(),type:"metric",name:"LCP",value:321,unit:"ms",route:"/performance",environment:"evidence",version:process.env.GITHUB_SHA.slice(0,12)}]}))'
-          curl --fail-with-body -sS -H "content-type: application/json" -H "origin: https://babysteps.baby2b.online" \
-            --data @event.json http://127.0.0.1:8788/api/performance/events | tee ingest-response.json
-          node -e 'const request=require("./event.json");const response=require("./ingest-response.json");if(response.eventIds?.[0]!==request.events[0].eventId)process.exit(1)'
+          test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
+          RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" \
+            nohup pnpm --filter @babysteps/web exec vite --host 127.0.0.1 --port 4173 \
+            > "$RUNNER_TEMP/local-web.log" 2>&1 &
+          web_pid=$!
+          echo "pid=$web_pid" >> "$GITHUB_OUTPUT"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "$WEB_ORIGIN" >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          tail -n 40 "$RUNNER_TEMP/local-web.log"
+          exit 1
+      - name: Browser journey through real Chromium
+        run: |
+          pnpm exec playwright install chromium
+          node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --output evidence/browser-journey.json
       - name: Run one on-demand ECS cleaning task
         id: cleaner
         run: |
@@ -165,18 +186,73 @@ jobs:
           aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
           exit_code="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)"
           test "$exit_code" = "0"
-      - name: Query and verify real aggregate
+      - name: Query and verify real browser aggregates
         run: |
-          curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&metric=LCP&environment=evidence&version=${GITHUB_SHA:0:12}" | tee performance-stats.json
-          node -e 'const s=require("./performance-stats.json");if(s.sampleCount!==1||s.p50!==321||s.p75!==321||s.p95!==321)process.exit(1)'
-      - name: Capture sanitized cloud evidence
+          curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=development&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
+          node -e 'const s=require("./evidence/performance-stats.json");const samples=(s.vitals??[]).reduce((n,v)=>n+(v.sampleCount??0),0)+(s.navigation??[]).reduce((n,v)=>n+(v.sampleCount??0),0);if(samples<1)process.exit(1)'
+      - name: Capture sanitized run metadata
         if: always()
         run: |
           mkdir -p evidence
-          cp event.json ingest-response.json performance-stats.json evidence/ 2>/dev/null || true
-          aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --query 'StackResources[].{type:ResourceType,status:ResourceStatus,logicalId:LogicalResourceId}' > evidence/resources.json 2>/dev/null || true
-          aws ecs describe-tasks --cluster "${{ steps.cleaner.outputs.cluster }}" --tasks "${{ steps.cleaner.outputs.task }}" --query 'tasks[0].{lastStatus:lastStatus,stopCode:stopCode,containers:containers[].{name:name,exitCode:exitCode}}' > evidence/cleaner-task.json 2>/dev/null || true
-          APPROVAL_REFERENCE='${{ inputs.approval_reference }}' node -e 'const fs=require("fs"),crypto=require("crypto");fs.writeFileSync("evidence/run.json",JSON.stringify({commit:process.env.GITHUB_SHA,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex"),region:process.env.AWS_REGION,stack:process.env.STACK_NAME},null,2))'
+          node -e 'const fs=require("fs");fs.writeFileSync("evidence/run.json",JSON.stringify({commit:process.env.GITHUB_SHA,approvalReferenceSha256:process.env.APPROVAL_REFERENCE_HASH,region:process.env.AWS_REGION,runId:process.env.RUN_ID,ttlExpiresAt:process.env.EXPIRES_AT},null,2))'
+      - name: Capture real control-plane snapshot before cleanup
+        if: always() && steps.deploy.outcome == 'success'
+        run: |
+          stack_status="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].StackStatus' --output text)"
+          repository="babysteps-performance-cleaner-$ENVIRONMENT_NAME"
+          ecr_images="$(aws ecr list-images --repository-name "$repository" --query 'length(imageIds)' --output text)"
+          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          ecs_cluster_status="$(aws ecs describe-clusters --clusters "$cluster" --query 'clusters[0].status' --output text)"
+          ecs_task_count="$(aws ecs list-tasks --cluster "$cluster" --desired-status STOPPED --query 'length(taskArns)' --output text)"
+          cleaner_exit_code=-1
+          if test -n "${{ steps.cleaner.outputs.task }}"; then
+            cleaner_exit_code="$(aws ecs describe-tasks --cluster "$cluster" --tasks "${{ steps.cleaner.outputs.task }}" --query 'tasks[0].containers[0].exitCode' --output text)"
+          fi
+          cleaner_task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerTaskDefinitionArn'].OutputValue" --output text)"
+          admin_task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
+          task_definition_count=0
+          aws ecs describe-task-definition --task-definition "$cleaner_task_definition" >/dev/null && task_definition_count=$((task_definition_count + 1))
+          aws ecs describe-task-definition --task-definition "$admin_task_definition" >/dev/null && task_definition_count=$((task_definition_count + 1))
+          queue_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-events-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
+          dlq_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-dlq-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
+          sqs_visible="$(aws sqs get-queue-attributes --queue-url "$queue_url" --attribute-names ApproximateNumberOfMessages --query 'Attributes.ApproximateNumberOfMessages' --output text)"
+          dlq_visible="$(aws sqs get-queue-attributes --queue-url "$dlq_url" --attribute-names ApproximateNumberOfMessages --query 'Attributes.ApproximateNumberOfMessages' --output text)"
+          api_id="$(aws cloudformation describe-stack-resource --stack-name "$STACK_NAME" --logical-resource-id PerformanceApi --query 'StackResourceDetail.PhysicalResourceId' --output text)"
+          aws apigatewayv2 get-api --api-id "$api_id" >/dev/null
+          lambda_count=0
+          for function_name in "babysteps-performance-ingest-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
+            aws lambda get-function --function-name "$function_name" >/dev/null && lambda_count=$((lambda_count + 1))
+          done
+          log_group_count="$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$ENVIRONMENT_NAME" --query 'length(logGroups)' --output text)"
+          secret_count=0
+          for secret_name in "babysteps-performance-db-$ENVIRONMENT_NAME" "babysteps-performance-origin-$ENVIRONMENT_NAME"; do
+            aws secretsmanager describe-secret --secret-id "$secret_name" >/dev/null && secret_count=$((secret_count + 1))
+          done
+          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          aws ec2 describe-security-groups --group-ids "$security_group" >/dev/null
+          echo "RUNTIME_SECURITY_GROUP_ID=$security_group" >> "$GITHUB_ENV"
+          iam_role_count=0
+          for role_name in "babysteps-performance-execution-$ENVIRONMENT_NAME" "babysteps-performance-task-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
+            aws iam get-role --role-name "$role_name" >/dev/null && iam_role_count=$((iam_role_count + 1))
+          done
+          export stack_status ecr_images ecs_cluster_status ecs_task_count cleaner_exit_code task_definition_count sqs_visible dlq_visible lambda_count log_group_count secret_count iam_role_count
+          node - <<'NODE'
+          const fs = require("fs");
+          const number = (name) => Number(process.env[name]);
+          fs.writeFileSync("evidence/control-plane-before-cleanup.json", JSON.stringify({
+            stack: { status: process.env.stack_status },
+            ecr: { imageCount: number("ecr_images") },
+            ecs: { clusterStatus: process.env.ecs_cluster_status, taskCount: number("ecs_task_count"), cleanerExitCode: number("cleaner_exit_code"), taskDefinitionCount: number("task_definition_count") },
+            sqs: { visibleMessages: number("sqs_visible"), dlqVisibleMessages: number("dlq_visible") },
+            apiGateway: { present: true }, lambda: { count: number("lambda_count") },
+            cloudWatch: { logGroupCount: number("log_group_count") }, secrets: { count: number("secret_count") },
+            securityGroup: { present: true }, iam: { roleCount: number("iam_role_count") },
+            sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
+          }, null, 2));
+          NODE
+      - name: Stop local Web
+        if: always() && steps.local-web.outputs.pid != ''
+        run: kill "${{ steps.local-web.outputs.pid }}" 2>/dev/null || true
       - name: Stop temporary Worker proxy
         if: always() && steps.worker-proxy.outputs.pid != ''
         run: kill "${{ steps.worker-proxy.outputs.pid }}" 2>/dev/null || true
@@ -191,8 +267,12 @@ jobs:
             cleanup_task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --overrides '{"containerOverrides":[{"name":"cleaner","environment":[{"name":"CLEANER_MODE","value":"cleanup-schema"}]}]}' --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
             aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$cleanup_task"
             if test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$cleanup_task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"; then
-              printf '{"schemaDeleted":true,"attempt":%s}\n' "$attempt" > evidence/schema-cleanup.json
-              exit 0
+              verify_task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --overrides '{"containerOverrides":[{"name":"cleaner","environment":[{"name":"CLEANER_MODE","value":"verify-schema-absent"}]}]}' --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+              aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$verify_task"
+              if test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$verify_task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"; then
+                printf '{"schemaDeleted":true,"schemaAbsenceVerified":true,"attempt":%s}\n' "$attempt" > evidence/schema-cleanup.json
+                exit 0
+              fi
             fi
           done
           printf '{"schemaDeleted":false,"attempts":3}\n' > evidence/schema-cleanup.json
@@ -205,15 +285,55 @@ jobs:
             aws cloudformation delete-stack --stack-name "$STACK_NAME" --role-arn "${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}"
             aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
           fi
-          test "$(aws ecs list-clusters --query "clusterArns[?contains(@, '$ENVIRONMENT_NAME')] | length(@)" --output text)" = "0"
-          printf '{"projectStackDeleted":true,"remainingProjectClusters":0,"sharedFoundationProtected":true}\n' > evidence/cleanup.json
+          for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
+            definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns' --output text)"
+            if test -n "$definitions"; then aws ecs delete-task-definitions --task-definitions $definitions >/dev/null; fi
+          done
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then exit 1; fi
+          ecr_remaining=0
+          aws ecr describe-repositories --repository-names "babysteps-performance-cleaner-$ENVIRONMENT_NAME" >/dev/null 2>&1 && ecr_remaining=1
+          ecs_cluster_remaining="$(aws ecs list-clusters --query "clusterArns[?contains(@, 'babysteps-performance-$ENVIRONMENT_NAME')] | length(@)" --output text)"
+          task_definition_remaining=0
+          for status in ACTIVE INACTIVE; do
+            for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
+              count="$(aws ecs list-task-definitions --family-prefix "$family" --status "$status" --query 'length(taskDefinitionArns)' --output text)"
+              task_definition_remaining=$((task_definition_remaining + count))
+            done
+          done
+          sqs_remaining=0
+          for queue_name in "babysteps-performance-events-$ENVIRONMENT_NAME" "babysteps-performance-dlq-$ENVIRONMENT_NAME"; do
+            aws sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1 && sqs_remaining=$((sqs_remaining + 1))
+          done
+          api_remaining="$(aws apigatewayv2 get-apis --query "length(Items[?Name=='babysteps-performance-api-$ENVIRONMENT_NAME'])" --output text)"
+          lambda_remaining="$(aws lambda list-functions --query "length(Functions[?starts_with(FunctionName, 'babysteps-performance-') && contains(FunctionName, '$ENVIRONMENT_NAME')])" --output text)"
+          log_remaining="$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$ENVIRONMENT_NAME" --query 'length(logGroups)' --output text)"
+          secret_remaining="$(aws secretsmanager list-secrets --include-planned-deletion --filters Key=name,Values="babysteps-performance-" --query "length(SecretList[?contains(Name, '$ENVIRONMENT_NAME')])" --output text)"
+          security_group_remaining="$(aws ec2 describe-security-groups --filters Name=tag:Project,Values=babysteps-performance Name=tag:RunId,Values="$RUN_ID" --query 'length(SecurityGroups)' --output text)"
+          ingress_remaining=0
+          if test -n "${RUNTIME_SECURITY_GROUP_ID:-}"; then
+            ingress_remaining="$(aws ec2 describe-security-group-rules --filters Name=group-id,Values='${{ vars.AWS_SHARED_DATABASE_SECURITY_GROUP_ID }}' --query "length(SecurityGroupRules[?ReferencedGroupInfo.GroupId=='$RUNTIME_SECURITY_GROUP_ID'])" --output text)"
+          fi
+          iam_remaining="$(aws iam list-roles --query "length(Roles[?starts_with(RoleName, 'babysteps-performance-') && contains(RoleName, '$ENVIRONMENT_NAME')])" --output text)"
+          remaining=$((ecr_remaining + ecs_cluster_remaining + task_definition_remaining + sqs_remaining + api_remaining + lambda_remaining + log_remaining + secret_remaining + security_group_remaining + ingress_remaining + iam_remaining))
+          export remaining ecr_remaining ecs_cluster_remaining task_definition_remaining sqs_remaining api_remaining lambda_remaining log_remaining secret_remaining security_group_remaining ingress_remaining iam_remaining
+          node - <<'NODE'
+          const fs = require("fs");
+          const n = (key) => Number(process.env[key]);
+          fs.writeFileSync("evidence/cleanup.json", JSON.stringify({
+            cloudFormationStackAbsent: true,
+            remainingProjectResources: n("remaining"),
+            inventory: { ecr: n("ecr_remaining"), ecsClustersAndTasks: n("ecs_cluster_remaining"), taskDefinitions: n("task_definition_remaining"), sqsAndDlq: n("sqs_remaining"), apiGateway: n("api_remaining"), lambda: n("lambda_remaining"), cloudWatchLogGroups: n("log_remaining"), secrets: n("secret_remaining"), securityGroups: n("security_group_remaining"), securityGroupIngress: n("ingress_remaining"), iamRoles: n("iam_remaining") },
+            sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
+          }, null, 2));
+          NODE
+          test "$remaining" = "0"
       - name: Record incomplete cleanup without claiming success
         if: always() && steps.delete-stack.outcome != 'success'
         run: |
-          printf '{"projectStackDeleted":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
+          printf '{"cloudFormationStackAbsent":false,"remainingProjectResources":-1,"schemaCleanupCertain":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: babysteps-performance-evidence-${{ github.run_id }}
-          path: evidence
+          path: evidence/*.json
           retention-days: 14

@@ -17,16 +17,23 @@ const sample: PerformanceEvent = {
 describe("performance PostgreSQL store", () => {
 	it("inserts idempotently with parameterized SQL", async () => {
 		const calls: Array<{ text: string; values?: readonly unknown[] }> = [];
-		const store = new PostgresPerformanceStore({
-			query: async (text, values) => {
-				calls.push({ text, values });
-				return { rows: [], rowCount: 1 };
+		const store = new PostgresPerformanceStore(
+			{
+				query: async (text, values) => {
+					calls.push({ text, values });
+					return { rows: [], rowCount: 1 };
+				},
 			},
-		});
-		await store.insert(sample);
+			Date.now,
+			"123",
+		);
+		await expect(store.insert(sample)).resolves.toBe("inserted");
 
 		expect(calls[0]?.text).toContain("ON CONFLICT (event_id) DO NOTHING");
-		expect(calls[0]?.text).toContain("babysteps_performance.hourly_aggregates");
+		expect(calls[0]?.text).toContain(
+			'"babysteps_performance_123"."hourly_aggregates"',
+		);
+		expect(calls[0]?.text).not.toMatch(/babysteps_performance(?:\.|")/);
 		expect(calls[0]?.text).toContain("FROM inserted");
 		expect(calls[0]?.text).toContain("category, outcome");
 		expect(calls[0]?.values).toContain(sample.eventId);
@@ -61,6 +68,7 @@ describe("performance PostgreSQL store", () => {
 				},
 			},
 			() => sample.timestamp + 3_600_000,
+			"123",
 		);
 		const result = await store.query({
 			window: "24h",
@@ -114,6 +122,7 @@ describe("performance PostgreSQL store", () => {
 				}),
 			},
 			() => sample.timestamp + 3_600_000,
+			"123",
 		);
 		await expect(store.query({ window: "24h", metric: "LCP" })).rejects.toThrow(
 			"STATISTICS_WINDOW_TOO_LARGE",
@@ -145,6 +154,7 @@ describe("performance PostgreSQL store", () => {
 				}),
 			},
 			() => now,
+			"123",
 		);
 
 		const result = await store.query({ window: "1h", metric: "LCP" });
@@ -155,5 +165,16 @@ describe("performance PostgreSQL store", () => {
 				outcome: "success",
 			}),
 		]);
+	});
+
+	it("reports a duplicate event without updating aggregates", async () => {
+		const store = new PostgresPerformanceStore(
+			{
+				query: async () => ({ rows: [], rowCount: 0 }),
+			},
+			Date.now,
+			"456",
+		);
+		await expect(store.insert(sample)).resolves.toBe("deduplicated");
 	});
 });
