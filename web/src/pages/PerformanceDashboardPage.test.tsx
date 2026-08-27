@@ -9,10 +9,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type {
-	PerformanceDashboardResponse,
-	PerformanceFilters,
-	PerformanceMetricSummary,
+import {
+	isPerformanceDashboardResponse,
+	type PerformanceDashboardResponse,
+	type PerformanceFilters,
+	type PerformanceMetricSummary,
 } from "../performance/api";
 import { PerformanceDashboardPage } from "./PerformanceDashboardPage";
 
@@ -136,7 +137,7 @@ const liveStats = {
 	})),
 	routes: [{ route: "/", sampleCount: 42, p75: 180, p95: 410 }],
 	trend: [
-		{ bucketStart: 1_786_600_000_000, name: "LCP", sampleCount: 42, p75: 180 },
+		{ bucketStart: 1_786_597_200_000, name: "LCP", sampleCount: 42, p75: 180 },
 	],
 	versions: [{ version: "v2", sampleCount: 42, p75: 180, p95: 410 }],
 	coverage: coverageNames.map((name) => ({
@@ -159,6 +160,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("renders the ten data-driven cockpit sections with coverage and provenance", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
 		await screen.findAllByText("42");
 		for (const heading of [
@@ -182,6 +184,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("shares the four filters in the URL and restores history navigation", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		window.history.replaceState(
 			{},
 			"",
@@ -244,20 +247,18 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("renders a valid API snapshot without attaching the bundled evidence banner", async () => {
-		render(
-			<PerformanceDashboardPage
-				fetchStats={async () => ({
-					...liveStats,
-					freshness: {
-						...liveStats.freshness,
-						mode: "snapshot",
-						source: "verified-snapshot",
-						runId: "api-run",
-						commit: "api-commit",
-					},
-				})}
-			/>,
-		);
+		const response = {
+			...liveStats,
+			freshness: {
+				...liveStats.freshness,
+				mode: "snapshot" as const,
+				source: "verified-snapshot" as const,
+				runId: "api-run",
+				commit: "api-commit",
+			},
+		};
+		expect(isPerformanceDashboardResponse(response)).toBe(true);
+		render(<PerformanceDashboardPage fetchStats={async () => response} />);
 		expect(await screen.findByText("历史 API 快照 · 非实时")).toBeTruthy();
 		expect(screen.queryByText("最近一次真实闭环")).toBeNull();
 		expect(screen.queryByRole("link", { name: /查看 Run/ })).toBeNull();
@@ -266,6 +267,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("uses the bundled snapshot only in history mode and shares mode in the URL", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		const fetchStats = async () => liveStats;
 		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
 		await screen.findAllByText("42");
@@ -275,6 +277,16 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("ignores a late response from an earlier filter request", async () => {
+		const newResponse = {
+			...liveStats,
+			routes: [{ route: "/new", sampleCount: 42, p75: 180, p95: 410 }],
+		};
+		const oldResponse = {
+			...liveStats,
+			routes: [{ route: "/old", sampleCount: 42, p75: 180, p95: 410 }],
+		};
+		expect(isPerformanceDashboardResponse(newResponse)).toBe(true);
+		expect(isPerformanceDashboardResponse(oldResponse)).toBe(true);
 		let resolveFirst:
 			| ((value: PerformanceDashboardResponse) => void)
 			| undefined;
@@ -292,22 +304,17 @@ describe("PerformanceDashboardPage", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
 		await act(async () => {
-			resolveSecond?.({
-				...liveStats,
-				routes: [{ route: "/new", sampleCount: 42, p75: 180, p95: 410 }],
-			});
+			resolveSecond?.(newResponse);
 		});
 		await act(async () => {
-			resolveFirst?.({
-				...liveStats,
-				routes: [{ route: "/old", sampleCount: 42, p75: 180, p95: 410 }],
-			});
+			resolveFirst?.(oldResponse);
 		});
 		expect(screen.getAllByText("/new").length).toBeGreaterThan(0);
 		expect(screen.queryByText("/old")).toBeNull();
 	});
 
 	it("keeps a prior live response visibly stale after a refresh failure", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		let calls = 0;
 		render(
 			<PerformanceDashboardPage
@@ -324,24 +331,24 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("falls back to bundled history instead of reusing live data from different filters", async () => {
+		const response = {
+			...liveStats,
+			routes: [
+				{
+					route: "/filters-a-only",
+					sampleCount: 42,
+					p75: 180,
+					p95: 410,
+				},
+			],
+		};
+		expect(isPerformanceDashboardResponse(response)).toBe(true);
 		let calls = 0;
 		render(
 			<PerformanceDashboardPage
 				fetchStats={async () => {
 					calls += 1;
-					if (calls === 1) {
-						return {
-							...liveStats,
-							routes: [
-								{
-									route: "/filters-a-only",
-									sampleCount: 42,
-									p75: 180,
-									p95: 410,
-								},
-							],
-						};
-					}
+					if (calls === 1) return response;
 					throw new Error("filters B unavailable");
 				}}
 			/>,
@@ -360,6 +367,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("passes all four applied filter values to fetchStats", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		const fetchStats = vi.fn(async (_filters: PerformanceFilters) => liveStats);
 		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
 		await screen.findAllByText("42");
@@ -390,20 +398,23 @@ describe("PerformanceDashboardPage", () => {
 	it("renders positive Web3 counts and rate from the same sample denominator", async () => {
 		const response = {
 			...liveStats,
-			web3: [
-				{
-					...liveStats.web3[0],
-					sampleCount: 10,
-					successCount: 7,
-					failureCount: 3,
-					successRate: 0.7,
-					p50: 210,
-					p75: 321,
-					p95: 490,
-					coverage: "observed" as const,
-				},
-			],
+			web3: liveStats.web3.map((item, index) =>
+				index === 0
+					? {
+							...liveStats.web3[0],
+							sampleCount: 10,
+							successCount: 7,
+							failureCount: 3,
+							successRate: 0.7,
+							p50: 210,
+							p75: 321,
+							p95: 490,
+							coverage: "observed" as const,
+						}
+					: item,
+			),
 		};
+		expect(isPerformanceDashboardResponse(response)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => response} />);
 		const section = (
 			await screen.findByRole("heading", { name: "Web3 操作" })
@@ -419,7 +430,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("renders the actual trend bucket, metric, sample count and p75", async () => {
-		const bucketStart = 1_786_600_123_000;
+		const bucketStart = 1_786_600_800_000;
 		const response = {
 			...liveStats,
 			trend: [
@@ -431,6 +442,7 @@ describe("PerformanceDashboardPage", () => {
 				},
 			],
 		};
+		expect(isPerformanceDashboardResponse(response)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => response} />);
 		const trendTable = await screen.findByRole("table", { name: "真实趋势" });
 		const row = within(trendTable).getByRole("row", { name: /INP 17 246 ms/ });
@@ -443,6 +455,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("canonicalizes a direct history URL to the immutable artifact filters", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		window.history.replaceState(
 			{},
 			"",
@@ -471,9 +484,36 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("canonicalizes history popstate and clears and locks every filter", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		const fetchStats = vi.fn(async () => liveStats);
 		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
 		await screen.findAllByText("42");
+		fireEvent.change(screen.getByLabelText("时间范围"), {
+			target: { value: "7d" },
+		});
+		fireEvent.change(screen.getByLabelText("页面路径"), {
+			target: { value: "/live-route" },
+		});
+		fireEvent.change(screen.getByLabelText("运行环境"), {
+			target: { value: "production" },
+		});
+		fireEvent.change(screen.getByLabelText("发布版本"), {
+			target: { value: "live-version" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+		await waitFor(() => expect(fetchStats).toHaveBeenCalledTimes(2));
+		expect((screen.getByLabelText("时间范围") as HTMLSelectElement).value).toBe(
+			"7d",
+		);
+		expect((screen.getByLabelText("页面路径") as HTMLInputElement).value).toBe(
+			"/live-route",
+		);
+		expect((screen.getByLabelText("运行环境") as HTMLInputElement).value).toBe(
+			"production",
+		);
+		expect((screen.getByLabelText("发布版本") as HTMLInputElement).value).toBe(
+			"live-version",
+		);
 		await act(async () => {
 			window.history.replaceState(
 				{},
@@ -510,11 +550,23 @@ describe("PerformanceDashboardPage", () => {
 		for (const [first, second] of combinations) {
 			const response = {
 				...liveStats,
-				navigation: [
-					{ ...metric("navigation.dns"), coverage: first },
-					{ ...metric("navigation.tcp"), coverage: second },
-				],
+				navigation: liveStats.navigation.map((item, index) => {
+					if (index === 0 && first === "observed") {
+						return {
+							...item,
+							sampleCount: 1,
+							p50: 10,
+							p75: 20,
+							p95: 30,
+							coverage: first,
+						};
+					}
+					if (index === 0) return { ...item, coverage: first };
+					if (index === 1) return { ...item, coverage: second };
+					return item;
+				}),
 			};
+			expect(isPerformanceDashboardResponse(response)).toBe(true);
 			const view = render(
 				<PerformanceDashboardPage fetchStats={async () => response} />,
 			);
@@ -528,6 +580,7 @@ describe("PerformanceDashboardPage", () => {
 	});
 
 	it("labels an all-zero error catalog as no error category", async () => {
+		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
 		expect(await screen.findByText("无错误分类")).toBeTruthy();
 	});
