@@ -10,6 +10,7 @@ web/dist-worker/
 aws/build.toml
 coverage/
 *.log
+!docs/evidence/recordings/**/*.mp4
 .DS_Store
 .idea/
 .vscode/
