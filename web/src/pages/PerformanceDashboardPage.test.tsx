@@ -1,4 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PerformanceOverview } from "../performance/api";
 import { PerformanceDashboardPage } from "./PerformanceDashboardPage";
@@ -35,8 +41,20 @@ const liveOverview = {
 				{ route: "/tasks/:id", sampleCount: 18, p50: 140, p75: 220, p95: 410 },
 			],
 			trend: [
-				{ bucketStart: 1_786_600_000_000, sampleCount: 20, p50: 115, p75: 160, p95: 360 },
-				{ bucketStart: 1_786_603_600_000, sampleCount: 22, p50: 120, p75: 180, p95: 410 },
+				{
+					bucketStart: 1_786_600_000_000,
+					sampleCount: 20,
+					p50: 115,
+					p75: 160,
+					p95: 360,
+				},
+				{
+					bucketStart: 1_786_603_600_000,
+					sampleCount: 22,
+					p50: 120,
+					p75: 180,
+					p95: 410,
+				},
 			],
 		},
 		{
@@ -81,9 +99,15 @@ describe("PerformanceDashboardPage", () => {
 		expect(await screen.findByText("128")).toBeTruthy();
 		expect(screen.getByText("3 项")).toBeTruthy();
 		expect(screen.getByText("2.3%")).toBeTruthy();
-		expect(screen.getByRole("heading", { name: "多指标 p75 对比" })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: "p50 / p75 / p95 趋势" })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: "页面路径分位对比" })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "多指标 p75 对比" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "p50 / p75 / p95 趋势" }),
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "页面路径分位对比" }),
+		).toBeTruthy();
 		expect(screen.getByRole("heading", { name: "错误事件分布" })).toBeTruthy();
 		expect(screen.getAllByText("LCP").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("javascript.error").length).toBeGreaterThan(0);
@@ -95,14 +119,27 @@ describe("PerformanceDashboardPage", () => {
 		render(<PerformanceDashboardPage fetchOverview={fetchOverview} />);
 		await screen.findByText("128");
 
-		fireEvent.change(screen.getByLabelText("时间范围"), { target: { value: "7d" } });
-		fireEvent.change(screen.getByLabelText("页面路径"), { target: { value: "/tasks/:id" } });
-		fireEvent.change(screen.getByLabelText("运行环境"), { target: { value: "production" } });
-		fireEvent.change(screen.getByLabelText("发布版本"), { target: { value: "v2" } });
+		fireEvent.change(screen.getByLabelText("时间范围"), {
+			target: { value: "7d" },
+		});
+		fireEvent.change(screen.getByLabelText("页面路径"), {
+			target: { value: "/tasks/:id" },
+		});
+		fireEvent.change(screen.getByLabelText("运行环境"), {
+			target: { value: "production" },
+		});
+		fireEvent.change(screen.getByLabelText("发布版本"), {
+			target: { value: "v2" },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
 
 		expect(fetchOverview).toHaveBeenLastCalledWith(
-			{ window: "7d", route: "/tasks/:id", environment: "production", version: "v2" },
+			{
+				window: "7d",
+				route: "/tasks/:id",
+				environment: "production",
+				version: "v2",
+			},
 			undefined,
 		);
 	});
@@ -111,7 +148,9 @@ describe("PerformanceDashboardPage", () => {
 		const fetchOverview = vi.fn(async () => liveOverview);
 		render(<PerformanceDashboardPage fetchOverview={fetchOverview} />);
 		await screen.findByText("128");
-		fireEvent.change(screen.getByLabelText("分析指标"), { target: { value: "api.duration" } });
+		fireEvent.change(screen.getByLabelText("分析指标"), {
+			target: { value: "api.duration" },
+		});
 		expect(screen.getByText("p75 · 130 ms")).toBeTruthy();
 		expect(fetchOverview).toHaveBeenCalledTimes(1);
 	});
