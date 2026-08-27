@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadExactPerformanceStack",
+      "Effect": "Allow",
+      "Action": "cloudformation:DescribeStacks",
+      "Resource": "arn:aws:cloudformation:us-east-1:782086108248:stack/babysteps-performance-control/*"
+    },
+    {
+      "Sid": "ReadExactPerformanceRuntime",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DescribeClusters",
+        "ecr:DescribeRepositories",
+        "sqs:GetQueueUrl",
+        "lambda:GetFunction"
+      ],
+      "Resource": [
+        "arn:aws:ecs:us-east-1:782086108248:cluster/babysteps-performance-control",
+        "arn:aws:ecr:us-east-1:782086108248:repository/babysteps-performance-cleaner-control",
+        "arn:aws:sqs:us-east-1:782086108248:babysteps-performance-events-control",
+        "arn:aws:sqs:us-east-1:782086108248:babysteps-performance-dlq-control",
+        "arn:aws:lambda:us-east-1:782086108248:function:babysteps-performance-ingest-control",
+        "arn:aws:lambda:us-east-1:782086108248:function:babysteps-performance-query-control"
+      ]
+    },
+    {
+      "Sid": "ReadExactPerformanceSecrets",
+      "Effect": "Allow",
+      "Action": "secretsmanager:DescribeSecret",
+      "Resource": [
+        "arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-db-control-*",
+        "arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-origin-control-*"
+      ]
+    },
+    {
+      "Sid": "ReadPerformanceRegionalInventory",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "tag:GetResources",
+        "ecs:DescribeTaskDefinition"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "ReadPerformanceApis",
+      "Effect": "Allow",
+      "Action": "apigateway:GET",
+      "Resource": "arn:aws:apigateway:us-east-1::/apis/*"
+    }
+  ]
+}

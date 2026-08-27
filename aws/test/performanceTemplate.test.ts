@@ -52,6 +52,11 @@ describe("performance observability infrastructure", () => {
 			"Name: !Sub babysteps-performance-db-${EnvironmentName}",
 		);
 		expect(source).toContain("PROJECT_DATABASE_SECRET_ARN");
+		expect(source).toContain("OriginTokenSecret");
+		expect(source).toContain("OriginTokenSecretArn");
+		expect(source).toContain(
+			"Name: !Sub babysteps-performance-origin-${EnvironmentName}",
+		);
 		expect(source).toContain("MASTER_DATABASE_SECRET_ARN");
 		expect(source).toContain("DatabaseAdminTaskRole");
 		expect(source).toContain("DatabaseAdminTaskDefinition");
