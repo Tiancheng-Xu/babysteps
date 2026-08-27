@@ -318,4 +318,24 @@ describe("PerformanceDashboardPage", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Live 数据" }));
 		expect(await screen.findByText(/stale/)).toBeTruthy();
 	});
+
+	it("canonicalizes a direct history URL and locks its fixed artifact filters", async () => {
+		window.history.replaceState({}, "", "/performance?mode=history&window=7d&route=%2Ftasks&environment=prod&version=v2");
+		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
+		expect(await screen.findByText("最近一次真实闭环")).toBeTruthy();
+		expect(window.location.search).toBe("?mode=history");
+		expect((screen.getByLabelText("页面路径") as HTMLInputElement).disabled).toBe(true);
+	});
+
+	it("summarizes no-sample plus unavailable coverage as partial and preserves unavailable Long Task fields", async () => {
+		const response = { ...liveStats, vitals: liveStats.vitals.map((item, index) => index === 0 ? item : { ...item, coverage: index === 1 ? "unavailable" as const : "instrumented-no-sample" as const }), longTasks: { ...liveStats.longTasks, coverage: "unavailable" as const } };
+		render(<PerformanceDashboardPage fetchStats={async () => response} />);
+		expect((await screen.findAllByText("部分覆盖")).length).toBeGreaterThan(0);
+		expect(document.body.textContent).toContain("次数 — · 总计 — · 最长 —");
+	});
+
+	it("labels an all-zero error catalog as no error category", async () => {
+		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
+		expect(await screen.findByText("无错误分类")).toBeTruthy();
+	});
 });

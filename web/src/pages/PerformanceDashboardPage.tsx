@@ -158,11 +158,7 @@ function Meta({
 function sectionCoverage(
 	items: Array<{ coverage: PerformanceCoverageStatus }>,
 ): SectionCoverage {
-	if (
-		items.some((item) => item.coverage === "observed") &&
-		items.some((item) => item.coverage !== "observed")
-	)
-		return "partial";
+	if (new Set(items.map((item) => item.coverage)).size > 1) return "partial";
 	return items[0]?.coverage ?? "unavailable";
 }
 
@@ -184,6 +180,7 @@ export function PerformanceDashboardPage({
 		useState<PerformanceDashboardResponse | null>(null);
 	const [status, setStatus] = useState<DashboardStatus>("loading");
 	const [mode, setMode] = useState<DashboardMode>(modeFromUrl);
+	const historyMode = mode === "history" || modeFromUrl() === "history";
 	const priorLive = useRef<{
 		key: string;
 		data: PerformanceDashboardResponse;
@@ -206,7 +203,10 @@ export function PerformanceDashboardPage({
 
 	useEffect(() => {
 		let active = true;
-		if (mode === "history") {
+		if (historyMode) {
+			window.history.replaceState({}, "", `${window.location.pathname}?mode=history`);
+			setFilters((current) => current.window === VERIFIED_PERFORMANCE_DASHBOARD.window && !current.route && !current.environment && !current.version ? current : { window: VERIFIED_PERFORMANCE_DASHBOARD.window });
+			setDraft((current) => current.window === VERIFIED_PERFORMANCE_DASHBOARD.window && !current.route && !current.environment && !current.version ? current : { window: VERIFIED_PERFORMANCE_DASHBOARD.window });
 			setDashboard(VERIFIED_PERFORMANCE_DASHBOARD);
 			setStatus("bundled-history");
 			return () => {
@@ -238,7 +238,7 @@ export function PerformanceDashboardPage({
 		return () => {
 			active = false;
 		};
-	}, [fetchStats, filters, mode, reload]);
+	}, [fetchStats, filters, historyMode, reload]);
 
 	const data = dashboard;
 	const isBundled =
@@ -277,11 +277,12 @@ export function PerformanceDashboardPage({
 					setFilters(draft);
 				}}
 			>
-				<fieldset disabled={mode === "history"}>
+				<fieldset disabled={historyMode}>
 					<label>
 						时间范围
-						<select
-							aria-label="时间范围"
+					<select
+						aria-label="时间范围"
+						disabled={historyMode}
 							value={draft.window}
 							onChange={(event) =>
 								setDraft({
@@ -298,7 +299,8 @@ export function PerformanceDashboardPage({
 					<label>
 						页面路径
 						<input
-							aria-label="页面路径"
+						aria-label="页面路径"
+						disabled={historyMode}
 							value={draft.route ?? ""}
 							onChange={(event) =>
 								setDraft({ ...draft, route: event.target.value || undefined })
@@ -309,7 +311,8 @@ export function PerformanceDashboardPage({
 					<label>
 						运行环境
 						<input
-							aria-label="运行环境"
+						aria-label="运行环境"
+						disabled={historyMode}
 							value={draft.environment ?? ""}
 							onChange={(event) =>
 								setDraft({
@@ -323,7 +326,8 @@ export function PerformanceDashboardPage({
 					<label>
 						发布版本
 						<input
-							aria-label="发布版本"
+						aria-label="发布版本"
+						disabled={historyMode}
 							value={draft.version ?? ""}
 							onChange={(event) =>
 								setDraft({ ...draft, version: event.target.value || undefined })
@@ -331,7 +335,7 @@ export function PerformanceDashboardPage({
 							placeholder="全部版本"
 						/>
 					</label>
-					<button type="submit">应用筛选</button>
+					<button type="submit" disabled={historyMode}>应用筛选</button>
 				</fieldset>
 			</form>
 			<div className="performance-mode-controls" aria-label="数据模式">
@@ -348,7 +352,7 @@ export function PerformanceDashboardPage({
 				</button>
 				<button
 					type="button"
-					aria-pressed={mode === "history"}
+					aria-pressed={historyMode}
 					onClick={() => {
 						const fixed = {
 							window: VERIFIED_PERFORMANCE_DASHBOARD.window,
@@ -456,10 +460,11 @@ export function PerformanceDashboardPage({
 								<span>错误样本</span>
 								<strong>{totalSamples(data.errors)}</strong>
 								<small>
-									{data.errors
-										.slice()
-										.sort((a, b) => b.sampleCount - a.sampleCount)[0]?.name ??
-										"无错误分类"}
+									{totalSamples(data.errors) === 0
+										? "无错误分类"
+										: data.errors
+												.slice()
+												.sort((a, b) => b.sampleCount - a.sampleCount)[0]?.name}
 								</small>
 							</article>
 							<article>
@@ -634,7 +639,7 @@ export function PerformanceDashboardPage({
 						<p className="performance-note">
 							Long Task：
 							{data.longTasks.coverage === "unavailable"
-								? "—"
+								? "次数 — · 总计 — · 最长 —"
 								: `${data.longTasks.count} 次 · 总计 ${data.longTasks.totalDurationMs} ms · 最长 ${data.longTasks.maxDurationMs ?? "—"} ms`}{" "}
 							· <Coverage status={data.longTasks.coverage} />
 						</p>
