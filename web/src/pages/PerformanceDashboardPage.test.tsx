@@ -5,103 +5,238 @@ import {
 	render,
 	screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PerformanceStats } from "../performance/api";
+import { afterEach, describe, expect, it } from "vitest";
+
+import type {
+	PerformanceDashboardResponse,
+	PerformanceMetricSummary,
+} from "../performance/api";
 import { PerformanceDashboardPage } from "./PerformanceDashboardPage";
+
+const metric = (
+	name: string,
+	unit: PerformanceMetricSummary["unit"] = "ms",
+): PerformanceMetricSummary => ({
+	name,
+	unit,
+	sampleCount: name === "LCP" ? 42 : 0,
+	p50: name === "LCP" ? 120 : null,
+	p75: name === "LCP" ? 180 : null,
+	p95: name === "LCP" ? 410 : null,
+	coverage: name === "LCP" ? "observed" : "instrumented-no-sample",
+});
+
+const vitalNames = ["LCP", "CLS", "INP", "FCP", "TTFB"];
+const navigationNames = [
+	"navigation.dns",
+	"navigation.tcp",
+	"navigation.tls",
+	"navigation.request_wait",
+	"navigation.download",
+	"navigation.dom_ready",
+	"navigation.window_load",
+];
+const resourceNames = [
+	"resource.duration",
+	"resource.fetch.duration",
+	"resource.xhr.duration",
+	"resource.script.duration",
+	"resource.stylesheet.duration",
+	"resource.image.duration",
+	"resource.font.duration",
+];
+const errorNames = [
+	"javascript.error",
+	"promise.rejection",
+	"error.javascript.type_error",
+	"error.javascript.network",
+	"error.javascript.timeout",
+	"error.javascript.unknown",
+	"error.promise.type_error",
+	"error.promise.network",
+	"error.promise.timeout",
+	"error.promise.unknown",
+];
+const web3Names = [
+	"contract.read",
+	"contract.write",
+	"web3.uniswap.quote",
+	"web3.uniswap.swap",
+	"web3.privy.login",
+	"wallet.connect",
+	"auth.challenge",
+	"auth.sign",
+	"auth.verify",
+	"rpc.read",
+	"web3.rpc.read",
+	"approve.submit",
+	"approve.receipt",
+	"transaction.submit",
+	"transaction.receipt",
+];
+const coverageNames = [
+	...vitalNames,
+	...navigationNames,
+	...resourceNames,
+	"longtask.duration",
+	"longtask.count",
+	"longtask.total",
+	"longtask.max",
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+	"csr.fallback",
+	"hydration.recoverable_error",
+	...errorNames,
+	...web3Names,
+];
 
 const liveStats = {
 	window: "24h",
-	metric: "LCP",
-	unit: "ms",
-	sampleCount: 42,
-	p50: 120,
-	p75: 180,
-	p95: 410,
-	errorRate: 0.024,
-	routes: [
-		{ route: "/", sampleCount: 24, p75: 150 },
-		{ route: "/tasks/:id", sampleCount: 18, p75: 220 },
-	],
+	freshness: {
+		observedAt: 1_786_600_001_000,
+		latestSampleAt: 1_786_600_000_000,
+		mode: "live",
+		source: "live-api",
+		runId: "run-42",
+		commit: "abcdef123456",
+	},
+	vitals: vitalNames.map((name) =>
+		metric(name, name === "CLS" ? "score" : "ms"),
+	),
+	navigation: navigationNames.map((name) => metric(name)),
+	resources: resourceNames.map((name) => metric(name)),
+	longTasks: {
+		count: 0,
+		totalDurationMs: 0,
+		maxDurationMs: null,
+		duration: metric("longtask.duration"),
+		coverage: "instrumented-no-sample" as const,
+	},
+	errors: errorNames.map((name) => ({
+		name,
+		sampleCount: 0,
+		rate: null,
+		coverage: "instrumented-no-sample" as const,
+	})),
+	web3: web3Names.map((name) => ({
+		name,
+		unit: "ms" as const,
+		sampleCount: 0,
+		successCount: 0,
+		failureCount: 0,
+		successRate: null,
+		p50: null,
+		p75: null,
+		p95: null,
+		coverage: "instrumented-no-sample" as const,
+	})),
+	routes: [{ route: "/", sampleCount: 42, p75: 180, p95: 410 }],
 	trend: [
-		{ bucketStart: 1_786_600_000_000, sampleCount: 20, p75: 160 },
-		{ bucketStart: 1_786_603_600_000, sampleCount: 22, p75: 180 },
+		{ bucketStart: 1_786_600_000_000, name: "LCP", sampleCount: 42, p75: 180 },
 	],
-} satisfies PerformanceStats;
+	versions: [{ version: "v2", sampleCount: 42, p75: 180, p95: 410 }],
+	coverage: coverageNames.map((name) => ({
+		name,
+		status:
+			name === "LCP"
+				? ("observed" as const)
+				: ("instrumented-no-sample" as const),
+	})),
+	pipeline: {
+		status: "unavailable" as const,
+		source: "database-only" as const,
+	},
+} satisfies PerformanceDashboardResponse;
 
 describe("PerformanceDashboardPage", () => {
-	afterEach(cleanup);
-
-	it("shows provenance, sample count and real percentiles", async () => {
-		const fetchStats = vi.fn(async () => liveStats);
-		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
-
-		expect(await screen.findByText("42")).toBeTruthy();
-		expect(screen.getByText("p50 · 120 ms")).toBeTruthy();
-		expect(screen.getByText("p75 · 180 ms")).toBeTruthy();
-		expect(screen.getByText("p95 · 410 ms")).toBeTruthy();
-		expect(screen.getByText("2.4%")).toBeTruthy();
-		expect(screen.getByText(/真实 AWS 清洗结果/)).toBeTruthy();
-		expect(screen.getByText("真实 p75 趋势")).toBeTruthy();
+	afterEach(() => {
+		cleanup();
+		window.history.replaceState({}, "", "/performance");
 	});
 
-	it("sends time, route, metric, environment and version filters", async () => {
-		const fetchStats = vi.fn(async () => liveStats);
-		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
-		await screen.findByText("42");
+	it("renders the ten data-driven cockpit sections with coverage and provenance", async () => {
+		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
+		await screen.findAllByText("42");
+		for (const heading of [
+			"运行状态与总览",
+			"Core Web Vitals",
+			"导航阶段",
+			"趋势与版本",
+			"页面路径",
+			"资源与主线程",
+			"稳定性错误",
+			"Web3 操作",
+			"AWS 管道健康",
+			"Evidence 与口径",
+		]) {
+			expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
+		}
+		expect(
+			screen.getAllByText("已埋点，当前快照无样本").length,
+		).toBeGreaterThan(0);
+		expect(screen.getAllByText(/来源：实时 API/).length).toBeGreaterThan(0);
+	});
 
-		fireEvent.change(screen.getByLabelText("时间范围"), {
-			target: { value: "7d" },
-		});
+	it("shares the four filters in the URL and restores history navigation", async () => {
+		window.history.replaceState(
+			{},
+			"",
+			"/performance?window=7d&route=%2Ftasks&environment=production&version=v2",
+		);
+		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
+		await screen.findAllByText("42");
+		expect((screen.getByLabelText("时间范围") as HTMLSelectElement).value).toBe(
+			"7d",
+		);
+		expect((screen.getByLabelText("页面路径") as HTMLInputElement).value).toBe(
+			"/tasks",
+		);
+		expect((screen.getByLabelText("运行环境") as HTMLInputElement).value).toBe(
+			"production",
+		);
+		expect((screen.getByLabelText("发布版本") as HTMLInputElement).value).toBe(
+			"v2",
+		);
 		fireEvent.change(screen.getByLabelText("页面路径"), {
-			target: { value: "/tasks/:id" },
-		});
-		fireEvent.change(screen.getByLabelText("性能指标"), {
-			target: { value: "LCP" },
-		});
-		fireEvent.change(screen.getByLabelText("运行环境"), {
-			target: { value: "production" },
-		});
-		fireEvent.change(screen.getByLabelText("发布版本"), {
-			target: { value: "v2" },
+			target: { value: "/profile" },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
-
-		expect(fetchStats).toHaveBeenLastCalledWith(
-			{
-				window: "7d",
-				route: "/tasks/:id",
-				metric: "LCP",
-				environment: "production",
-				version: "v2",
-			},
-			undefined,
+		expect(window.location.search).toContain("route=%2Fprofile");
+		await act(async () => {
+			window.history.replaceState(
+				{},
+				"",
+				"/performance?window=7d&route=%2Ftasks&environment=production&version=v2",
+			);
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+		expect((screen.getByLabelText("页面路径") as HTMLInputElement).value).toBe(
+			"/tasks",
+		);
+		await act(async () => {
+			window.history.replaceState(
+				{},
+				"",
+				"/performance?window=7d&route=%2Fprofile&environment=production&version=v2",
+			);
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+		expect((screen.getByLabelText("页面路径") as HTMLInputElement).value).toBe(
+			"/profile",
 		);
 	});
 
-	it("shows an honest unavailable state instead of fixture data", async () => {
-		const fetchStats = vi.fn().mockRejectedValue(new Error("offline"));
-		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
-		expect(await screen.findByText("性能数据暂不可用")).toBeTruthy();
-		expect(screen.queryByText("42")).toBeNull();
-	});
-
-	it("refreshes while visible and keeps the last real result on a transient failure", async () => {
-		vi.useFakeTimers();
-		const fetchStats = vi
-			.fn()
-			.mockResolvedValueOnce(liveStats)
-			.mockRejectedValueOnce(new Error("temporary outage"));
-		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
-		await act(async () => Promise.resolve());
-		expect(screen.getByText("42")).toBeTruthy();
-
-		await act(async () => {
-			await vi.advanceTimersByTimeAsync(10_000);
-		});
-
-		expect(fetchStats).toHaveBeenCalledTimes(2);
-		expect(screen.getByText("42")).toBeTruthy();
-		expect(screen.getByText("正在显示上一次真实结果")).toBeTruthy();
-		vi.useRealTimers();
+	it("falls back to the verified historical snapshot when the API is invalid or unavailable", async () => {
+		render(
+			<PerformanceDashboardPage
+				fetchStats={async () => {
+					throw new Error("invalid performance response");
+				}}
+			/>,
+		);
+		expect(await screen.findByText("历史快照 · 非实时")).toBeTruthy();
+		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
+		expect(screen.getByRole("status").textContent).toContain("管线失败");
 	});
 });
