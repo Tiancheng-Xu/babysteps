@@ -40,6 +40,7 @@
       "Action": [
         "logs:DescribeLogGroups",
         "tag:GetResources",
+        "ecs:ListTaskDefinitions",
         "ecs:DescribeTaskDefinition"
       ],
       "Resource": "*",
@@ -48,6 +49,29 @@
           "aws:RequestedRegion": "us-east-1"
         }
       }
+    },
+    {
+      "Sid": "ListTasksOnlyInExactPerformanceCluster",
+      "Effect": "Allow",
+      "Action": "ecs:ListTasks",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "ecs:cluster": "arn:aws:ecs:us-east-1:782086108248:cluster/babysteps-performance-control"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactPerformanceRoles",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::782086108248:role/babysteps-performance-db-admin-control",
+        "arn:aws:iam::782086108248:role/babysteps-performance-execution-control",
+        "arn:aws:iam::782086108248:role/babysteps-performance-query-control",
+        "arn:aws:iam::782086108248:role/babysteps-performance-task-control"
+      ]
     },
     {
       "Sid": "ReadPerformanceApis",
