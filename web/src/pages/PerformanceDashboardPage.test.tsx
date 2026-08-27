@@ -4,8 +4,10 @@ import {
 	fireEvent,
 	render,
 	screen,
+	waitFor,
+	within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
 	PerformanceDashboardResponse,
@@ -258,7 +260,9 @@ describe("PerformanceDashboardPage", () => {
 		);
 		expect(await screen.findByText("历史 API 快照 · 非实时")).toBeTruthy();
 		expect(screen.queryByText("最近一次真实闭环")).toBeNull();
-		expect(screen.getAllByText("api-run", { exact: false }).length).toBeGreaterThan(0);
+		expect(screen.queryByRole("link", { name: /查看 Run/ })).toBeNull();
+		expect(screen.getAllByText("Run api-run")).toHaveLength(2);
+		expect(screen.getByText("api-commit")).toBeTruthy();
 	});
 
 	it("uses the bundled snapshot only in history mode and shares mode in the URL", async () => {
@@ -319,19 +323,208 @@ describe("PerformanceDashboardPage", () => {
 		expect(await screen.findByText(/stale/)).toBeTruthy();
 	});
 
-	it("canonicalizes a direct history URL and locks its fixed artifact filters", async () => {
-		window.history.replaceState({}, "", "/performance?mode=history&window=7d&route=%2Ftasks&environment=prod&version=v2");
-		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
-		expect(await screen.findByText("最近一次真实闭环")).toBeTruthy();
-		expect(window.location.search).toBe("?mode=history");
-		expect((screen.getByLabelText("页面路径") as HTMLInputElement).disabled).toBe(true);
+	it("falls back to bundled history instead of reusing live data from different filters", async () => {
+		let calls = 0;
+		render(
+			<PerformanceDashboardPage
+				fetchStats={async () => {
+					calls += 1;
+					if (calls === 1) {
+						return {
+							...liveStats,
+							routes: [
+								{
+									route: "/filters-a-only",
+									sampleCount: 42,
+									p75: 180,
+									p95: 410,
+								},
+							],
+						};
+					}
+					throw new Error("filters B unavailable");
+				}}
+			/>,
+		);
+		expect(await screen.findAllByText("/filters-a-only")).not.toHaveLength(0);
+		fireEvent.change(screen.getByLabelText("页面路径"), {
+			target: { value: "/filters-b" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+
+		expect(
+			await screen.findByText("管线失败 · 历史快照 · 非实时"),
+		).toBeTruthy();
+		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
+		expect(screen.queryByText("/filters-a-only")).toBeNull();
 	});
 
-	it("summarizes no-sample plus unavailable coverage as partial and preserves unavailable Long Task fields", async () => {
-		const response = { ...liveStats, vitals: liveStats.vitals.map((item, index) => index === 0 ? item : { ...item, coverage: index === 1 ? "unavailable" as const : "instrumented-no-sample" as const }), longTasks: { ...liveStats.longTasks, coverage: "unavailable" as const } };
+	it("passes all four applied filter values to fetchStats", async () => {
+		const fetchStats = vi.fn(async (_filters: PerformanceFilters) => liveStats);
+		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
+		await screen.findAllByText("42");
+
+		fireEvent.change(screen.getByLabelText("时间范围"), {
+			target: { value: "7d" },
+		});
+		fireEvent.change(screen.getByLabelText("页面路径"), {
+			target: { value: "/tasks/verified" },
+		});
+		fireEvent.change(screen.getByLabelText("运行环境"), {
+			target: { value: "production" },
+		});
+		fireEvent.change(screen.getByLabelText("发布版本"), {
+			target: { value: "release-2026-08-26" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+
+		await waitFor(() => expect(fetchStats).toHaveBeenCalledTimes(2));
+		expect(fetchStats.mock.calls[1]?.[0]).toEqual({
+			window: "7d",
+			route: "/tasks/verified",
+			environment: "production",
+			version: "release-2026-08-26",
+		});
+	});
+
+	it("renders positive Web3 counts and rate from the same sample denominator", async () => {
+		const response = {
+			...liveStats,
+			web3: [
+				{
+					...liveStats.web3[0],
+					sampleCount: 10,
+					successCount: 7,
+					failureCount: 3,
+					successRate: 0.7,
+					p50: 210,
+					p75: 321,
+					p95: 490,
+					coverage: "observed" as const,
+				},
+			],
+		};
 		render(<PerformanceDashboardPage fetchStats={async () => response} />);
-		expect((await screen.findAllByText("部分覆盖")).length).toBeGreaterThan(0);
-		expect(document.body.textContent).toContain("次数 — · 总计 — · 最长 —");
+		const section = (
+			await screen.findByRole("heading", { name: "Web3 操作" })
+		).closest("section");
+		expect(section).not.toBeNull();
+		expect(within(section as HTMLElement).getByText("样本 10")).toBeTruthy();
+		expect(within(section as HTMLElement).getByText("p75 321 ms")).toBeTruthy();
+		expect(
+			within(section as HTMLElement).getByText(
+				"成功 7 / 失败 3 / 成功率 70.0%",
+			),
+		).toBeTruthy();
+	});
+
+	it("renders the actual trend bucket, metric, sample count and p75", async () => {
+		const bucketStart = 1_786_600_123_000;
+		const response = {
+			...liveStats,
+			trend: [
+				{
+					bucketStart,
+					name: "INP",
+					sampleCount: 17,
+					p75: 246,
+				},
+			],
+		};
+		render(<PerformanceDashboardPage fetchStats={async () => response} />);
+		const trendTable = await screen.findByRole("table", { name: "真实趋势" });
+		const row = within(trendTable).getByRole("row", { name: /INP 17 246 ms/ });
+		expect(row.textContent).toContain(
+			new Date(bucketStart).toLocaleString("zh-CN", { hour12: false }),
+		);
+		expect(within(row).getByText("INP")).toBeTruthy();
+		expect(within(row).getByText("17")).toBeTruthy();
+		expect(within(row).getByText("246 ms")).toBeTruthy();
+	});
+
+	it("canonicalizes a direct history URL to the immutable artifact filters", async () => {
+		window.history.replaceState(
+			{},
+			"",
+			"/performance?mode=history&window=7d&route=%2Ftasks&environment=prod&version=v2",
+		);
+		const fetchStats = vi.fn(async () => liveStats);
+		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
+		expect(await screen.findByText("最近一次真实闭环")).toBeTruthy();
+		expect(window.location.search).toBe("?mode=history");
+		expect((screen.getByLabelText("时间范围") as HTMLSelectElement).value).toBe(
+			"1h",
+		);
+		for (const label of ["页面路径", "运行环境", "发布版本"]) {
+			expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
+		}
+		for (const label of ["时间范围", "页面路径", "运行环境", "发布版本"]) {
+			expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(
+				true,
+			);
+		}
+		expect(screen.getByRole("button", { name: "应用筛选" })).toHaveProperty(
+			"disabled",
+			true,
+		);
+		expect(fetchStats).not.toHaveBeenCalled();
+	});
+
+	it("canonicalizes history popstate and clears and locks every filter", async () => {
+		const fetchStats = vi.fn(async () => liveStats);
+		render(<PerformanceDashboardPage fetchStats={fetchStats} />);
+		await screen.findAllByText("42");
+		await act(async () => {
+			window.history.replaceState(
+				{},
+				"",
+				"/performance?mode=history&window=7d&route=%2Ftasks&environment=prod&version=v2",
+			);
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+
+		expect(await screen.findByText("最近一次真实闭环")).toBeTruthy();
+		expect(window.location.search).toBe("?mode=history");
+		expect((screen.getByLabelText("时间范围") as HTMLSelectElement).value).toBe(
+			"1h",
+		);
+		for (const label of ["页面路径", "运行环境", "发布版本"]) {
+			expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
+		}
+		for (const label of ["时间范围", "页面路径", "运行环境", "发布版本"]) {
+			expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(
+				true,
+			);
+		}
+		expect(screen.getByRole("button", { name: "应用筛选" })).toHaveProperty(
+			"disabled",
+			true,
+		);
+	});
+
+	it("summarizes both mixed coverage combinations as partial", async () => {
+		const combinations = [
+			["instrumented-no-sample", "unavailable"],
+			["observed", "unavailable"],
+		] as const;
+		for (const [first, second] of combinations) {
+			const response = {
+				...liveStats,
+				navigation: [
+					{ ...metric("navigation.dns"), coverage: first },
+					{ ...metric("navigation.tcp"), coverage: second },
+				],
+			};
+			const view = render(
+				<PerformanceDashboardPage fetchStats={async () => response} />,
+			);
+			const section = (
+				await screen.findByRole("heading", { name: "导航阶段" })
+			).closest("section");
+			expect(section).not.toBeNull();
+			expect(within(section as HTMLElement).getByText("部分覆盖")).toBeTruthy();
+			view.unmount();
+		}
 	});
 
 	it("labels an all-zero error catalog as no error category", async () => {
