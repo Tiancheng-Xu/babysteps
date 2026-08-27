@@ -41,13 +41,13 @@ test("parsed workflow exposes the exact v1 dispatch inputs plus scheduled safety
 		"generation",
 		"operation_id",
 	]);
-	assert.deepEqual(dispatch.inputs.action.options, ["start", "stop"]);
+	assert.deepEqual(dispatch.inputs.action.options, ["preflight", "start", "stop"]);
 	assert.equal(dispatch.inputs.action.type, "choice");
 	assert.equal(dispatch.inputs.action.required, true);
-	assert.equal(dispatch.inputs.operation_id.required, true);
-	assert.equal(dispatch.inputs.generation.required, true);
-	assert.equal(dispatch.inputs.expires_at.required, true);
-	assert.equal(dispatch.inputs.estimated_cost_usd.required, true);
+	assert.equal(dispatch.inputs.operation_id.required, false);
+	assert.equal(dispatch.inputs.generation.required, false);
+	assert.equal(dispatch.inputs.expires_at.required, false);
+	assert.equal(dispatch.inputs.estimated_cost_usd.required, false);
 	assert.ok(workflow.on.schedule.length > 0, "scheduled expiry must exist");
 	assert.deepEqual(workflow.concurrency, {
 		group: "babysteps-performance-control",
@@ -55,6 +55,37 @@ test("parsed workflow exposes the exact v1 dispatch inputs plus scheduled safety
 	});
 	assert.equal(job.environment, "aws-performance");
 	assert.equal(job.permissions["id-token"], "write");
+});
+
+test("preflight is read-only and reuses the exact zero-residue gate", async () => {
+	const { steps } = await loadWorkflow();
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(resolve.run, /action" = "preflight"/);
+	assert.match(resolve.run, /source=operator-readonly-preflight/);
+
+	const foundation = stepByName(
+		steps,
+		"Verify protected shared foundation is ready",
+	);
+	assert.match(foundation.if, /action != 'preflight'/);
+
+	const residue = stepByName(steps, "Verify zero project residue");
+	assert.match(residue.if, /action == 'preflight'/);
+	assert.match(residue.run, /aws sts get-caller-identity/);
+
+	for (const name of [
+		"Mark persistent cleanup state running",
+		"Deploy existing single performance stack",
+		"Delete exact stable project stack",
+		"Mark persistent cleanup state required",
+		"Mark persistent cleanup state verified",
+		"Publish running callback",
+		"Publish verified stopped snapshot callback",
+		"Publish idempotent stopped callback",
+		"Publish cleanup_required without claiming cleanup success",
+	]) {
+		assert.doesNotMatch(stepByName(steps, name).if, /preflight/);
+	}
 });
 
 test("parsed workflow fixes region, stack, TTL and cost outside caller inputs", async () => {
