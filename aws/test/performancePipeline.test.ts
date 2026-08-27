@@ -197,8 +197,20 @@ describe("real-sample statistics", () => {
 			"LCP",
 		);
 		expect(stats.trend).toEqual([
-			{ bucketStart: 1_786_597_200_000, sampleCount: 2, p50: 10, p75: 30, p95: 30 },
-			{ bucketStart: 1_786_600_800_000, sampleCount: 1, p50: 90, p75: 90, p95: 90 },
+			{
+				bucketStart: 1_786_597_200_000,
+				sampleCount: 2,
+				p50: 10,
+				p75: 30,
+				p95: 30,
+			},
+			{
+				bucketStart: 1_786_600_800_000,
+				sampleCount: 1,
+				p50: 90,
+				p75: 90,
+				p95: 90,
+			},
 		]);
 	});
 
@@ -207,7 +219,12 @@ describe("real-sample statistics", () => {
 			event({ name: "LCP", value: 120 }),
 			event({ name: "CLS", unit: "score", value: 0.08 }),
 			event({ type: "resource", name: "api.duration", value: 80 }),
-			event({ type: "error", name: "javascript.error", unit: "count", value: 1 }),
+			event({
+				type: "error",
+				name: "javascript.error",
+				unit: "count",
+				value: 1,
+			}),
 		]);
 		expect(overview.summary).toMatchObject({
 			totalEvents: 4,

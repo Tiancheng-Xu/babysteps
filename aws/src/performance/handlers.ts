@@ -97,7 +97,9 @@ export function createPerformanceQueryHandler(dependencies: {
 					schemaVersion: "performance-overview/v2",
 					window: {
 						preset: parsed.data.window,
-						from: new Date(now - windowMilliseconds[parsed.data.window]).toISOString(),
+						from: new Date(
+							now - windowMilliseconds[parsed.data.window],
+						).toISOString(),
 						to: new Date(now).toISOString(),
 					},
 					filters: Object.fromEntries(
