@@ -327,8 +327,9 @@ jobs:
           test "$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)" = "0"
           api="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)"
           echo "API_ID=$(printf '%s' "$api" | cut -d. -f1 | sed 's#https://##')" >> "$GITHUB_ENV"
-          curl --fail-with-body --silent --show-error -H "x-babysteps-origin-token: $ORIGIN_TOKEN" "$api/stats?window=1h" > evidence/performance-snapshot.json
-          node -e 'const s=require("./evidence/performance-snapshot.json");if(!Number.isInteger(s.sampleCount)||s.sampleCount<0)process.exit(1)'
+          curl --fail-with-body --silent --show-error -H "x-babysteps-origin-token: $ORIGIN_TOKEN" "$api/stats?window=1h&metric=all&environment=production" > evidence/performance-overview.json
+          node scripts/build-performance-snapshot.mjs evidence/performance-overview.json evidence/performance-snapshot.json
+          node -e 'const s=require("./evidence/performance-snapshot.json");if(s.schemaVersion!==2||!Array.isArray(s.metrics)||s.metrics.length<1||s.summary.totalEvents<1)process.exit(1)'
       - name: DROP SCHEMA using exact schema-cleanup task
         id: schema-cleanup
         if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry')

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	acceptPerformanceBatch,
+	computePerformanceOverview,
 	computePerformanceStats,
 	type PerformanceEvent,
 } from "../src/performance/pipeline";
@@ -150,8 +151,8 @@ describe("real-sample statistics", () => {
 			event({ route: "/tasks", value: 100 }),
 		]);
 		expect(stats.routes).toEqual([
-			{ route: "/", sampleCount: 2, p75: 20 },
-			{ route: "/tasks", sampleCount: 1, p75: 100 },
+			{ route: "/", sampleCount: 2, p50: 10, p75: 20, p95: 20 },
+			{ route: "/tasks", sampleCount: 1, p50: 100, p75: 100, p95: 100 },
 		]);
 	});
 
@@ -196,8 +197,46 @@ describe("real-sample statistics", () => {
 			"LCP",
 		);
 		expect(stats.trend).toEqual([
-			{ bucketStart: 1_786_600_000_000, sampleCount: 2, p75: 30 },
-			{ bucketStart: 1_786_603_600_000, sampleCount: 1, p75: 90 },
+			{
+				bucketStart: 1_786_597_200_000,
+				sampleCount: 2,
+				p50: 10,
+				p75: 30,
+				p95: 30,
+			},
+			{
+				bucketStart: 1_786_600_800_000,
+				sampleCount: 1,
+				p50: 90,
+				p75: 90,
+				p95: 90,
+			},
+		]);
+	});
+
+	it("returns all metric families without mixing their units", () => {
+		const overview = computePerformanceOverview([
+			event({ name: "LCP", value: 120 }),
+			event({ name: "CLS", unit: "score", value: 0.08 }),
+			event({ type: "resource", name: "api.duration", value: 80 }),
+			event({
+				type: "error",
+				name: "javascript.error",
+				unit: "count",
+				value: 1,
+			}),
+		]);
+		expect(overview.summary).toMatchObject({
+			totalEvents: 4,
+			errorCount: 1,
+			errorRate: 0.25,
+			metricCount: 4,
+		});
+		expect(overview.metrics.map(({ metric, unit }) => [metric, unit])).toEqual([
+			["api.duration", "ms"],
+			["CLS", "score"],
+			["javascript.error", "count"],
+			["LCP", "ms"],
 		]);
 	});
 });

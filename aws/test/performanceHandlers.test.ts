@@ -59,6 +59,37 @@ describe("performance Lambda adapters", () => {
 		});
 	});
 
+	it("returns a versioned all-metric overview for snapshot generation", async () => {
+		const events = [
+			JSON.parse(body).events[0],
+			{
+				...JSON.parse(body).events[0],
+				eventId: "123e4567-e89b-42d3-a456-426614174001",
+				type: "error",
+				name: "javascript.error",
+				unit: "count",
+				value: 1,
+			},
+		];
+		const handler = createPerformanceQueryHandler({
+			originToken: "token",
+			query: vi.fn(async () => events),
+			now: () => 1_786_603_600_000,
+		});
+		const response = await handler({
+			headers: { "x-babysteps-origin-token": "token" },
+			rawPath: "/stats",
+			queryStringParameters: { window: "1h", metric: "all" },
+		});
+		const overview = JSON.parse(response.body);
+		expect(overview).toMatchObject({
+			schemaVersion: "performance-overview/v2",
+			window: { preset: "1h" },
+			summary: { totalEvents: 2, errorCount: 1, metricCount: 2 },
+		});
+		expect(overview.metrics).toHaveLength(2);
+	});
+
 	it("rejects direct unauthenticated statistics reads", async () => {
 		const handler = createPerformanceQueryHandler({
 			originToken: "token",
