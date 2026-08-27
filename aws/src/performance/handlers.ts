@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { z } from "zod";
 import {
 	acceptPerformanceBatch,
+	computePerformanceOverview,
 	computePerformanceStats,
 	type PerformanceEvent,
 	PerformanceRequestError,
@@ -21,6 +22,12 @@ const filtersSchema = z.object({
 	environment: z.string().max(32).optional(),
 	version: z.string().max(64).optional(),
 });
+
+const windowMilliseconds = {
+	"1h": 3_600_000,
+	"24h": 86_400_000,
+	"7d": 604_800_000,
+} as const;
 
 const response = (statusCode: number, body: unknown): JsonResponse => ({
 	statusCode,
@@ -66,6 +73,7 @@ export function createPerformanceIngestHandler(dependencies: {
 export function createPerformanceQueryHandler(dependencies: {
 	originToken: string;
 	query: (filters: PerformanceFilters) => Promise<StoredPerformanceEvent[]>;
+	now?: () => number;
 }) {
 	return async (
 		event: Pick<
@@ -83,6 +91,23 @@ export function createPerformanceQueryHandler(dependencies: {
 		if (!parsed.success) return response(400, { error: "invalid filters" });
 		try {
 			const events = await dependencies.query(parsed.data);
+			if (parsed.data.metric === "all") {
+				const now = dependencies.now?.() ?? Date.now();
+				return response(200, {
+					schemaVersion: "performance-overview/v2",
+					window: {
+						preset: parsed.data.window,
+						from: new Date(now - windowMilliseconds[parsed.data.window]).toISOString(),
+						to: new Date(now).toISOString(),
+					},
+					filters: Object.fromEntries(
+						Object.entries(parsed.data).filter(
+							([key, value]) => key !== "metric" && value !== undefined,
+						),
+					),
+					...computePerformanceOverview(events),
+				});
+			}
 			return response(200, {
 				window: parsed.data.window,
 				...computePerformanceStats(events, parsed.data.metric),

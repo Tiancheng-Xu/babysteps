@@ -46,10 +46,13 @@ export function createPerformanceClient(
 	let timer: ReturnType<typeof setInterval> | undefined;
 	let observers: PerformanceObserver[] = [];
 	let started = false;
-	const onError = () =>
+	const onError = (event: Event) =>
 		record({
 			type: "error",
-			name: "javascript.error",
+			name:
+				typeof ErrorEvent !== "undefined" && event instanceof ErrorEvent
+					? "javascript.error"
+					: "resource.error",
 			value: 1,
 			unit: "count",
 		});
@@ -147,11 +150,31 @@ export function createPerformanceClient(
 			if (!entry.name.includes("/api/performance/"))
 				record({
 					type: "resource",
-					name: "resource.duration",
+					name: ["fetch", "xmlhttprequest"].includes(
+						(entry as PerformanceResourceTiming).initiatorType,
+					)
+						? "api.duration"
+						: "resource.duration",
 					value: entry.duration,
 					unit: "ms",
 				});
 		});
+		observe("navigation", (entry) =>
+			record({
+				type: "resource",
+				name: "navigation.duration",
+				value: entry.duration,
+				unit: "ms",
+			}),
+		);
+		observe("longtask", (entry) =>
+			record({
+				type: "resource",
+				name: "longtask.duration",
+				value: entry.duration,
+				unit: "ms",
+			}),
+		);
 		globalThis.addEventListener?.("error", onError);
 		globalThis.addEventListener?.("unhandledrejection", onUnhandledRejection);
 		globalThis.addEventListener?.("pagehide", onPageHide);

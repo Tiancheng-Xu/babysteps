@@ -133,20 +133,57 @@ function percentile(sorted: number[], quantile: number): number {
 	return sorted[Math.max(0, index)] ?? 0;
 }
 
-export function computePerformanceStats(
-	events: StoredPerformanceEvent[],
-	metric?: string,
-): {
+export type PerformanceRouteStats = {
+	route: string;
+	sampleCount: number;
+	p50: number;
+	p75: number;
+	p95: number;
+};
+
+export type PerformanceTrendPoint = {
+	bucketStart: number;
+	sampleCount: number;
+	p50: number;
+	p75: number;
+	p95: number;
+};
+
+export type PerformanceMetricStats = {
 	metric: string;
+	category: "web-vital" | PerformanceEvent["type"];
 	unit: PerformanceEvent["unit"];
 	sampleCount: number;
 	p50: number;
 	p75: number;
 	p95: number;
+	errorCount: number;
 	errorRate: number;
-	routes: Array<{ route: string; sampleCount: number; p75: number }>;
-	trend: Array<{ bucketStart: number; sampleCount: number; p75: number }>;
-} {
+	routes: PerformanceRouteStats[];
+	trend: PerformanceTrendPoint[];
+};
+
+export type PerformanceOverview = {
+	summary: {
+		totalEvents: number;
+		errorCount: number;
+		errorRate: number;
+		metricCount: number;
+		routeCount: number;
+		latestEventAt: number | null;
+	};
+	metrics: PerformanceMetricStats[];
+};
+
+const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
+
+const categoryFor = (event: StoredPerformanceEvent) =>
+	webVitalNames.has(event.name) ? "web-vital" : event.type;
+
+export function computePerformanceStats(
+	events: StoredPerformanceEvent[],
+	metric?: string,
+): PerformanceMetricStats {
 	const selected = metric
 		? events.filter((item) => item.name === metric)
 		: events;
@@ -159,14 +196,11 @@ export function computePerformanceStats(
 	const values = selected.map(({ value }) => value).sort((a, b) => a - b);
 	const routeGroups = new Map<string, number[]>();
 	const trendGroups = new Map<number, number[]>();
-	const trendAnchor = selected[0]?.timestamp ?? 0;
 	for (const event of selected) {
 		const group = routeGroups.get(event.route) ?? [];
 		group.push(event.value);
 		routeGroups.set(event.route, group);
-		const bucketStart =
-			trendAnchor +
-			Math.floor((event.timestamp - trendAnchor) / 3_600_000) * 3_600_000;
+		const bucketStart = Math.floor(event.timestamp / 3_600_000) * 3_600_000;
 		const bucket = trendGroups.get(bucketStart) ?? [];
 		bucket.push(event.value);
 		trendGroups.set(bucketStart, bucket);
@@ -174,11 +208,13 @@ export function computePerformanceStats(
 
 	return {
 		metric: metric ?? selected[0]?.name ?? "unknown",
+		category: selected[0] ? categoryFor(selected[0]) : "metric",
 		unit: selected[0]?.unit ?? (metric === "CLS" ? "score" : "ms"),
 		sampleCount: selected.length,
 		p50: percentile(values, 0.5),
 		p75: percentile(values, 0.75),
 		p95: percentile(values, 0.95),
+		errorCount: selected.filter(({ type }) => type === "error").length,
 		errorRate:
 			events.length === 0
 				? 0
@@ -188,9 +224,17 @@ export function computePerformanceStats(
 			.map(([route, routeValues]) => ({
 				route,
 				sampleCount: routeValues.length,
+				p50: percentile(
+					[...routeValues].sort((a, b) => a - b),
+					0.5,
+				),
 				p75: percentile(
 					[...routeValues].sort((a, b) => a - b),
 					0.75,
+				),
+				p95: percentile(
+					[...routeValues].sort((a, b) => a - b),
+					0.95,
 				),
 			})),
 		trend: [...trendGroups]
@@ -198,10 +242,47 @@ export function computePerformanceStats(
 			.map(([bucketStart, bucketValues]) => ({
 				bucketStart,
 				sampleCount: bucketValues.length,
+				p50: percentile(
+					[...bucketValues].sort((a, b) => a - b),
+					0.5,
+				),
 				p75: percentile(
 					[...bucketValues].sort((a, b) => a - b),
 					0.75,
 				),
+				p95: percentile(
+					[...bucketValues].sort((a, b) => a - b),
+					0.95,
+				),
 			})),
+	};
+}
+
+export function computePerformanceOverview(
+	events: StoredPerformanceEvent[],
+): PerformanceOverview {
+	const groups = new Map<string, StoredPerformanceEvent[]>();
+	for (const event of events) {
+		const key = `${event.name}:${event.unit}`;
+		const group = groups.get(key) ?? [];
+		group.push(event);
+		groups.set(key, group);
+	}
+	const errorCount = events.filter(({ type }) => type === "error").length;
+	return {
+		summary: {
+			totalEvents: events.length,
+			errorCount,
+			errorRate: events.length === 0 ? 0 : errorCount / events.length,
+			metricCount: groups.size,
+			routeCount: new Set(events.map(({ route }) => route)).size,
+			latestEventAt:
+				events.length === 0
+					? null
+					: Math.max(...events.map(({ timestamp }) => timestamp)),
+		},
+		metrics: [...groups.values()]
+			.map((group) => computePerformanceStats(group))
+			.sort((left, right) => left.metric.localeCompare(right.metric)),
 	};
 }

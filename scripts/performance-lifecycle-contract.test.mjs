@@ -403,6 +403,9 @@ test("final aggregation is best effort while schema and stack cleanup retry inde
 	const { steps } = await loadWorkflow();
 	const aggregate = stepByName(steps, "Run final-aggregate");
 	assert.equal(aggregate["continue-on-error"], true);
+	assert.match(aggregate.run, /stats\?window=1h&metric=all&environment=production/);
+	assert.match(aggregate.run, /build-performance-snapshot\.mjs/);
+	assert.match(aggregate.run, /schemaVersion!==2/);
 
 	const schema = stepByName(steps, "DROP SCHEMA using exact schema-cleanup task");
 	assert.match(schema.if, /^always\(\)/);

@@ -9,7 +9,9 @@ export type PerformanceFilters = {
 export type PerformanceRouteSummary = {
 	route: string;
 	sampleCount: number;
+	p50: number;
 	p75: number;
+	p95: number;
 };
 
 export type PerformanceStats = {
@@ -20,9 +22,35 @@ export type PerformanceStats = {
 	p50: number;
 	p75: number;
 	p95: number;
+	errorCount: number;
 	errorRate: number;
 	routes: PerformanceRouteSummary[];
-	trend: Array<{ bucketStart: number; sampleCount: number; p75: number }>;
+	trend: Array<{
+		bucketStart: number;
+		sampleCount: number;
+		p50: number;
+		p75: number;
+		p95: number;
+	}>;
+};
+
+export type PerformanceMetricStats = Omit<PerformanceStats, "window"> & {
+	category: "web-vital" | "metric" | "resource" | "error" | "custom" | "web3";
+};
+
+export type PerformanceOverview = {
+	schemaVersion: "performance-overview/v2";
+	window: { preset: PerformanceFilters["window"]; from: string; to: string };
+	filters: Record<string, string>;
+	summary: {
+		totalEvents: number;
+		errorCount: number;
+		errorRate: number;
+		metricCount: number;
+		routeCount: number;
+		latestEventAt: number | null;
+	};
+	metrics: PerformanceMetricStats[];
 };
 
 export function performanceEventsEndpoint(apiUrl?: string): string {
@@ -51,4 +79,24 @@ export async function fetchPerformanceStats(
 	);
 	if (!response.ok) throw new Error("performance stats unavailable");
 	return (await response.json()) as PerformanceStats;
+}
+
+export async function fetchPerformanceOverview(
+	filters: Omit<PerformanceFilters, "metric">,
+	apiUrl?: string,
+): Promise<PerformanceOverview> {
+	const query = new URLSearchParams({ metric: "all" });
+	for (const [key, value] of Object.entries(filters)) {
+		if (value) query.set(key, value);
+	}
+	const response = await fetch(
+		`${performanceStatsEndpoint(apiUrl)}?${query.toString()}`,
+		{ headers: { accept: "application/json" }, credentials: "omit" },
+	);
+	if (!response.ok) throw new Error("performance overview unavailable");
+	const overview = (await response.json()) as PerformanceOverview;
+	if (overview.schemaVersion !== "performance-overview/v2") {
+		throw new Error("invalid performance overview");
+	}
+	return overview;
 }
