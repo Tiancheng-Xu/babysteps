@@ -80,6 +80,32 @@ describe("performance observability infrastructure", () => {
 		expect(source).not.toContain("AWS::RDS::DBInstance");
 	});
 
+	it("explicitly manages all runtime log groups with seven-day tagged deletion", async () => {
+		const { template } = await load();
+		const resources = template.Resources ?? {};
+		for (const [logGroupName, functionName] of [
+			["IngestFunctionLogGroup", "IngestFunction"],
+			["QueryFunctionLogGroup", "QueryFunction"],
+		] as const) {
+			expect(resources[logGroupName]).toMatchObject({
+				Type: "AWS::Logs::LogGroup",
+				DeletionPolicy: "Delete",
+				UpdateReplacePolicy: "Delete",
+				Properties: {
+					RetentionInDays: 7,
+					Tags: expect.arrayContaining([
+						{ Key: "Project", Value: "babysteps-performance" },
+						{ Key: "RunId", Value: { Ref: "RunId" } },
+						{ Key: "ExpiresAt", Value: { Ref: "ExpiresAt" } },
+					]),
+				},
+			});
+			expect(resources[functionName]).toMatchObject({
+				DependsOn: logGroupName,
+			});
+		}
+	});
+
 	it("contains no account, credential or private endpoint literal", async () => {
 		const { source } = await load();
 		expect(source).not.toMatch(/AKIA[0-9A-Z]{16}/);

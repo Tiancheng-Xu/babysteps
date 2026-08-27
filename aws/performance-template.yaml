@@ -113,8 +113,27 @@ Resources:
   PerformanceLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       LogGroupName: !Sub /babysteps/performance/${EnvironmentName}
+      RetentionInDays: 7
+      Tags: *resourceTags
+
+  IngestFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/babysteps-performance-ingest-${EnvironmentName}
+      RetentionInDays: 7
+      Tags: *resourceTags
+
+  QueryFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/babysteps-performance-query-${EnvironmentName}
       RetentionInDays: 7
       Tags: *resourceTags
 
@@ -275,6 +294,7 @@ Resources:
   IngestFunction:
     Type: AWS::Serverless::Function
     DeletionPolicy: Delete
+    DependsOn: IngestFunctionLogGroup
     Properties:
       FunctionName: !Sub babysteps-performance-ingest-${EnvironmentName}
       CodeUri: .
@@ -290,6 +310,7 @@ Resources:
   QueryFunction:
     Type: AWS::Serverless::Function
     DeletionPolicy: Delete
+    DependsOn: QueryFunctionLogGroup
     Properties:
       FunctionName: !Sub babysteps-performance-query-${EnvironmentName}
       CodeUri: .

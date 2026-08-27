@@ -61,6 +61,10 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /Browser journey/);
 	assert.match(source, /PERFORMANCE_ORIGIN_TOKEN/);
 	assert.match(source, /approvalReferenceSha256/);
+	assert.match(source, /logs get-log-events/);
+	assert.match(source, /cleaner\/cleaner\/\$task_id/);
+	assert.match(source, /evidence\/cleaner-summary\.json/);
+	assert.match(source, /retryableFailures/);
 	assert.doesNotMatch(source, /event\.json/);
 	assert.doesNotMatch(source, /value:\s*321|p50\s*!==\s*321/);
 	for (const inventory of [
@@ -181,9 +185,75 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		);
 	}
 	const stepByName = (name) => steps.find((step) => step.name === name);
+	const validation = stepByName(
+		"Validate exact recovery target and capture sanitized state",
+	);
+	assert.equal(validation.id, "validate-target");
+	assert.match(validation.run, /Project/);
+	assert.match(validation.run, /RunId/);
+	assert.match(validation.run, /test "\$project" = "babysteps-performance"/);
+	assert.match(validation.run, /test "\$tagged_run_id" = "\$run_id"/);
+	assert.match(validation.run, /validated=true.*GITHUB_OUTPUT/s);
+	assert.match(validation.run, /stack_state=.*GITHUB_OUTPUT/s);
+
 	assert.match(stepByName("Drop and verify exact run-scoped schema").if, /^always\(\)/);
-	assert.match(stepByName("Delete exact failed project stack").if, /^always\(\)/);
-	assert.match(stepByName("Verify exact prefix and tag inventory is zero").if, /^always\(\)/);
+	assert.match(
+		stepByName("Drop and verify exact run-scoped schema").if,
+		/steps\.validate-target\.outcome == 'success'/,
+	);
+	assert.match(
+		stepByName("Drop and verify exact run-scoped schema").if,
+		/steps\.validate-target\.outputs\.stack_state == 'present'/,
+	);
+	assert.match(stepByName("Delete exact failed project stack").if, /schema-cleanup\.outcome == 'success'/);
+	assert.match(stepByName("Delete exact failed project stack").if, /database_state != 'schema-initialized'/);
+	assert.match(
+		stepByName("Delete exact failed project stack").if,
+		/steps\.validate-target\.outcome == 'success'/,
+	);
+	assert.match(
+		stepByName("Delete exact failed project stack").if,
+		/steps\.validate-target\.outputs\.stack_state == 'present'/,
+	);
+	const inventory = stepByName("Verify exact prefix and tag inventory is zero");
+	assert.match(
+		inventory.if,
+		/steps\.validate-target\.outcome == 'success'/,
+	);
+	assert.match(
+		inventory.if,
+		/outputs\.stack_state == 'absent'/,
+	);
+	assert.equal(
+		inventory.run.match(
+			/ecs_task_remaining=\$\(\(ecs_task_remaining \+ count\)\)/g,
+		)?.length,
+		1,
+		"each ECS task count must be accumulated exactly once",
+	);
+
+	const awsWritePattern =
+		/aws (?:ecs run-task|cloudformation delete-stack|ecs delete-task-definitions)\b/;
+	const writeSteps = steps.filter((step) => awsWritePattern.test(step.run ?? ""));
+	assert.ok(writeSteps.length >= 2);
+	for (const step of writeSteps) {
+		assert.match(
+			step.if ?? "",
+			/steps\.validate-target\.outcome == 'success'/,
+			`${step.name} can write AWS state after target validation failed`,
+		);
+		assert.match(
+			step.if ?? "",
+			/steps\.validate-target\.outputs\.validated == 'true'/,
+			`${step.name} can write AWS state without the validated target output`,
+		);
+		assert.match(
+			step.if ?? "",
+			/steps\.validate-target\.outputs\.stack_state == 'present'/,
+			`${step.name} can write AWS state for an absent stack`,
+		);
+	}
+	assert.doesNotMatch(validation.run, awsWritePattern);
 	assert.match(recovery, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
 	assert.match(recovery, /ecs list-tasks/);
 	assert.match(recovery, /workflow_dispatch:/);
@@ -205,7 +275,32 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(recovery, /remainingProjectResources/);
 	assert.match(recovery, /test "\$remaining" = "0"/);
 	assert.match(recovery, /shared.*(?:explicit deny|protected)/is);
+	assert.match(recovery, /cleanup_required/);
+	for (const logGroup of [
+		"/babysteps/performance/$ENVIRONMENT_NAME",
+		"/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME",
+		"/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME",
+	]) {
+		assert.ok(recovery.includes(logGroup), `recovery inventory is missing ${logGroup}`);
+	}
 	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
+});
+
+test("every SAM deploy supplies the required run and approval hash parameters", async () => {
+	for (const workflowPath of [
+		".github/workflows/aws-performance.yml",
+		".github/workflows/aws-performance-control.yml",
+	]) {
+		const workflow = parse(await readFile(workflowPath, "utf8"));
+		const deploys = Object.values(workflow.jobs).flatMap((job) =>
+			(job.steps ?? []).filter((step) => /\bsam deploy\b/.test(step.run ?? "")),
+		);
+		assert.ok(deploys.length > 0, `${workflowPath} must deploy through SAM`);
+		for (const deploy of deploys) {
+			assert.match(deploy.run, /RunId="\$RUN_ID"/);
+			assert.match(deploy.run, /ApprovalReferenceHash="\$APPROVAL_REFERENCE_HASH"/);
+		}
+	}
 });
 
 test("a scheduled TTL janitor dispatches the existing exact recovery deep module", async () => {

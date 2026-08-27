@@ -189,6 +189,35 @@ jobs:
           aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
           exit_code="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)"
           test "$exit_code" = "0"
+      - name: Capture and validate exact cleaner summary
+        run: |
+          task='${{ steps.cleaner.outputs.task }}'
+          task_id="${task##*/}"
+          log_group="/babysteps/performance/$ENVIRONMENT_NAME"
+          log_stream="cleaner/cleaner/$task_id"
+          for attempt in $(seq 1 12); do
+            if aws logs get-log-events --log-group-name "$log_group" --log-stream-name "$log_stream" --output json > cleaner-log-events.json 2>/dev/null && jq -e '.events | length > 0' cleaner-log-events.json >/dev/null; then break; fi
+            sleep 5
+          done
+          node - <<'NODE'
+          const fs = require("fs");
+          const input = JSON.parse(fs.readFileSync("cleaner-log-events.json", "utf8"));
+          const keys = ["deduplicated", "discarded", "durationMs", "inserted", "processed", "retryableFailures", "writeDurationMs"];
+          const summaries = (input.events ?? []).flatMap(({ message }) => {
+            if (typeof message !== "string" || /[\r\n]/.test(message)) return [];
+            try {
+              const value = JSON.parse(message);
+              return value && typeof value === "object" && JSON.stringify(Object.keys(value).sort()) === JSON.stringify(keys) ? [value] : [];
+            } catch { return []; }
+          });
+          if (summaries.length !== 1) throw new Error("EXPECTED_ONE_CLEANER_SUMMARY");
+          const summary = summaries[0];
+          for (const key of keys) if (!Number.isSafeInteger(summary[key]) || summary[key] < 0) throw new Error(`INVALID_CLEANER_SUMMARY_${key}`);
+          if (summary.processed < 1 || summary.inserted < 1) throw new Error("CLEANER_DID_NOT_INSERT_REAL_EVENT");
+          if (summary.retryableFailures !== 0) throw new Error("CLEANER_RETRYABLE_FAILURES");
+          if (summary.processed !== summary.inserted + summary.deduplicated + summary.discarded + summary.retryableFailures) throw new Error("CLEANER_SUMMARY_TOTAL_MISMATCH");
+          fs.writeFileSync("evidence/cleaner-summary.json", `${JSON.stringify(summary, null, 2)}\n`);
+          NODE
       - name: Query and verify real browser aggregates
         run: |
           curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=development&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
@@ -226,7 +255,11 @@ jobs:
           for function_name in "babysteps-performance-ingest-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
             aws lambda get-function --function-name "$function_name" >/dev/null && lambda_count=$((lambda_count + 1))
           done
-          log_group_count="$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$ENVIRONMENT_NAME" --query 'length(logGroups)' --output text)"
+          log_group_count=0
+          for log_group in "/babysteps/performance/$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME"; do
+            count="$(aws logs describe-log-groups --log-group-name-prefix "$log_group" --query "length(logGroups[?logGroupName=='$log_group'])" --output text)"
+            log_group_count=$((log_group_count + count))
+          done
           secret_count=0
           for secret_name in "babysteps-performance-db-$ENVIRONMENT_NAME" "babysteps-performance-origin-$ENVIRONMENT_NAME"; do
             aws secretsmanager describe-secret --secret-id "$secret_name" >/dev/null && secret_count=$((secret_count + 1))
@@ -248,7 +281,7 @@ jobs:
             ecs: { clusterStatus: process.env.ecs_cluster_status, taskCount: number("ecs_task_count"), cleanerExitCode: number("cleaner_exit_code"), taskDefinitionCount: number("task_definition_count") },
             sqs: { visibleMessages: number("sqs_visible"), dlqVisibleMessages: number("dlq_visible") },
             apiGateway: { present: true }, lambda: { count: number("lambda_count") },
-            cloudWatch: { logGroupCount: number("log_group_count") }, secrets: { count: number("secret_count") },
+            cloudWatch: { logGroupCount: number("log_group_count") }, cleanerSummary: JSON.parse(fs.readFileSync("evidence/cleaner-summary.json", "utf8")), secrets: { count: number("secret_count") },
             securityGroup: { present: true }, iam: { roleCount: number("iam_role_count") },
             sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
           }, null, 2));
@@ -326,7 +359,11 @@ jobs:
           done
           api_remaining="$(aws apigatewayv2 get-apis --query "length(Items[?Name=='babysteps-performance-api-$ENVIRONMENT_NAME'])" --output text)"
           lambda_remaining="$(aws lambda list-functions --query "length(Functions[?starts_with(FunctionName, 'babysteps-performance-') && contains(FunctionName, '$ENVIRONMENT_NAME')])" --output text)"
-          log_remaining="$(aws logs describe-log-groups --log-group-name-prefix "/babysteps/performance/$ENVIRONMENT_NAME" --query 'length(logGroups)' --output text)"
+          log_remaining=0
+          for log_group in "/babysteps/performance/$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME"; do
+            count="$(aws logs describe-log-groups --log-group-name-prefix "$log_group" --query "length(logGroups[?logGroupName=='$log_group'])" --output text)"
+            log_remaining=$((log_remaining + count))
+          done
           secret_remaining="$(aws secretsmanager list-secrets --include-planned-deletion --filters Key=name,Values="babysteps-performance-" --query "length(SecretList[?contains(Name, '$ENVIRONMENT_NAME')])" --output text)"
           security_group_remaining="$(aws ec2 describe-security-groups --filters Name=tag:Project,Values=babysteps-performance Name=tag:RunId,Values="$RUN_ID" --query 'length(SecurityGroups)' --output text)"
           ingress_remaining=0
