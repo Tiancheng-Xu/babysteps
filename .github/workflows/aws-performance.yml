@@ -220,7 +220,7 @@ jobs:
           NODE
       - name: Query and verify real browser aggregates
         run: |
-          curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=development&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
+          curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=production&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
           node -e 'const s=require("./evidence/performance-stats.json");const samples=(s.vitals??[]).reduce((n,v)=>n+(v.sampleCount??0),0)+(s.navigation??[]).reduce((n,v)=>n+(v.sampleCount??0),0);if(samples<1)process.exit(1)'
       - name: Capture live performance dashboard Evidence
         run: |
@@ -252,7 +252,10 @@ jobs:
           dlq_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-dlq-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
           sqs_visible="$(aws sqs get-queue-attributes --queue-url "$queue_url" --attribute-names ApproximateNumberOfMessages --query 'Attributes.ApproximateNumberOfMessages' --output text)"
           dlq_visible="$(aws sqs get-queue-attributes --queue-url "$dlq_url" --attribute-names ApproximateNumberOfMessages --query 'Attributes.ApproximateNumberOfMessages' --output text)"
-          api_id="$(aws cloudformation describe-stack-resource --stack-name "$STACK_NAME" --logical-resource-id PerformanceApi --query 'StackResourceDetail.PhysicalResourceId' --output text)"
+          api_endpoint="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)"
+          api_id="${api_endpoint#https://}"
+          api_id="${api_id%%.*}"
+          test -n "$api_id" && test "$api_id" != "$api_endpoint"
           aws apigatewayv2 get-api --api-id "$api_id" >/dev/null
           lambda_count=0
           for function_name in "babysteps-performance-ingest-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
