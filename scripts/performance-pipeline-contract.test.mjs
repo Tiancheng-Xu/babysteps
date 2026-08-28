@@ -314,6 +314,35 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		stepByName("Delete exact failed project stack").if,
 		/steps\.validate-target\.outputs\.stack_state == 'present'/,
 	);
+	const orphanedTaskDefinitions = stepByName(
+		"Delete exact orphaned task definitions",
+	);
+	assert.equal(orphanedTaskDefinitions.id, "delete-task-definitions");
+	assert.match(
+		orphanedTaskDefinitions.if,
+		/steps\.validate-target\.outcome == 'success'/,
+	);
+	assert.match(
+		orphanedTaskDefinitions.if,
+		/steps\.validate-target\.outputs\.validated == 'true'/,
+	);
+	assert.match(
+		orphanedTaskDefinitions.if,
+		/outputs\.stack_state == 'absent'/,
+	);
+	assert.match(
+		orphanedTaskDefinitions.if,
+		/steps\.delete-stack\.outcome == 'success'/,
+	);
+	assert.match(
+		orphanedTaskDefinitions.run,
+		/babysteps-performance-cleaner-\$ENVIRONMENT_NAME/,
+	);
+	assert.match(
+		orphanedTaskDefinitions.run,
+		/babysteps-performance-db-admin-\$ENVIRONMENT_NAME/,
+	);
+	assert.match(orphanedTaskDefinitions.run, /test "\$actual_family" = "\$family"/);
 	const inventory = stepByName("Verify exact prefix and tag inventory is zero");
 	assert.match(
 		inventory.if,
@@ -322,6 +351,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(
 		inventory.if,
 		/outputs\.stack_state == 'absent'/,
+	);
+	assert.match(
+		inventory.if,
+		/steps\.delete-task-definitions\.outcome == 'success'/,
 	);
 	assert.equal(
 		inventory.run.match(
@@ -346,11 +379,13 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 			/steps\.validate-target\.outputs\.validated == 'true'/,
 			`${step.name} can write AWS state without the validated target output`,
 		);
-		assert.match(
-			step.if ?? "",
-			/steps\.validate-target\.outputs\.stack_state == 'present'/,
-			`${step.name} can write AWS state for an absent stack`,
-		);
+		if (/aws (?:ecs run-task|cloudformation delete-stack)\b/.test(step.run ?? "")) {
+			assert.match(
+				step.if ?? "",
+				/steps\.validate-target\.outputs\.stack_state == 'present'/,
+				`${step.name} can write stack-owned AWS state for an absent stack`,
+			);
+		}
 	}
 	assert.doesNotMatch(validation.run, awsWritePattern);
 	assert.match(recovery, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
