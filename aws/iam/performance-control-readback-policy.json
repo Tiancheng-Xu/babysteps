@@ -38,7 +38,12 @@
       "Sid": "ReadPerformanceRegionalInventory",
       "Effect": "Allow",
       "Action": [
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:DescribeSecurityGroups",
+        "iam:ListRoles",
+        "lambda:ListFunctions",
         "logs:DescribeLogGroups",
+        "secretsmanager:ListSecrets",
         "tag:GetResources",
         "ecs:ListTaskDefinitions",
         "ecs:DescribeTaskDefinition"
