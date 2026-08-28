@@ -5,15 +5,20 @@ import test from "node:test";
 const expectedReadActions = [
 	"apigateway:GET",
 	"cloudformation:DescribeStacks",
+	"ec2:DescribeSecurityGroupRules",
+	"ec2:DescribeSecurityGroups",
 	"ecr:DescribeRepositories",
 	"ecs:DescribeClusters",
 	"ecs:DescribeTaskDefinition",
 	"ecs:ListTaskDefinitions",
 	"ecs:ListTasks",
 	"iam:GetRole",
+	"iam:ListRoles",
 	"lambda:GetFunction",
+	"lambda:ListFunctions",
 	"logs:DescribeLogGroups",
 	"secretsmanager:DescribeSecret",
+	"secretsmanager:ListSecrets",
 	"sqs:GetQueueUrl",
 	"tag:GetResources",
 ];
@@ -21,6 +26,10 @@ const expectedReadActions = [
 test("preflight readback policy covers every zero-residue AWS read and no mutation", async () => {
 	const workflow = await readFile(
 		".github/workflows/aws-performance-control.yml",
+		"utf8",
+	);
+	const recoveryWorkflow = await readFile(
+		".github/workflows/aws-performance-recovery.yml",
 		"utf8",
 	);
 	const classifier = await readFile(
@@ -64,6 +73,15 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"arn:aws:apigateway:us-east-1::/apis/*",
 	]);
 	assert.doesNotMatch(workflow, /iam list-roles/);
+	for (const command of [
+		"lambda list-functions",
+		"secretsmanager list-secrets",
+		"ec2 describe-security-groups",
+		"ec2 describe-security-group-rules",
+		"iam list-roles",
+	]) {
+		assert.match(recoveryWorkflow, new RegExp(command.replaceAll("-", "\\-")));
+	}
 	assert.match(classifier, /iam-role\) printf '%s' 'NoSuchEntity'/);
 	const roleStatement = policy.Statement.find((statement) =>
 		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
