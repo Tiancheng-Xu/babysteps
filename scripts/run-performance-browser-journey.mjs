@@ -124,7 +124,7 @@ async function runJourney() {
 		if (dashboardOnly) {
 			const dashboardUrl = new URL("/performance", parsedOrigin);
 			dashboardUrl.searchParams.set("window", "1h");
-			dashboardUrl.searchParams.set("environment", "development");
+			dashboardUrl.searchParams.set("environment", "production");
 			dashboardUrl.searchParams.set("version", version);
 			try {
 				const response = await page.goto(dashboardUrl.toString(), {

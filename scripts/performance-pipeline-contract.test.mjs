@@ -120,6 +120,14 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 	assert.match(journeySource, /getByRole\("heading"/);
 	assert.match(journeySource, /marketplace-task-card, \.empty-state/);
+	assert.match(
+		journeySource,
+		/dashboardUrl\.searchParams\.set\("environment", "production"\)/,
+	);
+	assert.doesNotMatch(
+		journeySource,
+		/dashboardUrl\.searchParams\.set\("environment", "development"\)/,
+	);
 	const summary = sanitizeJourneySummary({
 		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
 		coverage: ["LCP", "navigation.dns", "navigation.tls"],
