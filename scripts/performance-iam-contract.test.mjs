@@ -59,7 +59,10 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 			/(?:Create|Delete|Put|Update|Run|Stop|Execute|PassRole)/,
 		);
 	}
-	assert.equal(policy.Statement.at(-1).Resource, "arn:aws:apigateway:us-east-1::/apis/*");
+	assert.deepEqual(policy.Statement.at(-1).Resource, [
+		"arn:aws:apigateway:us-east-1::/apis",
+		"arn:aws:apigateway:us-east-1::/apis/*",
+	]);
 	assert.doesNotMatch(workflow, /iam list-roles/);
 	assert.match(classifier, /iam-role\) printf '%s' 'NoSuchEntity'/);
 	const roleStatement = policy.Statement.find((statement) =>
