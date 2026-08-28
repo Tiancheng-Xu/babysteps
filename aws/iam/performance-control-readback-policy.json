@@ -77,7 +77,10 @@
       "Sid": "ReadPerformanceApis",
       "Effect": "Allow",
       "Action": "apigateway:GET",
-      "Resource": "arn:aws:apigateway:us-east-1::/apis/*"
+      "Resource": [
+        "arn:aws:apigateway:us-east-1::/apis",
+        "arn:aws:apigateway:us-east-1::/apis/*"
+      ]
     }
   ]
 }
