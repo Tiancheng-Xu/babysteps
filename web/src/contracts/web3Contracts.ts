@@ -35,10 +35,12 @@ export function parsePublicAppConfig(input: PublicAppConfig): PublicAppConfig {
 	let apiUrl: string | undefined;
 	if (input.apiUrl?.trim()) {
 		const parsed = new URL(input.apiUrl.trim());
-		const isLocalhost = parsed.hostname === "localhost";
+		const isLoopback = ["localhost", "127.0.0.1", "[::1]"].includes(
+			parsed.hostname,
+		);
 		if (
 			parsed.protocol !== "https:" &&
-			!(isLocalhost && parsed.protocol === "http:")
+			!(isLoopback && parsed.protocol === "http:")
 		) {
 			throw new Error("BabySteps API URL must use HTTPS outside localhost.");
 		}

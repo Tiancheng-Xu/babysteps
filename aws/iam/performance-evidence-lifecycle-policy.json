@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListTasksOnlyInEphemeralEvidenceClusters",
+      "Effect": "Allow",
+      "Action": "ecs:ListTasks",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        },
+        "ArnLike": {
+          "ecs:cluster": "arn:aws:ecs:us-east-1:782086108248:cluster/babysteps-performance-e*"
+        }
+      }
+    },
+    {
+      "Sid": "DeleteOnlyEphemeralEvidenceTaskDefinitions",
+      "Effect": "Allow",
+      "Action": "ecs:DeleteTaskDefinitions",
+      "Resource": [
+        "arn:aws:ecs:us-east-1:782086108248:task-definition/babysteps-performance-cleaner-e*:*",
+        "arn:aws:ecs:us-east-1:782086108248:task-definition/babysteps-performance-db-admin-e*:*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    }
+  ]
+}

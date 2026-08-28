@@ -101,7 +101,7 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 });
 
 test("the Chromium journey emits only a bounded sanitized summary", async () => {
-	const { journeyRoutes, sanitizeJourneySummary } = await import(
+	const { journeyRoutes, sanitizeJourneyFailure, sanitizeJourneySummary } = await import(
 		"./run-performance-browser-journey.mjs"
 	);
 	assert.deepEqual(
@@ -141,6 +141,105 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.doesNotMatch(
 		JSON.stringify(summary),
 		/secret|private\.example|cookie|authorization/i,
+	);
+	assert.equal(
+		sanitizeJourneyFailure(
+			new Error(
+				"Timeout at https://private.example/profile?token=redacted-fixture",
+			),
+			"/profile",
+		),
+		"ROUTE_TIMEOUT_PROFILE",
+	);
+	assert.equal(
+		sanitizeJourneyFailure(new Error("socket closed"), "/performance"),
+		"ROUTE_FAILED_PERFORMANCE",
+	);
+	assert.doesNotMatch(
+		sanitizeJourneyFailure(
+			new Error("secret=https://private.example/?token=redacted-fixture"),
+			"/evidence",
+		),
+		/secret|private\.example|token/i,
+	);
+});
+
+test("the real browser run boots production config and preserves visual Evidence", async () => {
+	const source = await readFile(
+		".github/workflows/aws-performance.yml",
+		"utf8",
+	);
+	const workflow = parse(source);
+	const steps = workflow.jobs["prove-and-clean"].steps;
+	const byName = (name) => steps.find((step) => step.name === name);
+
+	assert.match(
+		byName("Start local Web at the exact Worker APP_URI origin").run,
+		/--mode production/,
+	);
+	assert.match(
+		byName("Browser journey through real Chromium").run,
+		/--artifacts-dir evidence\/browser/,
+	);
+	assert.match(
+		byName("Capture live performance dashboard Evidence").run,
+		/--dashboard-only/,
+	);
+	assert.match(
+		byName("Capture live performance dashboard Evidence").run,
+		/--version "\$\{GITHUB_SHA:0:12\}"/,
+	);
+	const upload = steps.find(
+		(step) => step.uses === "actions/upload-artifact@v4",
+	);
+	assert.equal(upload.with.path, "evidence/");
+	assert.equal(upload.with["if-no-files-found"], "error");
+});
+
+test("ephemeral Evidence lifecycle permissions stay inside the run prefix", async () => {
+	const policy = JSON.parse(
+		await readFile(
+			"aws/iam/performance-evidence-lifecycle-policy.json",
+			"utf8",
+		),
+	);
+	const list = policy.Statement.find((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
+			"ecs:ListTasks",
+		),
+	);
+	assert.equal(list.Effect, "Allow");
+	assert.equal(list.Resource, "*");
+	assert.equal(
+		list.Condition.StringEquals["aws:RequestedRegion"],
+		"us-east-1",
+	);
+	assert.equal(
+		list.Condition.ArnLike["ecs:cluster"],
+		"arn:aws:ecs:us-east-1:782086108248:cluster/babysteps-performance-e*",
+	);
+
+	const remove = policy.Statement.find((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
+			"ecs:DeleteTaskDefinitions",
+		),
+	);
+	assert.equal(remove.Effect, "Allow");
+	assert.deepEqual(remove.Resource, [
+		"arn:aws:ecs:us-east-1:782086108248:task-definition/babysteps-performance-cleaner-e*:*",
+		"arn:aws:ecs:us-east-1:782086108248:task-definition/babysteps-performance-db-admin-e*:*",
+	]);
+	assert.equal(
+		remove.Condition.StringEquals["aws:RequestedRegion"],
+		"us-east-1",
+	);
+	assert.deepEqual(
+		new Set(
+			policy.Statement.flatMap((statement) =>
+				Array.isArray(statement.Action) ? statement.Action : [statement.Action],
+			),
+		),
+		new Set(["ecs:DeleteTaskDefinitions", "ecs:ListTasks"]),
 	);
 });
 
