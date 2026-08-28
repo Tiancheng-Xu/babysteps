@@ -422,8 +422,12 @@ export function PerformanceDashboardPage({
 						{VERIFIED_PERFORMANCE_OBSERVATION.commit}
 					</p>
 					<p>
-						临时项目资源已清理；下列未观测项保持无样本或不可用，不伪造 Live/AWS
-						状态。
+						本轮采集 {VERIFIED_PERFORMANCE_OBSERVATION.browserEventCount}{" "}
+						个浏览器事件， Cleaner 完成{" "}
+						{VERIFIED_PERFORMANCE_OBSERVATION.cleanerInsertedCount} 条写入；
+						清理前仍有{" "}
+						{VERIFIED_PERFORMANCE_OBSERVATION.queueVisibleBeforeCleanup}
+						条待清理，因此不宣称全量排空。临时项目资源已清理；未保存分布的指标保持不可用。
 					</p>
 					<a
 						className="performance-link"

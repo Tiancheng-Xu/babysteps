@@ -244,6 +244,41 @@ describe("PerformanceDashboardPage", () => {
 		expect(await screen.findByText("历史快照 · 非实时")).toBeTruthy();
 		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
 		expect(screen.getByRole("status").textContent).toContain("管线失败");
+		expect(screen.getAllByText("Run 33160455921").length).toBeGreaterThan(0);
+		expect(screen.queryByText(/32626397427/u)).toBeNull();
+		expect(
+			screen.getByText(/415 个浏览器事件.*103 条写入.*80\s*条待清理/u),
+		).toBeTruthy();
+
+		const vitalsSection = screen
+			.getByRole("heading", { name: "Core Web Vitals" })
+			.closest("section");
+		expect(vitalsSection).not.toBeNull();
+		expect(
+			within(vitalsSection as HTMLElement).getByRole("row", {
+				name: /LCP 1 960 ms 960 ms 960 ms 已观测/u,
+			}),
+		).toBeTruthy();
+		expect(
+			within(vitalsSection as HTMLElement).getByRole("row", {
+				name: /FCP 1 960 ms 960 ms 960 ms 已观测/u,
+			}),
+		).toBeTruthy();
+		expect(
+			within(vitalsSection as HTMLElement).getByRole("row", {
+				name: /TTFB 1 9 ms 9 ms 9 ms 已观测/u,
+			}),
+		).toBeTruthy();
+
+		const resourceSection = screen
+			.getByRole("heading", { name: "资源与主线程" })
+			.closest("section");
+		expect(resourceSection).not.toBeNull();
+		expect(
+			within(resourceSection as HTMLElement).getByRole("row", {
+				name: /resource\.script\.duration 79 104 ms 138 ms 171 ms 已观测/u,
+			}),
+		).toBeTruthy();
 	});
 
 	it("renders a valid API snapshot without attaching the bundled evidence banner", async () => {

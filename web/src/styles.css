@@ -1236,6 +1236,7 @@ textarea[aria-invalid="true"] {
 
 .performance-panel {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	min-width: 0;
 	gap: 14px;
 	padding: clamp(16px, 2.5vw, 24px);
@@ -1409,6 +1410,7 @@ textarea[aria-invalid="true"] {
 
 .performance-kpis article {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	gap: 8px;
 	padding: 22px;
 	border-radius: 22px;
@@ -1424,6 +1426,11 @@ textarea[aria-invalid="true"] {
 	color: var(--performance-ink);
 	font-size: clamp(1.55rem, 3vw, 2.35rem);
 }
+.performance-kpis strong,
+.performance-kpis small {
+	overflow-wrap: anywhere;
+}
+
 .performance-kpis small {
 	display: block;
 }
@@ -1807,7 +1814,7 @@ textarea[aria-invalid="true"] {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 	.performance-kpis {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.performance-kpis--overview {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1843,7 +1850,7 @@ textarea[aria-invalid="true"] {
 	.performance-kpis--overview,
 	.performance-unit-group,
 	.performance-route-chart article {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.performance-panel__heading {
 		align-items: stretch;
