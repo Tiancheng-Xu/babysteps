@@ -4,17 +4,16 @@ import renderingArchitectureImage from "../../../docs/architecture/starbuddy-ren
 import renderingSequenceImage from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
-import performanceSnapshotVideo from "../../../docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4";
-import performanceDashboardDesktopImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
-import performanceDashboardMobileImage from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
+import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-28-performance-aws-final.json?url";
+import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
-import performanceSnapshotDesktopImage from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png";
-import performanceSnapshotMobileImage from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png";
+import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png";
+import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -533,16 +532,16 @@ export function EvidencePage() {
 						<h2 id="performance-proof-title">性能观测架构图</h2>
 					</div>
 					<span className="evidence-diagram-card__status">
-						历史闭环已验证 · 新合同待云端复验
+						最终闭环已验证 · 取证后零残留
 					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
-					清洗、共享数据库和真实统计拆成独立信任边界。历史 GitHub Actions Run
-					32626397427 已在 commit acd4898f61fc
-					上用一条受控事件复验旧版完整闭环，并在取证后自动删除临时资源。PR #36
-					的新实现（commits 0301a670 + a355227）已通过代码 Gate，但仍待新的云端
-					Run、故障恢复与零残留读回。
+					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
+					33160455921 在 commit e40008e056d2 上以本地 Chromium、Vite Preview
+					和本地 Worker 代理访问 5 条页面路径，再连接临时 AWS 后端完成 SQS
+					入队、ECS Cleaner、PostgreSQL 聚合与 Live Dashboard 取证；随后删除
+					Schema 与精确项目 Stack，复核 12 类项目资源全部为 0。
 				</p>
 				<section
 					className="evidence-requirement-map"
@@ -558,9 +557,9 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>packages/performance-sdk/src</code>
 							<strong>验证证据</strong>
-							<span>SDK 单元测试与 Web 构建通过</span>
+							<span>5 条真实页面路径、25 个批次、415 个浏览器事件</span>
 							<strong>当前状态</strong>
-							<span>历史版本已验证 · 新版本待云端复验</span>
+							<span>已实现并验证</span>
 						</article>
 						<article>
 							<strong>交付要求</strong>
@@ -570,15 +569,12 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>aws/src/performance · aws/performance-template.yaml</code>
 							<strong>验证证据</strong>
-							<a
-								href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/32626397427"
-								target="_blank"
-								rel="noreferrer"
-							>
-								Run 32626397427
-							</a>
+							<code>Run 33160455921</code>
 							<strong>当前状态</strong>
-							<span>历史版本已验证 · 新版本待云端复验</span>
+							<span>
+								ECS Cleaner 处理并写入 103 条，0 丢弃、0 可重试失败；清理前仍有
+								80 条 SQS 可见消息，未宣称全量排空
+							</span>
 						</article>
 						<article>
 							<strong>交付要求</strong>
@@ -587,16 +583,16 @@ export function EvidencePage() {
 							<span>PostgreSQL 聚合查询、p50/p75/p95、项目级自动清理</span>
 							<strong>代码位置</strong>
 							<code>
-								web/src/pages/PerformancePage.tsx ·
+								web/src/pages/PerformanceDashboardPage.tsx ·
 								.github/workflows/aws-performance.yml
 							</code>
 							<strong>验证证据</strong>
 							<span>
-								sampleCount=1，p50=p75=p95=321；Schema 与精确项目 Stack
-								已删除，项目 ECS Cluster 为 0
+								Live API 实测 LCP/FCP/TTFB、导航和脚本资源分位数；Schema
+								与精确项目 Stack 已删除，12 类项目资源全部为 0
 							</span>
 							<a
-								href="https://github.com/Tiancheng-Xu/babysteps/blob/main/docs/evidence/deployment/2026-08-23-performance-aws-observation.json"
+								href={performanceFinalEvidenceUrl}
 								target="_blank"
 								rel="noreferrer"
 							>
@@ -671,8 +667,8 @@ export function EvidencePage() {
 							<h4>生命周期与清理边界</h4>
 							<p>
 								最终 Run 已删除 exact Stack 与 babysteps-performance-*；共享
-								NAT、RDS、ALB、OIDC 和 Foundation 删除为
-								explicitDeny。清理后九类项目运行资源均为 0。
+								NAT、RDS、ALB、OIDC 和 Foundation 删除为 explicitDeny。清理后 12
+								类项目运行资源均为 0。
 							</p>
 						</article>
 						<article>
@@ -689,63 +685,41 @@ export function EvidencePage() {
 						aria-labelledby="performance-runtime-timeline-title"
 					>
 						<h4 id="performance-runtime-timeline-title">
-							真实云端验证与恢复时间线
+							临时 AWS 验证与恢复时间线
 						</h4>
 						<ol>
 							<li>
-								<a
-									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31760380214"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Run 31760380214
-								</a>
+								<code>Run 33160455921</code>
+								：commit e40008e056d2 的最终合同完成 5 条真实页面路径、415
+								个浏览器事件、ECS Cleaner 103 条幂等写入、Live Dashboard
+								双端截图与录屏；清理前仍有 80 条 SQS
+								可见消息，因此不把本轮描述成全量排空；随后 Schema、精确项目
+								Stack 与 12 类项目资源全部归零。
+							</li>
+							<li>
+								<code>Run 31760380214</code>
 								：ECS 任务已实际启动；旧 Cleaner bundle
 								在模块加载期退出，尚未读取 Secret
 								或连接数据库，因此不把它算成业务成功。
 							</li>
 							<li>
-								<a
-									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31761586956"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Recovery 31761586956
-								</a>
+								<code>Recovery 31761586956</code>
 								：短期 OIDC
 								身份只删除上述精确失败栈，并以九类项目资源归零作为完成条件。
 							</li>
 							<li>
-								<a
-									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31763815468"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Run 31763815468
-								</a>
+								<code>Run 31763815468</code>
 								：PostgreSQL 报 42P18，定位到 format 参数缺少显式 text
 								类型；修复后由 Recovery 31764528855 删除失败栈并再次验证零残留。
 							</li>
 							<li>
-								<a
-									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Run 31765573258
-								</a>
+								<code>Run 31765573258</code>
 								：commit 485999c 的最终闭环成功，ECS Cleaner exitCode=0，
 								sampleCount=1，p50=p75=p95=321；Schema、Stack
 								与九类项目资源均完成清理。
 							</li>
 							<li>
-								<a
-									href="https://github.com/Tiancheng-Xu/babysteps/actions/runs/32626397427"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Run 32626397427
-								</a>
+								<code>Run 32626397427</code>
 								：commit acd4898f61fc 的历史复验成功，受控 LCP 为 321ms， ECS
 								Cleaner exitCode=0；Schema 与精确项目 Stack 已删除，项目 ECS
 								Cluster 为 0，共享 Foundation 保持受保护。
@@ -849,8 +823,8 @@ export function EvidencePage() {
 				<div className="evidence-proof-gallery">
 					<figure>
 						<img
-							src={performanceDashboardDesktopImage}
-							alt="BabySteps 性能统计页桌面端本地响应式验证"
+							src={performanceFinalDesktopImage}
+							alt="最终 AWS 性能统计桌面端真实页面截图"
 							loading="lazy"
 						/>
 						<figcaption>
@@ -858,13 +832,14 @@ export function EvidencePage() {
 							时间、页面、指标、环境、版本五个筛选，以及“无演示数据兜底”。
 							<br />
 							<strong>证明什么：</strong>
-							桌面端会诚实展示上游不可用，不使用伪造曲线或 Mock 统计。
+							1440px 页面直接读取临时 AWS Live API，展示真实样本、覆盖状态和 p50
+							/ p75 / p95；不使用伪造曲线或 Mock 统计。
 						</figcaption>
 					</figure>
 					<figure>
 						<img
-							src={performanceDashboardMobileImage}
-							alt="BabySteps 性能统计页 390 像素手机端本地响应式验证"
+							src={performanceFinalMobileImage}
+							alt="最终 AWS 性能统计 390 像素手机端真实页面截图"
 							loading="lazy"
 						/>
 						<figcaption>
@@ -872,8 +847,8 @@ export function EvidencePage() {
 							视口内筛选器与状态提示保持单列可读。
 							<br />
 							<strong>证明什么：</strong>
-							手机端没有根级横向溢出；该截图证明 UI，历史云端结果由 Run
-							32626397427 的工件与清理盘点证明，新合同仍待云端复验。
+							手机端没有根级横向溢出；截图来自同一 Run 的真实 Live API，取证后
+							AWS 临时项目资源已全部清理。
 						</figcaption>
 					</figure>
 				</div>
@@ -885,59 +860,59 @@ export function EvidencePage() {
 						<div>
 							<p className="section-kicker">VISIBLE PROOF · AFTER CLEANUP</p>
 							<h3 id="performance-recorded-proof-title">
-								关闭收费资源后的可复核页面
+								本地浏览器接临时 AWS、截图与录屏
 							</h3>
 						</div>
 						<span className="evidence-diagram-card__status">
-							历史快照 · 非实时
+							真实 Run 截图 · 取证后已清理
 						</span>
 					</header>
 					<p>
-						历史 AWS 闭环完成后已删除项目 Schema 与临时
-						Stack，因此页面不会伪装成持续在线监控。 当实时 API
-						返回不可用时，它展示 Run 32626397427
-						留下的最后一次真实统计，并明确标注样本数、分位数和清理状态；它不证明
-						PR #36 新合同已经完成云端验收。
+						截图和录屏由本地 Chromium、Vite Preview 和本地 Worker 代理连接临时
+						AWS API、SQS、ECS 与 PostgreSQL 后采集；随后 Run 33160455921
+						删除项目 Schema 与临时 Stack，并用固定清单验证零残留。
+						因此这些媒体证明真实运行窗口，公开页面则诚实保持非实时，不伪装成持续在线
+						AWS 服务。
 					</p>
 					<div className="evidence-screenshot-grid">
 						<figure>
 							<img
-								src={performanceSnapshotDesktopImage}
-								alt="性能历史快照桌面端真实页面截图"
+								src={performanceFinalDesktopImage}
+								alt="最终 AWS 性能统计桌面端真实页面截图"
 								loading="lazy"
 							/>
 							<figcaption>
-								<strong>桌面证据：</strong>1440 像素完整页面，显示“历史快照 ·
-								非实时”、样本 1、p50/p75/p95=321ms、Run 链接与项目资源已清理。
+								<strong>桌面证据：</strong>1440 像素完整 Live 页面，显示 Core
+								Web Vitals、导航、资源、错误、Web3 指标与真实覆盖状态。
 							</figcaption>
 						</figure>
 						<figure>
 							<img
-								src={performanceSnapshotMobileImage}
-								alt="性能历史快照 390 像素手机端真实页面截图"
+								src={performanceFinalMobileImage}
+								alt="最终 AWS 性能统计 390 像素手机端真实页面截图"
 								loading="lazy"
 							/>
 							<figcaption>
 								<strong>手机证据：</strong>390
-								像素完整页面无根级横向溢出，筛选器、状态和真实快照保持单列可读。
+								像素完整页面无根级横向溢出，筛选器、状态和全量指标保持单列可读。
 							</figcaption>
 						</figure>
 					</div>
 					<figure className="evidence-video-proof">
 						<video
-							aria-label="性能历史快照页面滚动走读录屏"
+							aria-label="最终 AWS 性能统计页面走读录屏"
 							controls
 							muted
 							playsInline
 							preload="metadata"
-							poster={performanceSnapshotDesktopImage}
+							poster={performanceFinalDesktopImage}
 						>
-							<source src={performanceSnapshotVideo} type="video/mp4" />
-							当前浏览器不支持 MP4 视频播放。
+							<source src={performanceFinalVideo} type="video/webm" />
+							当前浏览器不支持 WebM 视频播放。
 						</video>
 						<figcaption>
-							5.8 秒无声滚动录屏，只包含本地验证页面；不包含账号、Token、Cookie
-							或其他窗口内容。
+							4.84 秒无声走读录屏，只包含真实 Live
+							Dashboard；不包含账号、Token、 Cookie 或其他窗口内容。
 						</figcaption>
 					</figure>
 				</section>

@@ -26,6 +26,8 @@ Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，
 
 同日使用公开 Worker API 与 Sepolia V2 完成 challenge-sign-verify、canonical D1 草稿、Provider 请求、Owner 审核、VRF 激活、精确 approve、购买、链下绑定、用户名保存与购买门控评论，并从公开 API 读回任务与评论。脱敏证据见 [`2026-08-12-public-api-closed-loop.json`](2026-08-12-public-api-closed-loop.json)；文件不包含 Cookie、签名、私钥或密码。
 
+2026-08-28 最终性能观测 Run `33160455921` 以本地 Chromium、Vite Preview 和本地 Worker 代理连接临时 AWS 后端，访问 5 条页面路径，并让 103 条事件穿过 API Gateway/Lambda → SQS/DLQ → 一次性 ECS Cleaner → PostgreSQL → Live Dashboard 完整链路，同时保存 1440/390 双端截图和录屏。旅程共采集 415 条事件，但清理前仍有 80 条 SQS 可见消息，因此不宣称全量队列排空。取证后已验证 Schema 不存在、精确项目 Stack 不存在、12 类项目资源全部为 0；共享 VPC、NAT、PostgreSQL、OIDC 与 Foundation 保持受保护。机器证据见 [`2026-08-28-performance-aws-final.json`](2026-08-28-performance-aws-final.json)。
+
 ## 后续业务闭环证据清单
 
 部署时必须逐项保存以下证据：

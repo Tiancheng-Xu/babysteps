@@ -26,7 +26,7 @@ describe("EvidencePage", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("separates the historical AWS performance proof from the pending current contract", () => {
+	it("shows the final verified AWS performance lifecycle with visible proof", () => {
 		render(<EvidencePage />);
 
 		expect(
@@ -43,17 +43,15 @@ describe("EvidencePage", () => {
 			screen.getByText(/账户级复用、零长期密钥、角色本身不收费/u),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: "真实云端验证与恢复时间线" }),
+			screen.getByRole("heading", { name: "临时 AWS 验证与恢复时间线" }),
 		).toBeTruthy();
 		expect(screen.getByText(/31760380214/u)).toBeTruthy();
 		expect(screen.getByText(/31761586956/u)).toBeTruthy();
-		expect(screen.getAllByText(/32626397427/u).length).toBeGreaterThan(0);
-		expect(screen.getAllByText(/commit acd4898f61fc/u).length).toBeGreaterThan(
+		expect(screen.getAllByText(/33160455921/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/commit e40008e056d2/u).length).toBeGreaterThan(
 			0,
 		);
-		expect(
-			screen.getAllByText(/sampleCount=1，p50=p75=p95=321/u).length,
-		).toBeGreaterThan(0);
+		expect(screen.getAllByText(/5 条真实页面路径/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByText(/Schema 与精确项目 Stack/u).length,
 		).toBeGreaterThan(0);
@@ -61,25 +59,20 @@ describe("EvidencePage", () => {
 			screen.getAllByText(/项目 ECS Cluster 为 0/u).length,
 		).toBeGreaterThan(0);
 		expect(screen.getByRole("link", { name: "查看机器可读证据" })).toBeTruthy();
-		expect(screen.getByText("历史闭环已验证 · 新合同待云端复验")).toBeTruthy();
+		expect(screen.getByText("最终闭环已验证 · 取证后零残留")).toBeTruthy();
+		expect(screen.queryByText(/新合同待云端复验/u)).toBeNull();
+		expect(screen.getByText("真实 Run 截图 · 取证后已清理")).toBeTruthy();
 		expect(
-			screen.getAllByText(/0301a670 \+\s*a355227/u).length,
-		).toBeGreaterThan(0);
+			screen.getAllByRole("img", {
+				name: "最终 AWS 性能统计桌面端真实页面截图",
+			}).length,
+		).toBe(2);
 		expect(
-			screen.getAllByText(/新合同仍待云端复验|新合同已经完成云端验收/u).length,
-		).toBeGreaterThan(0);
-		expect(screen.getByText("历史快照 · 非实时")).toBeTruthy();
-		expect(
-			screen.getByRole("img", {
-				name: "性能历史快照桌面端真实页面截图",
-			}),
-		).toBeTruthy();
-		expect(
-			screen.getByRole("img", {
-				name: "性能历史快照 390 像素手机端真实页面截图",
-			}),
-		).toBeTruthy();
-		expect(screen.getByLabelText("性能历史快照页面滚动走读录屏")).toBeTruthy();
+			screen.getAllByRole("img", {
+				name: "最终 AWS 性能统计 390 像素手机端真实页面截图",
+			}).length,
+		).toBe(2);
+		expect(screen.getByLabelText("最终 AWS 性能统计页面走读录屏")).toBeTruthy();
 	});
 
 	it("shows the verified StarBuddy Sepolia draw without claiming a live fusion", () => {
