@@ -128,6 +128,11 @@ jobs:
             done
             test "$deleted" = "true"
           fi
+
+      - name: Delete exact orphaned task definitions
+        id: delete-task-definitions
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && (steps.validate-target.outputs.stack_state == 'absent' || steps.delete-stack.outcome == 'success')
+        run: |
           for family in "babysteps-performance-cleaner-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME"; do
             definitions="$(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns' --output text)"
             for definition in $definitions; do
@@ -137,7 +142,7 @@ jobs:
             done
           done
       - name: Verify exact prefix and tag inventory is zero
-        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && (steps.validate-target.outputs.stack_state == 'absent' || steps.delete-stack.outcome == 'success')
+        if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && (steps.validate-target.outputs.stack_state == 'absent' || steps.delete-stack.outcome == 'success') && steps.delete-task-definitions.outcome == 'success'
         env:
           STACK_STATE: ${{ steps.validate-target.outputs.stack_state }}
           SCHEMA_CLEANUP_OUTCOME: ${{ steps.schema-cleanup.outcome }}
