@@ -43,6 +43,18 @@ describe("BabySteps browser routes", () => {
 		expect(globalThis.location.hash).toBe("");
 	});
 
+	it("publishes the canonical trailing-slash Evidence link", () => {
+		render(
+			<MemoryRouter initialEntries={["/"]}>
+				<AppRoutes interactive={false} />
+			</MemoryRouter>,
+		);
+
+		expect(
+			screen.getByRole("link", { name: "工作证据" }).getAttribute("href"),
+		).toBe("/evidence/");
+	});
+
 	it("renders a truthful not-found route instead of silently returning home", () => {
 		render(
 			<MemoryRouter initialEntries={["/missing-page"]}>

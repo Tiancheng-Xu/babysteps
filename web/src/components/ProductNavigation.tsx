@@ -15,7 +15,7 @@ export function ProductNavigation() {
 						className="product-nav__item"
 						end={item.path === "/"}
 						key={item.view}
-						to={item.path}
+						to={item.view === "evidence" ? "/evidence/" : item.path}
 					>
 						{item.label}
 					</NavLink>

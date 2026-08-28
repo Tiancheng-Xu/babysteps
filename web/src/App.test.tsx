@@ -445,7 +445,7 @@ describe("BabySteps App", () => {
 			within(navigation)
 				.getByRole("link", { name: "工作证据" })
 				.getAttribute("href"),
-		).toBe("/evidence");
+		).toBe("/evidence/");
 	});
 
 	it("keeps unavailable activities button-free and still lets an available card submit", () => {
