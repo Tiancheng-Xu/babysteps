@@ -189,6 +189,22 @@ test("the real browser run boots production config and preserves visual Evidence
 		byName("Capture live performance dashboard Evidence").run,
 		/--version "\$\{GITHUB_SHA:0:12\}"/,
 	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
+		/environment=production/,
+	);
+	assert.doesNotMatch(
+		byName("Query and verify real browser aggregates").run,
+		/environment=development/,
+	);
+	assert.match(
+		byName("Capture real control-plane snapshot before cleanup").run,
+		/OutputKey=='ApiEndpoint'/,
+	);
+	assert.doesNotMatch(
+		byName("Capture real control-plane snapshot before cleanup").run,
+		/cloudformation describe-stack-resource/,
+	);
 	const upload = steps.find(
 		(step) => step.uses === "actions/upload-artifact@v4",
 	);
