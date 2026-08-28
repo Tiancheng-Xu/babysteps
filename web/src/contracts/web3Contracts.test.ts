@@ -127,4 +127,20 @@ describe("web3 contract configuration", () => {
 			}),
 		).toThrow("Privy app ID must be a public application identifier.");
 	});
+
+	it("allows HTTP only for explicit loopback performance origins", () => {
+		expect(
+			contractConfig.parsePublicAppConfig({
+				apiUrl: "http://127.0.0.1:8788/",
+			}),
+		).toEqual({
+			privyAppId: undefined,
+			apiUrl: "http://127.0.0.1:8788",
+		});
+		expect(() =>
+			contractConfig.parsePublicAppConfig({
+				apiUrl: "http://performance.example",
+			}),
+		).toThrow("BabySteps API URL must use HTTPS outside localhost.");
+	});
 });

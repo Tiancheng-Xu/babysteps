@@ -163,7 +163,7 @@ jobs:
         run: |
           test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
           RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" \
-            nohup pnpm --filter @babysteps/web exec vite --host 127.0.0.1 --port 4173 \
+            nohup pnpm --filter @babysteps/web exec vite --mode production --host 127.0.0.1 --port 4173 \
             > "$RUNNER_TEMP/local-web.log" 2>&1 &
           web_pid=$!
           echo "pid=$web_pid" >> "$GITHUB_OUTPUT"
@@ -176,7 +176,7 @@ jobs:
       - name: Browser journey through real Chromium
         run: |
           pnpm exec playwright install --with-deps chromium
-          node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --output evidence/browser-journey.json
+          node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --artifacts-dir evidence/browser --output evidence/browser-journey.json
       - name: Run one on-demand ECS cleaning task
         id: cleaner
         run: |
@@ -222,6 +222,9 @@ jobs:
         run: |
           curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=development&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
           node -e 'const s=require("./evidence/performance-stats.json");const samples=(s.vitals??[]).reduce((n,v)=>n+(v.sampleCount??0),0)+(s.navigation??[]).reduce((n,v)=>n+(v.sampleCount??0),0);if(samples<1)process.exit(1)'
+      - name: Capture live performance dashboard Evidence
+        run: |
+          node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --artifacts-dir evidence/browser --dashboard-only --version "${GITHUB_SHA:0:12}" --output evidence/performance-dashboard-journey.json
       - name: Capture sanitized run metadata
         if: always()
         run: |
@@ -392,5 +395,6 @@ jobs:
         if: always()
         with:
           name: babysteps-performance-evidence-${{ github.run_id }}
-          path: evidence/*.json
+          path: evidence/
+          if-no-files-found: error
           retention-days: 14
