@@ -55,9 +55,10 @@ import performanceArchitecture from "../../../docs/architecture/starbuddy-perfor
 import performanceSequence from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import performanceDesktop from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceMobile from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
-import performanceSnapshotDesktop from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png";
-import performanceSnapshotMobile from "../../../docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png";
-import performanceSnapshotVideo from "../../../docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4";
+import performanceFinalDesktop from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png";
+import performanceFinalMobile from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png";
+import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm";
+import performanceFinalEvidence from "../../../docs/evidence/deployment/2026-08-28-performance-aws-final.json?url";
 import renderingArchitecture from "../../../docs/architecture/starbuddy-rendering-global-architecture.svg";
 import renderingSequence from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import renderingDesktop from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -113,15 +114,16 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
   <img src={performanceDesktop} alt="性能统计页桌面端" />
   <img src={performanceMobile} alt="性能统计页手机端" />
   <h3>要求、实现与证据映射</h3>
-	<p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · 历史闭环已验证 · 新合同待云端复验</p>
-	<p>PR #36 · 0301a670 + a355227</p>
-	<p>Run 32626397427 · sampleCount=1，p50=p75=p95=321 · 项目 ECS Cluster 为 0</p>
+	<p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · 最终闭环已验证 · 取证后零残留</p>
+	<p>commit e40008e056d2 · Run 33160455921</p>
+	<p>5 条真实页面路径 · 415 个浏览器事件 · ECS Cleaner 处理并写入 103 条 · 80 条 SQS 可见消息 · 未宣称全量排空 · 12 类项目资源全部为 0</p>
+	<code>web/src/pages/PerformanceDashboardPage.tsx</code>
 	<a>查看机器可读证据</a>
-	<p>无演示数据兜底 · 历史云端结果由 Run 证明 · 新合同仍待云端复验</p>
-	<p>关闭收费资源后的可复核页面 · 历史快照 · 非实时</p>
-	<img src={performanceSnapshotDesktop} alt="性能历史快照桌面端真实页面截图" />
-	<img src={performanceSnapshotMobile} alt="性能历史快照 390 像素手机端真实页面截图" />
-	<video aria-label="性能历史快照页面滚动走读录屏"><source src={performanceSnapshotVideo} /></video>
+	<a href={performanceFinalEvidence}>查看机器可读证据</a>
+	<p>无演示数据兜底 · 本地浏览器接临时 AWS、截图与录屏 · 真实 Run 截图 · 取证后已清理</p>
+	<img src={performanceFinalDesktop} alt="最终 AWS 性能统计桌面端真实页面截图" />
+	<img src={performanceFinalMobile} alt="最终 AWS 性能统计 390 像素手机端真实页面截图" />
+	<video aria-label="最终 AWS 性能统计页面走读录屏"><source src={performanceFinalVideo} /></video>
 	<p>应反向优化的共享能力</p>
 </section>
 <section>
@@ -203,11 +205,12 @@ const validAssetFacts = [
 		width: 2400,
 		height: 1600,
 		text: `<svg width="2400" height="1600">
-			<text>Browser SDK</text><text>Cloudflare Worker</text><text>Origin Token</text>
+			<text>Browser SDK</text><text>Cloudflare Worker 合同</text><text>Origin Token</text>
 			<text>API Gateway</text><text>SQS 主队列</text><text>SQS DLQ</text>
 			<text>一次性 ECS Fargate Cleaner</text><text>共享 PostgreSQL</text>
 			<text>p50 / p75 / p95</text><text>GitHub Actions + OIDC</text>
-			<text>项目栈自动清理</text><text>历史闭环已验证</text><text>新性能合同云端待验证</text><text>Run 32626397427</text>
+			<text>项目栈自动清理</text><text>临时 AWS 闭环已验证</text><text>零残留</text><text>Run 33160455921</text>
+			<text>415 collected / 103 inserted</text><text>清理前 SQS visible=80</text><text>未验证全量排空</text><text>12 类项目资源归零</text>
 		</svg>`,
 	},
 	{
@@ -221,7 +224,8 @@ const validAssetFacts = [
 			<text>04 ECS 清洗</text><text>05 真实统计</text><text>06 Evidence 与清理</text>
 			<text>sendBeacon</text><text>失败静默</text><text>maxReceiveCount = 3</text>
 			<text>幂等写入</text><text>sampleCount</text><text>DROP SCHEMA</text><text>delete-stack</text>
-			<text>Run 32626397427</text><text>ECS exitCode=0</text>
+			<text>Run 33160455921</text><text>415 collected</text>
+			<text>ECS 103 inserted</text><text>SQS visible=80</text><text>全量队列排空未验证</text><text>12 类项目资源全部为 0</text>
 		</svg>`,
 	},
 	{
@@ -340,7 +344,95 @@ const validAssetFacts = [
 		text: "",
 		sha256: "4734e52dd36d6cedf4b99d8987f282e1e8ad5f21561da1abc24d832bbb57bf9c",
 	},
+	{
+		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+		exists: true,
+		bytes: 1803775,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "49ce112fe7937cde482953aced69bf6f08aba4414367c55aa370a35b0f22d04c",
+	},
+	{
+		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+		exists: true,
+		bytes: 1503359,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "c7177a4283ff33541fded21f36cfff082d52cb6190f299b15b586b097ec09574",
+	},
+	{
+		path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+		exists: true,
+		bytes: 624302,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "568e2dfd0d0ae4e611f7b3b16766bf3374884073c867e246048cb9ffc367c6aa",
+	},
 ];
+
+const validMachineEvidence = {
+	schemaVersion: 3,
+	status: "verified-and-cleaned",
+	workflow: {
+		runId: 33160455921,
+		commit: "e40008e056d24199641fa978142f706051889f3b",
+		validationSurface:
+			"local Chromium and Vite preview with local Worker proxy connected to temporary AWS resources",
+	},
+	browserJourney: { batchCount: 25, eventCount: 415 },
+	queueBeforeCleanup: { visibleMessages: 80, fullyDrained: false },
+	cleaner: {
+		processed: 103,
+		inserted: 103,
+		discarded: 0,
+		retryableFailures: 0,
+		exitCode: 0,
+	},
+	dashboard: {
+		mode: "live",
+		source: "live-api",
+		media: {
+			desktop: {
+				path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+				sha256:
+					"49ce112fe7937cde482953aced69bf6f08aba4414367c55aa370a35b0f22d04c",
+			},
+			mobile390: {
+				path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+				sha256:
+					"c7177a4283ff33541fded21f36cfff082d52cb6190f299b15b586b097ec09574",
+			},
+			recording: {
+				path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+				sha256:
+					"568e2dfd0d0ae4e611f7b3b16766bf3374884073c867e246048cb9ffc367c6aa",
+			},
+		},
+	},
+	cleanup: {
+		schemaDeleted: true,
+		schemaAbsenceVerified: true,
+		cloudFormationStackAbsent: true,
+		remainingProjectResources: 0,
+		inventory: {
+			ecr: 0,
+			ecsClusters: 0,
+			ecsTasks: 0,
+			taskDefinitions: 0,
+			sqsAndDlq: 0,
+			apiGateway: 0,
+			lambda: 0,
+			cloudWatchLogGroups: 0,
+			secrets: 0,
+			securityGroups: 0,
+			securityGroupIngress: 0,
+			iamRoles: 0,
+		},
+	},
+};
 
 function validate(
 	mapText,
@@ -348,6 +440,7 @@ function validate(
 	workerEvidenceText = validWorkerEvidence,
 	evidencePageText = validEvidencePage,
 	assetFacts = validAssetFacts,
+	machineEvidence = validMachineEvidence,
 ) {
 	return validateDeliveryEvidence(
 		mapText,
@@ -355,6 +448,7 @@ function validate(
 		workerEvidenceText,
 		evidencePageText,
 		assetFacts,
+		machineEvidence,
 	);
 }
 
@@ -726,7 +820,7 @@ test("rejects a screenshot whose recorded proof hash no longer matches", () => {
 	);
 });
 
-test("rejects performance Evidence without the post-cleanup recording", () => {
+test("rejects performance Evidence without the final AWS recording", () => {
 	const validMap = mapWith(requiredHeaders, [
 		[
 			"性能观测",
@@ -737,12 +831,11 @@ test("rejects performance Evidence without the post-cleanup recording", () => {
 		],
 	]);
 	const withoutVideo = validEvidencePage.replaceAll(
-		"performance-verified-snapshot-walkthrough.mp4",
+		"performance-live.webm",
 		"missing-recording.mp4",
 	);
 	const assetsWithoutVideo = validAssetFacts.filter(
-		(asset) =>
-			!asset.path.endsWith("performance-verified-snapshot-walkthrough.mp4"),
+		(asset) => !asset.path.endsWith("performance-live.webm"),
 	);
 
 	assert.match(
@@ -753,6 +846,87 @@ test("rejects performance Evidence without the post-cleanup recording", () => {
 			withoutVideo,
 			assetsWithoutVideo,
 		).join("\n"),
-		/performance snapshot recording/,
+		/final AWS performance recording/,
+	);
+});
+
+test("rejects final AWS evidence whose Run or commit drifts", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["性能观测", "闭环", "`aws/`", "机器证据", "`complete`"],
+	]);
+	const changed = structuredClone(validMachineEvidence);
+	changed.workflow.runId = 1;
+	changed.workflow.commit = "wrong";
+
+	const errors = validate(
+		validMap,
+		validArchitecture,
+		validWorkerEvidence,
+		validEvidencePage,
+		validAssetFacts,
+		changed,
+	).join("\n");
+	assert.match(errors, /final AWS evidence Run ID mismatch/);
+	assert.match(errors, /final AWS evidence commit mismatch/);
+});
+
+test("rejects final AWS evidence that claims a full queue drain", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["性能观测", "闭环", "`aws/`", "机器证据", "`complete`"],
+	]);
+	const changed = structuredClone(validMachineEvidence);
+	changed.queueBeforeCleanup.fullyDrained = true;
+	changed.queueBeforeCleanup.visibleMessages = 0;
+
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			validEvidencePage,
+			validAssetFacts,
+			changed,
+		).join("\n"),
+		/final AWS evidence must disclose the unverified full queue drain/,
+	);
+});
+
+test("rejects final AWS evidence with nonzero cleanup inventory", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["性能观测", "闭环", "`aws/`", "机器证据", "`complete`"],
+	]);
+	const changed = structuredClone(validMachineEvidence);
+	changed.cleanup.inventory.sqsAndDlq = 1;
+
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			validEvidencePage,
+			validAssetFacts,
+			changed,
+		).join("\n"),
+		/final AWS evidence cleanup inventory must be zero/,
+	);
+});
+
+test("rejects final AWS evidence whose media hash drifts", () => {
+	const validMap = mapWith(requiredHeaders, [
+		["性能观测", "闭环", "`aws/`", "机器证据", "`complete`"],
+	]);
+	const changed = structuredClone(validMachineEvidence);
+	changed.dashboard.media.desktop.sha256 = "wrong";
+
+	assert.match(
+		validate(
+			validMap,
+			validArchitecture,
+			validWorkerEvidence,
+			validEvidencePage,
+			validAssetFacts,
+			changed,
+		).join("\n"),
+		/final AWS evidence desktop media hash mismatch/,
 	);
 });

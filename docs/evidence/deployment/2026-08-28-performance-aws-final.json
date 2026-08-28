@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 3,
+  "status": "verified-and-cleaned",
+  "observedAt": "2026-08-28",
+  "workflow": {
+    "name": "BabySteps AWS Performance Evidence",
+    "runId": 33160455921,
+    "commit": "e40008e056d24199641fa978142f706051889f3b",
+    "region": "us-east-1",
+    "mode": "manual temporary validation",
+    "validationSurface": "local Chromium and Vite preview with local Worker proxy connected to temporary AWS resources"
+  },
+  "browserJourney": {
+    "routes": [
+      "/",
+      "/tasks",
+      "/profile",
+      "/performance",
+      "/evidence"
+    ],
+    "batchCount": 25,
+    "eventCount": 415,
+    "observedMetrics": [
+      "FCP",
+      "LCP",
+      "TTFB",
+      "navigation.dom_ready",
+      "navigation.download",
+      "navigation.request_wait",
+      "navigation.tcp",
+      "navigation.window_load",
+      "resource.script.duration"
+    ]
+  },
+  "pipeline": [
+    "Local Chromium and Vite preview journey",
+    "Local Worker proxy implementing the Cloudflare Worker contract",
+    "API Gateway and ingest Lambda",
+    "SQS with DLQ",
+    "on-demand ECS Fargate cleaner",
+    "project PostgreSQL schema",
+    "query Lambda and live dashboard",
+    "sanitized workflow artifact",
+    "schema and stack cleanup"
+  ],
+  "queueBeforeCleanup": {
+    "visibleMessages": 80,
+    "fullyDrained": false
+  },
+  "cleaner": {
+    "processed": 103,
+    "inserted": 103,
+    "deduplicated": 0,
+    "discarded": 0,
+    "retryableFailures": 0,
+    "writeDurationMs": 506,
+    "durationMs": 22041,
+    "exitCode": 0
+  },
+  "dashboard": {
+    "mode": "live",
+    "source": "live-api",
+    "window": "1h",
+    "visibleSampleCount": 3,
+    "vitals": {
+      "LCP": { "sampleCount": 1, "p50": 960, "p75": 960, "p95": 960 },
+      "FCP": { "sampleCount": 1, "p50": 960, "p75": 960, "p95": 960 },
+      "TTFB": { "sampleCount": 1, "p50": 8.5, "p75": 8.5, "p95": 8.5 }
+    },
+    "navigationSampleCount": 3,
+    "scriptResourceSampleCount": 79,
+    "scriptResourceP50Ms": 104.1,
+    "scriptResourceP75Ms": 138.2,
+    "scriptResourceP95Ms": 171.4,
+    "errorSamples": 0,
+    "media": {
+      "desktop": {
+        "path": "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+        "sha256": "49ce112fe7937cde482953aced69bf6f08aba4414367c55aa370a35b0f22d04c"
+      },
+      "mobile390": {
+        "path": "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+        "sha256": "c7177a4283ff33541fded21f36cfff082d52cb6190f299b15b586b097ec09574"
+      },
+      "recording": {
+        "path": "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+        "sha256": "568e2dfd0d0ae4e611f7b3b16766bf3374884073c867e246048cb9ffc367c6aa"
+      }
+    }
+  },
+  "cleanup": {
+    "schemaDeleted": true,
+    "schemaAbsenceVerified": true,
+    "cloudFormationStackAbsent": true,
+    "remainingProjectResources": 0,
+    "inventory": {
+      "ecr": 0,
+      "ecsClusters": 0,
+      "ecsTasks": 0,
+      "taskDefinitions": 0,
+      "sqsAndDlq": 0,
+      "apiGateway": 0,
+      "lambda": 0,
+      "cloudWatchLogGroups": 0,
+      "secrets": 0,
+      "securityGroups": 0,
+      "securityGroupIngress": 0,
+      "iamRoles": 0
+    },
+    "sharedResources": {
+      "vpc": "protected-read-only",
+      "nat": "protected-read-only",
+      "database": "protected-read-only",
+      "oidc": "protected-read-only",
+      "artifactBucket": "protected-read-only",
+      "foundation": "explicit deny cleanup"
+    }
+  },
+  "security": {
+    "browserAwsCredentials": false,
+    "longLivedAwsAccessKey": false,
+    "githubIdentity": "short-lived OIDC session",
+    "publishedSecrets": false
+  },
+  "limitations": [
+    "This run proves the complete temporary validation lifecycle with controlled browser traffic, not production traffic scale.",
+    "The journey generated 415 browser events, while the captured cleaner task inserted 103 events and the pre-cleanup control-plane snapshot still showed 80 visible SQS messages. A full queue drain was not verified; the remaining temporary queue was removed with the project stack after evidence capture.",
+    "CLS, INP, long-task, error and Web3 metrics were instrumented but had no sample during this short controlled journey.",
+    "The project stack and project database schema were deleted after evidence capture; the public dashboard does not claim a continuously running AWS backend.",
+    "Shared VPC, NAT, PostgreSQL, OIDC and artifact storage were protected and were not deleted by project cleanup."
+  ]
+}

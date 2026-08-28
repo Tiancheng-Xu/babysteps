@@ -96,7 +96,7 @@ const expectedDiagramAssets = [
 		minimumHeight: 1400,
 		markers: [
 			"Browser SDK",
-			"Cloudflare Worker",
+			"Cloudflare Worker 合同",
 			"Origin Token",
 			"API Gateway",
 			"SQS 主队列",
@@ -106,9 +106,13 @@ const expectedDiagramAssets = [
 			"p50 / p75 / p95",
 			"GitHub Actions + OIDC",
 			"项目栈自动清理",
-			"历史闭环已验证",
-			"新性能合同云端待验证",
-			"Run 32626397427",
+			"临时 AWS 闭环已验证",
+			"零残留",
+			"Run 33160455921",
+			"415 collected / 103 inserted",
+			"清理前 SQS visible=80",
+			"未验证全量排空",
+			"12 类项目资源归零",
 		],
 	},
 	{
@@ -130,8 +134,12 @@ const expectedDiagramAssets = [
 			"sampleCount",
 			"DROP SCHEMA",
 			"delete-stack",
-			"Run 32626397427",
-			"ECS exitCode=0",
+			"Run 33160455921",
+			"415 collected",
+			"ECS 103 inserted",
+			"SQS visible=80",
+			"全量队列排空未验证",
+			"12 类项目资源全部为 0",
 		],
 	},
 	{
@@ -258,54 +266,34 @@ const expectedDiagramAssets = [
 			"5d40847d687edb07dc0157e71d7a0a96f67b50fe29cdd6ff4effb775f530a98b",
 	},
 	{
-		kind: "performance desktop screenshot",
-		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png",
+		kind: "final AWS performance desktop screenshot",
+		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 95710,
+		expectedBytes: 1803775,
 		expectedSha256:
-			"54d204fe68e1de477c70bfcca0fb311954e4e186109abd2d9ef607e70359930b",
+			"49ce112fe7937cde482953aced69bf6f08aba4414367c55aa370a35b0f22d04c",
 	},
 	{
-		kind: "performance mobile screenshot",
-		path: "docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png",
+		kind: "final AWS performance mobile screenshot",
+		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 66133,
+		expectedBytes: 1503359,
 		expectedSha256:
-			"47286d2140cb03a53d8ce4d4f01294b36f3af5c2bf9985a2d6210a70036e85a7",
+			"c7177a4283ff33541fded21f36cfff082d52cb6190f299b15b586b097ec09574",
 	},
 	{
-		kind: "performance snapshot desktop screenshot",
-		path: "docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-desktop-1440.png",
+		kind: "final AWS performance recording",
+		path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 576886,
+		expectedBytes: 624302,
 		expectedSha256:
-			"e4718c5f4ea52e3094a32c381e444c80f6461ae599e7a2e2263fdaf6341a22bd",
-	},
-	{
-		kind: "performance snapshot mobile screenshot",
-		path: "docs/evidence/screenshots/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-mobile-390.png",
-		minimumWidth: 0,
-		minimumHeight: 0,
-		markers: [],
-		expectedBytes: 378111,
-		expectedSha256:
-			"f035b7080962738a0d20db39ff67b0a0ac952cde14198493436e08cdd41bb97b",
-	},
-	{
-		kind: "performance snapshot recording",
-		path: "docs/evidence/recordings/2026-08-23-performance-verified-snapshot/performance-verified-snapshot-walkthrough.mp4",
-		minimumWidth: 0,
-		minimumHeight: 0,
-		markers: [],
-		expectedBytes: 1297104,
-		expectedSha256:
-			"4734e52dd36d6cedf4b99d8987f282e1e8ad5f21561da1abc24d832bbb57bf9c",
+			"568e2dfd0d0ae4e611f7b3b16766bf3374884073c867e246048cb9ffc367c6aa",
 	},
 ];
 const evidencePageMarkers = [
@@ -340,20 +328,24 @@ const evidencePageMarkers = [
 	"性能事件闭环时序图",
 	"浏览器 SDK → Worker → AWS",
 	"真实样本数与 p50 / p75 / p95",
-	"历史闭环已验证 · 新合同待云端复验",
-	"0301a670 +",
-	"a355227",
-	"Run 32626397427",
-	"sampleCount=1，p50=p75=p95=321",
-	"项目 ECS Cluster 为 0",
+	"最终闭环已验证 · 取证后零残留",
+	"commit e40008e056d2",
+	"Run 33160455921",
+	"5 条真实页面路径",
+	"415 个浏览器事件",
+	"ECS Cleaner 处理并写入 103 条",
+	"80 条 SQS 可见消息",
+	"未宣称全量排空",
+	"12 类项目资源全部为 0",
 	"查看机器可读证据",
 	"要求、实现与证据映射",
 	"无演示数据兜底",
-	"历史云端结果由 Run",
-	"新合同仍待云端复验",
-	"关闭收费资源后的可复核页面",
-	"历史快照 · 非实时",
-	"性能历史快照页面滚动走读录屏",
+	"真实 Run 截图 · 取证后已清理",
+	"本地浏览器接临时 AWS、截图与录屏",
+	"web/src/pages/PerformanceDashboardPage.tsx",
+	"最终 AWS 性能统计桌面端真实页面截图",
+	"最终 AWS 性能统计 390 像素手机端真实页面截图",
+	"最终 AWS 性能统计页面走读录屏",
 	"全局架构图",
 	"核心业务时序图",
 	"看哪里",
@@ -401,12 +393,121 @@ function normalizeStatus(value) {
 	return value.replaceAll("`", "").trim().toLowerCase();
 }
 
+function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
+	const errors = [];
+	if (!machineEvidence || typeof machineEvidence !== "object") {
+		return ["final AWS machine evidence is missing"];
+	}
+	if (machineEvidence.schemaVersion !== 3) {
+		errors.push("final AWS evidence schema version mismatch");
+	}
+	if (machineEvidence.workflow?.runId !== 33160455921) {
+		errors.push("final AWS evidence Run ID mismatch");
+	}
+	if (
+		machineEvidence.workflow?.commit !==
+		"e40008e056d24199641fa978142f706051889f3b"
+	) {
+		errors.push("final AWS evidence commit mismatch");
+	}
+	if (
+		machineEvidence.workflow?.validationSurface !==
+		"local Chromium and Vite preview with local Worker proxy connected to temporary AWS resources"
+	) {
+		errors.push("final AWS evidence validation surface mismatch");
+	}
+	if (
+		machineEvidence.browserJourney?.batchCount !== 25 ||
+		machineEvidence.browserJourney?.eventCount !== 415
+	) {
+		errors.push("final AWS evidence browser journey counts mismatch");
+	}
+	if (
+		machineEvidence.queueBeforeCleanup?.visibleMessages !== 80 ||
+		machineEvidence.queueBeforeCleanup?.fullyDrained !== false
+	) {
+		errors.push(
+			"final AWS evidence must disclose the unverified full queue drain",
+		);
+	}
+	const cleaner = machineEvidence.cleaner;
+	if (
+		cleaner?.processed !== 103 ||
+		cleaner?.inserted !== 103 ||
+		cleaner?.discarded !== 0 ||
+		cleaner?.retryableFailures !== 0 ||
+		cleaner?.exitCode !== 0
+	) {
+		errors.push("final AWS evidence cleaner result mismatch");
+	}
+	if (
+		machineEvidence.dashboard?.mode !== "live" ||
+		machineEvidence.dashboard?.source !== "live-api"
+	) {
+		errors.push("final AWS evidence dashboard source mismatch");
+	}
+	const cleanup = machineEvidence.cleanup;
+	if (
+		cleanup?.schemaDeleted !== true ||
+		cleanup?.schemaAbsenceVerified !== true ||
+		cleanup?.cloudFormationStackAbsent !== true ||
+		cleanup?.remainingProjectResources !== 0
+	) {
+		errors.push("final AWS evidence cleanup state mismatch");
+	}
+	const inventoryKeys = [
+		"ecr",
+		"ecsClusters",
+		"ecsTasks",
+		"taskDefinitions",
+		"sqsAndDlq",
+		"apiGateway",
+		"lambda",
+		"cloudWatchLogGroups",
+		"secrets",
+		"securityGroups",
+		"securityGroupIngress",
+		"iamRoles",
+	];
+	if (
+		inventoryKeys.some((key) => cleanup?.inventory?.[key] !== 0) ||
+		Object.keys(cleanup?.inventory ?? {}).length !== inventoryKeys.length
+	) {
+		errors.push("final AWS evidence cleanup inventory must be zero");
+	}
+	const media = {
+		desktop: {
+			path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+		},
+		mobile390: {
+			path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+		},
+		recording: {
+			path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+		},
+	};
+	for (const [name, expected] of Object.entries(media)) {
+		const recorded = machineEvidence.dashboard?.media?.[name];
+		const asset = assetFacts.find(
+			(candidate) => candidate.path === expected.path,
+		);
+		if (recorded?.path !== expected.path) {
+			errors.push(`final AWS evidence ${name} media path mismatch`);
+		}
+		if (!asset?.sha256 || recorded?.sha256 !== asset.sha256) {
+			errors.push(`final AWS evidence ${name} media hash mismatch`);
+		}
+	}
+	return errors;
+}
+
 export function validateDeliveryEvidence(
 	mapText,
 	architectureText,
 	workerEvidenceText,
 	evidencePageText = "",
 	assetFacts = [],
+	machineEvidence,
 ) {
 	const errors = [];
 	const lines = mapText.split(/\r?\n/);
@@ -528,6 +629,7 @@ export function validateDeliveryEvidence(
 			}
 		}
 	}
+	errors.push(...validateFinalPerformanceEvidence(machineEvidence, assetFacts));
 
 	return errors;
 }
@@ -565,25 +667,39 @@ async function main() {
 	const workerEvidencePath =
 		process.argv[4] ?? "docs/evidence/testing/2026-08-10-worker-d1.md";
 	const evidencePagePath = process.argv[5] ?? "web/src/pages/EvidencePage.tsx";
+	const machineEvidencePath =
+		process.argv[6] ??
+		"docs/evidence/deployment/2026-08-28-performance-aws-final.json";
 	const [
 		mapText,
 		architectureText,
 		workerEvidenceText,
 		evidencePageText,
 		assetFacts,
+		machineEvidenceText,
 	] = await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
 		readFile(workerEvidencePath, "utf8"),
 		readFile(evidencePagePath, "utf8"),
 		Promise.all(expectedDiagramAssets.map(({ path }) => readAssetFact(path))),
+		readFile(machineEvidencePath, "utf8"),
 	]);
+	let machineEvidence;
+	try {
+		machineEvidence = JSON.parse(machineEvidenceText);
+	} catch {
+		console.error("final AWS machine evidence is not valid JSON");
+		process.exitCode = 1;
+		return;
+	}
 	const errors = validateDeliveryEvidence(
 		mapText,
 		architectureText,
 		workerEvidenceText,
 		evidencePageText,
 		assetFacts,
+		machineEvidence,
 	);
 	if (errors.length > 0) {
 		for (const error of errors) console.error(error);
