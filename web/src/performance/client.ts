@@ -59,6 +59,7 @@ export function createPerformanceClient(
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
 	let started = false;
+	let finalVitalsListener: (() => void) | undefined;
 	const isHighPriority = (event: PerformanceEventInput) =>
 		event.type === "metric" || event.type === "error" || event.type === "web3";
 	const queueSize = () => highPriority.length + lowPriority.length;
@@ -247,14 +248,25 @@ export function createPerformanceClient(
 		started = true;
 		void loadWebVitals()
 			.then(({ onCLS, onFCP, onINP, onLCP, onTTFB }) => {
+				if (!started) return;
 				const report =
 					(name: string, unit: "ms" | "score") => (metric: { value: number }) =>
 						record({ type: "metric", name, value: metric.value, unit });
 				onLCP(report("LCP", "ms"));
 				onCLS(report("CLS", "score"));
-				onINP(report("INP", "ms"));
+				onINP(report("INP", "ms"), {
+					durationThreshold: 0,
+				});
 				onFCP(report("FCP", "ms"));
 				onTTFB(report("TTFB", "ms"));
+				finalVitalsListener = () => {
+					if (globalThis.document?.visibilityState !== "hidden") return;
+					void flushAll();
+				};
+				globalThis.document?.addEventListener(
+					"visibilitychange",
+					finalVitalsListener,
+				);
 			})
 			.catch(() => undefined);
 		observe("navigation", (entry) => {
@@ -291,6 +303,13 @@ export function createPerformanceClient(
 			onUnhandledRejection,
 		);
 		globalThis.removeEventListener?.("pagehide", onPageHide);
+		if (finalVitalsListener) {
+			globalThis.document?.removeEventListener(
+				"visibilitychange",
+				finalVitalsListener,
+			);
+			finalVitalsListener = undefined;
+		}
 		observers = [];
 		started = false;
 	};

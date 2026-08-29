@@ -28,6 +28,25 @@ export function formatCleanerSummary(summary: CleanerSummary) {
 	return `${JSON.stringify(summary)}\n`;
 }
 
+export function withinCleanerRuntime(
+	startedAt: number,
+	maxRuntimeMs: number,
+	now = Date.now(),
+) {
+	return now - startedAt < maxRuntimeMs;
+}
+
+function cleanerMaxRuntimeMs() {
+	const value = Number.parseInt(
+		process.env.CLEANER_MAX_RUNTIME_MS ?? "180000",
+		10,
+	);
+	if (!Number.isSafeInteger(value) || value < 30_000 || value > 600_000) {
+		throw new Error("INVALID_CLEANER_MAX_RUNTIME_MS");
+	}
+	return value;
+}
+
 async function runDatabaseMode(mode: string, runId: string) {
 	const projectCredentials = await readDatabaseSecret(
 		required("PROJECT_DATABASE_SECRET_ARN"),
@@ -79,6 +98,7 @@ export async function runCleaner() {
 	}
 
 	const queueUrl = required("QUEUE_URL");
+	const maxRuntimeMs = cleanerMaxRuntimeMs();
 	const sqs = new SQSClient({});
 	const pool = await createPerformancePool();
 	const store = new PostgresPerformanceStore(pool, Date.now, runId);
@@ -94,7 +114,7 @@ export async function runCleaner() {
 	let emptyPolls = 0;
 
 	try {
-		while (emptyPolls < 2) {
+		while (emptyPolls < 2 && withinCleanerRuntime(startedAt, maxRuntimeMs)) {
 			const batch = await sqs.send(
 				new ReceiveMessageCommand({
 					QueueUrl: queueUrl,
@@ -145,7 +165,12 @@ export async function runCleaner() {
 
 	summary.durationMs = Date.now() - startedAt;
 	process.stdout.write(formatCleanerSummary(summary));
-	if (summary.retryableFailures > 0) process.exitCode = 2;
+	if (
+		summary.retryableFailures > 0 ||
+		(emptyPolls < 2 && !withinCleanerRuntime(startedAt, maxRuntimeMs))
+	) {
+		process.exitCode = 2;
+	}
 }
 
 const isEntrypoint = process.argv[1]

@@ -2,7 +2,106 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPerformanceClient } from "./client";
 
 describe("performance client", () => {
-	afterEach(() => vi.useRealTimers());
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
+
+	it("observes fast real interactions instead of dropping good INP samples", async () => {
+		const onINP = vi.fn();
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			loadWebVitals: async () =>
+				({
+					onCLS: vi.fn(),
+					onFCP: vi.fn(),
+					onINP,
+					onLCP: vi.fn(),
+					onTTFB: vi.fn(),
+				}) as unknown as typeof import("web-vitals"),
+		});
+
+		client.start();
+		await vi.waitFor(() => expect(onINP).toHaveBeenCalledOnce());
+
+		expect(onINP.mock.calls[0]?.[1]).toEqual({
+			durationThreshold: 0,
+		});
+		client.stop();
+	});
+
+	it("does not synthesize CLS when the browser never reports it", async () => {
+		const bodies: string[] = [];
+		const onCLS = vi.fn();
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: (_url, body) => {
+				bodies.push(String(body));
+				return true;
+			},
+			random: () => 0,
+			loadWebVitals: async () =>
+				({
+					onCLS,
+					onFCP: vi.fn(),
+					onINP: vi.fn(),
+					onLCP: vi.fn(),
+					onTTFB: vi.fn(),
+				}) as unknown as typeof import("web-vitals"),
+		});
+
+		client.start();
+		await vi.waitFor(() => expect(onCLS).toHaveBeenCalledOnce());
+		expect(onCLS.mock.calls[0]?.[1]).toBeUndefined();
+		vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+		document.dispatchEvent(new Event("visibilitychange"));
+		await client.flush();
+
+		const cls = bodies
+			.flatMap((body) => JSON.parse(body).events)
+			.filter((event) => event.name === "CLS");
+		expect(cls).toEqual([]);
+		client.stop();
+	});
+
+	it("does not duplicate CLS when web-vitals already reported a shift", async () => {
+		const bodies: string[] = [];
+		let reportCLS: ((metric: { value: number }) => void) | undefined;
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: (_url, body) => {
+				bodies.push(String(body));
+				return true;
+			},
+			random: () => 0,
+			loadWebVitals: async () =>
+				({
+					onCLS: (callback: (metric: { value: number }) => void) => {
+						reportCLS = callback;
+					},
+					onFCP: vi.fn(),
+					onINP: vi.fn(),
+					onLCP: vi.fn(),
+					onTTFB: vi.fn(),
+				}) as unknown as typeof import("web-vitals"),
+		});
+
+		client.start();
+		await vi.waitFor(() => expect(reportCLS).toBeTypeOf("function"));
+		reportCLS?.({ value: 0.04 });
+		vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+		document.dispatchEvent(new Event("visibilitychange"));
+		await client.flush();
+
+		const cls = bodies
+			.flatMap((body) => JSON.parse(body).events)
+			.filter((event) => event.name === "CLS");
+		expect(cls).toEqual([expect.objectContaining({ value: 0.04 })]);
+		client.stop();
+	});
 
 	it("batches sanitized events and prefers sendBeacon", async () => {
 		const beacon = vi.fn((_url: string, _data: BodyInit) => true);

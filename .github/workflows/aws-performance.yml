@@ -184,9 +184,37 @@ jobs:
           task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerTaskDefinitionArn'].OutputValue" --output text)"
           security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
           task="$(aws ecs run-task --cluster "$cluster" --task-definition "$task_definition" --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[${{ vars.AWS_SHARED_PRIVATE_APP_SUBNET_IDS }}],securityGroups=[$security_group],assignPublicIp=DISABLED}" --query 'tasks[0].taskArn' --output text)"
+          test -n "$task" && test "$task" != "None"
           echo "task=$task" >> "$GITHUB_OUTPUT"
           echo "cluster=$cluster" >> "$GITHUB_OUTPUT"
-          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+          CLEANER_WATCHDOG_MAX_ATTEMPTS=36
+          CLEANER_WATCHDOG_INTERVAL_SECONDS=5
+          cleaner_stopped=false
+          for attempt in $(seq 1 "$CLEANER_WATCHDOG_MAX_ATTEMPTS"); do
+            last_status="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].lastStatus' --output text)"
+            if test "$last_status" = "STOPPED"; then
+              cleaner_stopped=true
+              break
+            fi
+            sleep "$CLEANER_WATCHDOG_INTERVAL_SECONDS"
+          done
+          if test "$cleaner_stopped" != "true"; then
+            aws ecs stop-task --cluster "$cluster" --task "$task" --reason "babysteps-performance-cleaner-time-budget-exceeded" >/dev/null
+            for attempt in $(seq 1 12); do
+              last_status="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].lastStatus' --output text)"
+              if test "$last_status" = "STOPPED"; then
+                cleaner_stopped=true
+                break
+              fi
+              sleep "$CLEANER_WATCHDOG_INTERVAL_SECONDS"
+            done
+            if test "$cleaner_stopped" != "true"; then
+              echo "CLEANER_TASK_DID_NOT_STOP_AFTER_WATCHDOG" >&2
+              exit 1
+            fi
+            echo "CLEANER_TASK_EXCEEDED_TIME_BUDGET" >&2
+            exit 1
+          fi
           exit_code="$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)"
           test "$exit_code" = "0"
       - name: Capture and validate exact cleaner summary
@@ -221,7 +249,33 @@ jobs:
       - name: Query and verify real browser aggregates
         run: |
           curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=production&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
-          node -e 'const s=require("./evidence/performance-stats.json");const samples=(s.vitals??[]).reduce((n,v)=>n+(v.sampleCount??0),0)+(s.navigation??[]).reduce((n,v)=>n+(v.sampleCount??0),0);if(samples<1)process.exit(1)'
+          node scripts/validate-performance-readback.mjs --stats evidence/performance-stats.json
+          queue_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-events-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
+          dlq_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-dlq-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
+          queue_visible=-1
+          queue_inflight=-1
+          queue_delayed=-1
+          for attempt in $(seq 1 6); do
+            read -r queue_visible queue_inflight queue_delayed <<< "$(aws sqs get-queue-attributes --queue-url "$queue_url" --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed --query '[Attributes.ApproximateNumberOfMessages,Attributes.ApproximateNumberOfMessagesNotVisible,Attributes.ApproximateNumberOfMessagesDelayed]' --output text)"
+            queue_total=$((queue_visible + queue_inflight + queue_delayed))
+            if test "$queue_total" = "0"; then break; fi
+            sleep 5
+          done
+          read -r dlq_visible dlq_inflight dlq_delayed <<< "$(aws sqs get-queue-attributes --queue-url "$dlq_url" --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed --query '[Attributes.ApproximateNumberOfMessages,Attributes.ApproximateNumberOfMessagesNotVisible,Attributes.ApproximateNumberOfMessagesDelayed]' --output text)"
+          queue_total=$((queue_visible + queue_inflight + queue_delayed))
+          dlq_total=$((dlq_visible + dlq_inflight + dlq_delayed))
+          export queue_visible queue_inflight queue_delayed queue_total dlq_visible dlq_inflight dlq_delayed dlq_total
+          node - <<'NODE'
+          const fs = require("fs");
+          const n = (name) => Number(process.env[name]);
+          fs.writeFileSync("evidence/queue-after-cleaner.json", `${JSON.stringify({
+            queue: { visible: n("queue_visible"), inFlight: n("queue_inflight"), delayed: n("queue_delayed"), total: n("queue_total") },
+            dlq: { visible: n("dlq_visible"), inFlight: n("dlq_inflight"), delayed: n("dlq_delayed"), total: n("dlq_total") }
+          }, null, 2)}\n`);
+          NODE
+          test "$queue_total" = "0"
+          test "$dlq_visible" = "0"
+          test "$dlq_total" = "0"
       - name: Capture live performance dashboard Evidence
         run: |
           node scripts/run-performance-browser-journey.mjs --origin "$WEB_ORIGIN" --artifacts-dir evidence/browser --dashboard-only --version "${GITHUB_SHA:0:12}" --output evidence/performance-dashboard-journey.json

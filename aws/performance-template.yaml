@@ -241,6 +241,7 @@ Resources:
           Image: !Sub ${CleanerRepository.RepositoryUri}:${CleanerImageTag}
           Environment:
             - { Name: QUEUE_URL, Value: { Ref: PerformanceQueue } }
+            - { Name: CLEANER_MAX_RUNTIME_MS, Value: "180000" }
             - { Name: PROJECT_DATABASE_SECRET_ARN, Value: { Ref: ProjectDatabaseSecret } }
             - { Name: PERFORMANCE_RUN_ID, Value: { Ref: RunId } }
             - { Name: NODE_EXTRA_CA_CERTS, Value: /app/certificates/us-east-1-bundle.pem }
