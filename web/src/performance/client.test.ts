@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPerformanceClient } from "./client";
+import { createPerformanceClient, normalizeMaxEventsPerMinute } from "./client";
 
 describe("performance client", () => {
 	afterEach(() => {
 		vi.useRealTimers();
 		vi.restoreAllMocks();
+	});
+
+	it("bounds a configured per-page event budget to the Worker quota", () => {
+		expect(normalizeMaxEventsPerMinute(20)).toBe(20);
+		expect(normalizeMaxEventsPerMinute(999)).toBe(120);
+		expect(normalizeMaxEventsPerMinute(Number.NaN)).toBe(120);
+		expect(normalizeMaxEventsPerMinute(0)).toBe(1);
 	});
 
 	it("observes fast real interactions instead of dropping good INP samples", async () => {

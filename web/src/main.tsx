@@ -17,6 +17,9 @@ const performanceClient = createPerformanceClient({
 	environment: import.meta.env.MODE,
 	version: import.meta.env.VITE_APP_VERSION ?? "local",
 	sampleRate: Number(import.meta.env.VITE_PERFORMANCE_SAMPLE_RATE ?? "1"),
+	maxEventsPerMinute: Number(
+		import.meta.env.VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE ?? "120",
+	),
 	route: () => globalThis.location?.pathname ?? "/",
 });
 setPerformanceClient(performanceClient);

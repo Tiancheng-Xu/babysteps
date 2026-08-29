@@ -137,12 +137,14 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.deepEqual(
 		{
 			appId: journeyManifest.appId,
+			perRouteEventBudget: journeyManifest.perRouteEventBudget,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
 			unavailableMetrics: journeyManifest.unavailableMetrics,
 		},
 		{
 			appId: "babysteps",
+			perRouteEventBudget: 20,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
 				"LCP",
@@ -200,6 +202,10 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			["/evidence", "链上工作证据"],
 		],
 	);
+	assert.ok(
+		journeyRoutes.length * journeyManifest.perRouteEventBudget <= 120,
+		"the controlled multi-route journey must stay inside the Worker minute quota",
+	);
 	const journeySource = await readFile(
 		"scripts/run-performance-browser-journey.mjs",
 		"utf8",
@@ -210,6 +216,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		/await page\.route\("\*\*\/api\/performance\/events"[\s\S]*if \(dashboardOnly\)[\s\S]*route\.fulfill/,
 	);
 	assert.match(journeySource, /getByRole\("heading"/);
+	assert.match(journeySource, /TELEMETRY_BATCH_REJECTED_/);
 	assert.match(
 		journeySource,
 		/journeyManifest\.telemetryResponseTimeoutMs \/ telemetryPollIntervalMs/,
@@ -326,6 +333,12 @@ test("the real browser run boots production config and preserves visual Evidence
 		byName("Start local Web at the exact Worker APP_URI origin").run,
 		/--mode production/,
 	);
+	assert.match(
+		byName("Start local Web at the exact Worker APP_URI origin").run,
+		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=20/,
+	);
+	const mainSource = await readFile("web/src/main.tsx", "utf8");
+	assert.match(mainSource, /VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE/);
 	assert.match(
 		byName("Browser journey through real Chromium").run,
 		/--artifacts-dir evidence\/browser/,

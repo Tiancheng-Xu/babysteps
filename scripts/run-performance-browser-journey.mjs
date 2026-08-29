@@ -216,6 +216,11 @@ async function runJourney() {
 			try {
 				const response = await route.fetch();
 				const accepted = response.ok();
+				if (!accepted) {
+					process.stdout.write(
+						`TELEMETRY_BATCH_REJECTED_${response.status()}\n`,
+					);
+				}
 				await route.fulfill({ response });
 				if (accepted) acceptedBatchCount += 1;
 				else rejectedBatchCount += 1;

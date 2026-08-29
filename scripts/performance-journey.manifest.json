@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "appId": "babysteps",
+  "perRouteEventBudget": 20,
   "telemetryResponseTimeoutMs": 15000,
   "allowedLocalOrigins": ["http://127.0.0.1", "http://localhost"],
   "routes": [
