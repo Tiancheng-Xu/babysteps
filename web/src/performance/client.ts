@@ -33,13 +33,21 @@ type PendingRetry = { events: QueuedEvent[]; readyAt: number };
 type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
+const workerMinuteQuota = 120;
+
+export function normalizeMaxEventsPerMinute(value: number): number {
+	if (!Number.isSafeInteger(value)) return workerMinuteQuota;
+	return Math.min(workerMinuteQuota, Math.max(1, value));
+}
 
 export function createPerformanceClient(
 	options: ClientOptions,
 ): PerformanceClient {
 	const endpoint = options.endpoint ?? "/api/performance/events";
 	const sampleRate = Math.min(1, Math.max(0, options.sampleRate ?? 1));
-	const maxEventsPerMinute = options.maxEventsPerMinute ?? 120;
+	const maxEventsPerMinute = normalizeMaxEventsPerMinute(
+		options.maxEventsPerMinute ?? workerMinuteQuota,
+	);
 	const batchSize = options.batchSize ?? 20;
 	const flushIntervalMs = options.flushIntervalMs ?? 5_000;
 	const random = options.random ?? Math.random;
