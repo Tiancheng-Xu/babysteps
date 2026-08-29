@@ -245,6 +245,7 @@ describe("PerformanceDashboardPage", () => {
 		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
 		expect(screen.getByRole("status").textContent).toContain("管线失败");
 		expect(screen.getAllByText("Run 33160455921").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("低置信度 · n=3").length).toBeGreaterThan(0);
 		expect(screen.queryByText(/32626397427/u)).toBeNull();
 		expect(
 			screen.getByText(/415 个浏览器事件.*103 条写入.*80\s*条待清理/u),
