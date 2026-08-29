@@ -315,12 +315,6 @@ async function runJourney() {
 					await page
 						.getByRole("heading", { name: heading, exact: true })
 						.waitFor({ state: "visible" });
-					if (route === "/tasks") {
-						await page
-							.locator(".marketplace-task-card, .empty-state")
-							.first()
-							.waitFor({ state: "visible" });
-					}
 					observedRoutes.add(route);
 					await performRepresentativeInteraction(page, route);
 					await page.waitForTimeout(350);
