@@ -44,6 +44,14 @@ describe("performance cleaner", () => {
 });
 
 describe("performance cleaner execution summary", () => {
+	it("stops polling before the workflow cleanup budget is exhausted", async () => {
+		const { withinCleanerRuntime } = await import(
+			"../src/performance/cleanerMain"
+		);
+		expect(withinCleanerRuntime(1_000, 180_000, 180_999)).toBe(true);
+		expect(withinCleanerRuntime(1_000, 180_000, 181_000)).toBe(false);
+	});
+
 	it("prints exactly one sanitized JSON line with complete counters", async () => {
 		const { formatCleanerSummary } = await import(
 			"../src/performance/cleanerMain"

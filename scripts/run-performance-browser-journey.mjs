@@ -1,17 +1,18 @@
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const journeyRoutes = [
-	{ path: "/", heading: "BabySteps · 成长星球" },
-	{ path: "/tasks", heading: "成长任务市集" },
-	{ path: "/profile", heading: "个人中心" },
-	{ path: "/performance", heading: "BabySteps 性能观测站" },
-	{ path: "/evidence", heading: "链上工作证据" },
-];
+export const journeyManifest = JSON.parse(
+	readFileSync(
+		new URL("./performance-journey.manifest.json", import.meta.url),
+		"utf8",
+	),
+);
+export const journeyRoutes = journeyManifest.routes;
 const expectedRoutes = journeyRoutes.map(({ path }) => path);
-const unavailableCoverage = ["navigation.dns", "navigation.tls"];
+const unavailableCoverage = journeyManifest.unavailableMetrics;
 const routeTokens = new Map([
 	["/", "HOME"],
 	["/tasks", "TASKS"],
@@ -31,6 +32,88 @@ function boundedCount(value) {
 	return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
+export function evaluateJourneyCoverage({ observed = [], required = [] }) {
+	const observedNames = new Set(observed);
+	const missing = [...new Set(required)]
+		.filter((name) => !observedNames.has(name))
+		.sort();
+	return { complete: missing.length === 0, missing };
+}
+
+export function assertJourneyComplete(summary) {
+	if (summary.routes.length !== expectedRoutes.length) {
+		throw new Error("INCOMPLETE_BROWSER_ROUTES");
+	}
+	if (summary.eventCount === 0) throw new Error("EMPTY_BROWSER_TELEMETRY");
+	if (summary.acceptedBatchCount === 0) {
+		throw new Error("NO_ACCEPTED_TELEMETRY_BATCH");
+	}
+	if (summary.rejectedBatchCount > 0) {
+		throw new Error("REJECTED_TELEMETRY_BATCH");
+	}
+	if (
+		summary.acceptedBatchCount + summary.rejectedBatchCount !==
+		summary.batchCount
+	) {
+		throw new Error("INCOMPLETE_TELEMETRY_RESPONSES");
+	}
+	if (summary.coverage.missingRequired.length > 0) {
+		throw new Error("INCOMPLETE_METRIC_COVERAGE");
+	}
+	if (!summary.representativeInteraction.observed) {
+		throw new Error("MISSING_REPRESENTATIVE_INTERACTION_METRIC");
+	}
+}
+
+async function performRepresentativeInteraction(page, route) {
+	const interaction = journeyManifest.representativeInteraction;
+	if (route !== interaction.route) return;
+	for (const step of interaction.steps) {
+		const locator = page.getByRole(step.role, {
+			name: step.name,
+			exact: true,
+		});
+		if (step.action === "fill") await locator.fill(step.value);
+		else if (step.action === "click") await locator.click();
+		else throw new Error("INVALID_INTERACTION_ACTION");
+		await page.evaluate(
+			() => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+		);
+	}
+	const actual = new URL(page.url()).searchParams.get(
+		interaction.assertion.urlSearchParam,
+	);
+	if (actual !== interaction.assertion.equals) {
+		throw new Error("INTERACTION_ASSERTION_FAILED");
+	}
+}
+
+async function finalizeControlledLifecycle(page, telemetryCounts) {
+	await page.evaluate(() => {
+		Object.defineProperty(document, "visibilityState", {
+			configurable: true,
+			get: () => "hidden",
+		});
+		document.dispatchEvent(new Event("visibilitychange", { bubbles: true }));
+	});
+	await page.waitForTimeout(500);
+	await page.evaluate(() =>
+		globalThis.dispatchEvent(
+			new PageTransitionEvent("pagehide", { persisted: false }),
+		),
+	);
+	for (let attempt = 0; attempt < 30; attempt += 1) {
+		if (
+			telemetryCounts.accepted() + telemetryCounts.rejected() ===
+			telemetryCounts.sent()
+		) {
+			return;
+		}
+		await page.waitForTimeout(100);
+	}
+	throw new Error("TELEMETRY_RESPONSE_TIMEOUT");
+}
+
 export function sanitizeJourneySummary(input) {
 	const routes = expectedRoutes.filter((route) =>
 		input.routes?.includes(route),
@@ -42,16 +125,30 @@ export function sanitizeJourneySummary(input) {
 					/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(name),
 			)
 		: [];
+	const observed = [
+		...new Set(names.filter((name) => !unavailableCoverage.includes(name))),
+	].sort();
+	const coverage = evaluateJourneyCoverage({
+		observed,
+		required: journeyManifest.requiredMetrics,
+	});
 	return {
 		routes,
 		coverage: {
-			observed: [
-				...new Set(names.filter((name) => !unavailableCoverage.includes(name))),
-			].sort(),
+			observed,
 			unavailable: unavailableCoverage,
+			missingRequired: coverage.missing,
 		},
 		batchCount: boundedCount(input.batchCount),
+		acceptedBatchCount: boundedCount(input.acceptedBatchCount),
+		rejectedBatchCount: boundedCount(input.rejectedBatchCount),
 		eventCount: boundedCount(input.eventCount),
+		representativeInteraction: {
+			route: journeyManifest.representativeInteraction.route,
+			metric: journeyManifest.representativeInteraction.expectedMetric,
+			observed: input.representativeMetricObserved === true,
+		},
+		lifecycleFinalization: "controlled-browser-hidden-pagehide",
 	};
 }
 
@@ -71,9 +168,9 @@ async function runJourney() {
 		throw new Error("INVALID_DASHBOARD_VERSION");
 	}
 	const parsedOrigin = new URL(origin);
+	const originBase = `${parsedOrigin.protocol}//${parsedOrigin.hostname}`;
 	if (
-		parsedOrigin.protocol !== "http:" ||
-		!["127.0.0.1", "localhost"].includes(parsedOrigin.hostname) ||
+		!journeyManifest.allowedLocalOrigins.includes(originBase) ||
 		parsedOrigin.pathname !== "/"
 	) {
 		throw new Error("INVALID_LOCAL_ORIGIN");
@@ -88,7 +185,10 @@ async function runJourney() {
 	const observedRoutes = new Set();
 	const coverage = new Set(unavailableCoverage);
 	let batchCount = 0;
+	let acceptedBatchCount = 0;
+	let rejectedBatchCount = 0;
 	let eventCount = 0;
+	let representativeMetricObserved = false;
 	let liveSampleCount = 0;
 	let context;
 	let video;
@@ -100,6 +200,25 @@ async function runJourney() {
 				: {}),
 		});
 		const page = await context.newPage();
+		await page.route("**/api/performance/events", async (route) => {
+			if (dashboardOnly) {
+				await route.fulfill({
+					status: 202,
+					contentType: "application/json",
+					body: '{"accepted":true}',
+				});
+				return;
+			}
+			try {
+				const response = await route.fetch();
+				const accepted = response.ok();
+				await route.fulfill({ response });
+				if (accepted) acceptedBatchCount += 1;
+				else rejectedBatchCount += 1;
+			} catch {
+				await route.abort();
+			}
+		});
 		video = page.video();
 		page.on("request", (request) => {
 			if (
@@ -114,13 +233,24 @@ async function runJourney() {
 				batchCount += 1;
 				eventCount += batch.events.length;
 				for (const event of batch.events) {
-					if (typeof event?.name === "string") coverage.add(event.name);
+					if (typeof event?.name !== "string") continue;
+					coverage.add(event.name);
+					const eventRoute =
+						typeof event.route === "string"
+							? event.route.split(/[?#]/u)[0]
+							: "";
+					if (
+						event.name ===
+							journeyManifest.representativeInteraction.expectedMetric &&
+						eventRoute === journeyManifest.representativeInteraction.route
+					) {
+						representativeMetricObserved = true;
+					}
 				}
 			} catch {
 				// A malformed batch is handled by the Worker/AWS contract, never logged here.
 			}
 		});
-
 		if (dashboardOnly) {
 			const dashboardUrl = new URL("/performance", parsedOrigin);
 			dashboardUrl.searchParams.set("window", "1h");
@@ -156,7 +286,10 @@ async function runJourney() {
 						fullPage: true,
 					});
 					await page.evaluate(() =>
-						globalThis.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }),
+						globalThis.scrollTo({
+							top: document.body.scrollHeight,
+							behavior: "smooth",
+						}),
 					);
 					await page.waitForTimeout(1_200);
 					await page.setViewportSize({ width: 390, height: 844 });
@@ -189,8 +322,7 @@ async function runJourney() {
 							.waitFor({ state: "visible" });
 					}
 					observedRoutes.add(route);
-					await page.locator("body").click({ position: { x: 24, y: 24 } });
-					await page.keyboard.press("Tab");
+					await performRepresentativeInteraction(page, route);
 					await page.waitForTimeout(350);
 					if (artifactsDir) {
 						await page.screenshot({
@@ -201,15 +333,16 @@ async function runJourney() {
 							fullPage: true,
 						});
 					}
+					await finalizeControlledLifecycle(page, {
+						accepted: () => acceptedBatchCount,
+						rejected: () => rejectedBatchCount,
+						sent: () => batchCount,
+					});
 					process.stdout.write(`BROWSER_ROUTE_OK ${routeTokens.get(route)}\n`);
 				} catch (error) {
 					throw new Error(sanitizeJourneyFailure(error, route));
 				}
 			}
-
-			await page.waitForTimeout(6_000);
-			await page.evaluate(() => globalThis.dispatchEvent(new Event("pagehide")));
-			await page.waitForTimeout(1_500);
 		}
 	} finally {
 		if (context) await context.close().catch(() => undefined);
@@ -239,14 +372,12 @@ async function runJourney() {
 		routes: [...observedRoutes],
 		coverage: [...coverage],
 		batchCount,
+		acceptedBatchCount,
+		rejectedBatchCount,
 		eventCount,
+		representativeMetricObserved,
 	});
-	if (
-		summary.routes.length !== expectedRoutes.length ||
-		summary.eventCount === 0
-	) {
-		throw new Error("INCOMPLETE_BROWSER_JOURNEY");
-	}
+	assertJourneyComplete(summary);
 	await writeFile(output, `${JSON.stringify(summary, null, 2)}\n`, {
 		mode: 0o600,
 	});

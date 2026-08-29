@@ -30,7 +30,10 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 			);
 		}
 	}
-	assert.match(source, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
+	assert.match(
+		source,
+		/APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/,
+	);
 	assert.match(source, /workflow_dispatch:/);
 	assert.match(source, /environment: aws-performance/);
 	assert.match(source, /id-token: write/);
@@ -94,6 +97,28 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.doesNotMatch(source, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });
 
+test("the cleaner task has a hard workflow watchdog that preserves cleanup time", async () => {
+	const source = await readFile(
+		".github/workflows/aws-performance.yml",
+		"utf8",
+	);
+	const workflow = parse(source);
+	const cleaner = Object.values(workflow.jobs)
+		.flatMap((job) => job.steps ?? [])
+		.find((step) => step.name === "Run one on-demand ECS cleaning task");
+
+	assert.ok(cleaner, "cleaner workflow step is missing");
+	assert.doesNotMatch(cleaner.run, /aws ecs wait tasks-stopped/);
+	assert.match(cleaner.run, /CLEANER_WATCHDOG_MAX_ATTEMPTS=36/);
+	assert.match(cleaner.run, /CLEANER_WATCHDOG_INTERVAL_SECONDS=5/);
+	assert.match(cleaner.run, /aws ecs stop-task/);
+	assert.match(
+		cleaner.run,
+		/--reason "babysteps-performance-cleaner-time-budget-exceeded"/,
+	);
+	assert.match(cleaner.run, /CLEANER_TASK_DID_NOT_STOP_AFTER_WATCHDOG/);
+});
+
 test("the AWS workspace owns the cleaner bundler required by a clean CI install", async () => {
 	const packageJson = JSON.parse(await readFile("aws/package.json", "utf8"));
 	assert.equal(packageJson.devDependencies.esbuild, "0.28.1");
@@ -101,9 +126,68 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 });
 
 test("the Chromium journey emits only a bounded sanitized summary", async () => {
-	const { journeyRoutes, sanitizeJourneyFailure, sanitizeJourneySummary } = await import(
-		"./run-performance-browser-journey.mjs"
+	const {
+		assertJourneyComplete,
+		evaluateJourneyCoverage,
+		journeyManifest,
+		journeyRoutes,
+		sanitizeJourneyFailure,
+		sanitizeJourneySummary,
+	} = await import("./run-performance-browser-journey.mjs");
+	assert.deepEqual(
+		{
+			appId: journeyManifest.appId,
+			requiredMetrics: journeyManifest.requiredMetrics,
+			unavailableMetrics: journeyManifest.unavailableMetrics,
+		},
+		{
+			appId: "babysteps",
+			requiredMetrics: [
+				"LCP",
+				"CLS",
+				"INP",
+				"FCP",
+				"TTFB",
+				"navigation.request_wait",
+				"navigation.download",
+				"navigation.dom_ready",
+				"navigation.window_load",
+			],
+			unavailableMetrics: ["navigation.dns", "navigation.tls"],
+		},
 	);
+	assert.equal(typeof evaluateJourneyCoverage, "function");
+	const required = [
+		"LCP",
+		"CLS",
+		"INP",
+		"FCP",
+		"TTFB",
+		"navigation.request_wait",
+		"navigation.download",
+		"navigation.dom_ready",
+		"navigation.window_load",
+	];
+	assert.deepEqual(evaluateJourneyCoverage({ observed: required, required }), {
+		complete: true,
+		missing: [],
+	});
+	for (const missing of [
+		"CLS",
+		"INP",
+		"navigation.request_wait",
+		"navigation.download",
+		"navigation.dom_ready",
+		"navigation.window_load",
+	]) {
+		assert.deepEqual(
+			evaluateJourneyCoverage({
+				observed: required.filter((name) => name !== missing),
+				required,
+			}),
+			{ complete: false, missing: [missing] },
+		);
+	}
 	assert.deepEqual(
 		journeyRoutes.map(({ path, heading }) => [path, heading]),
 		[
@@ -118,8 +202,14 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		"scripts/run-performance-browser-journey.mjs",
 		"utf8",
 	);
+	assert.match(journeySource, /allowedLocalOrigins/);
+	assert.match(
+		journeySource,
+		/await page\.route\("\*\*\/api\/performance\/events"[\s\S]*if \(dashboardOnly\)[\s\S]*route\.fulfill/,
+	);
 	assert.match(journeySource, /getByRole\("heading"/);
 	assert.match(journeySource, /marketplace-task-card, \.empty-state/);
+	assert.doesNotMatch(journeySource, /keyboard\.press\("Tab"\)/);
 	assert.match(
 		journeySource,
 		/dashboardUrl\.searchParams\.set\("environment", "production"\)/,
@@ -130,9 +220,12 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 	const summary = sanitizeJourneySummary({
 		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
-		coverage: ["LCP", "navigation.dns", "navigation.tls"],
+		coverage: [...required, "navigation.dns", "navigation.tls"],
 		batchCount: 2,
+		acceptedBatchCount: 2,
+		rejectedBatchCount: 0,
 		eventCount: 14,
+		representativeMetricObserved: true,
 		privateUrl: "https://private.example/a?token=redacted-fixture",
 		cookie: "session=redacted-fixture",
 		body: { authorization: "redacted-fixture" },
@@ -140,12 +233,50 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.deepEqual(summary, {
 		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
 		coverage: {
-			observed: ["LCP"],
+			observed: [...required].sort(),
 			unavailable: ["navigation.dns", "navigation.tls"],
+			missingRequired: [],
 		},
 		batchCount: 2,
+		acceptedBatchCount: 2,
+		rejectedBatchCount: 0,
 		eventCount: 14,
+		representativeInteraction: {
+			route: "/performance",
+			metric: "INP",
+			observed: true,
+		},
+		lifecycleFinalization: "controlled-browser-hidden-pagehide",
 	});
+	assert.doesNotThrow(() => assertJourneyComplete(summary));
+	for (const [patch, code] of [
+		[{ routes: ["/"] }, "INCOMPLETE_BROWSER_ROUTES"],
+		[{ eventCount: 0 }, "EMPTY_BROWSER_TELEMETRY"],
+		[{ acceptedBatchCount: 0 }, "NO_ACCEPTED_TELEMETRY_BATCH"],
+		[{ rejectedBatchCount: 1 }, "REJECTED_TELEMETRY_BATCH"],
+		[
+			{ batchCount: 2, acceptedBatchCount: 1 },
+			"INCOMPLETE_TELEMETRY_RESPONSES",
+		],
+		[
+			{
+				representativeInteraction: {
+					...summary.representativeInteraction,
+					observed: false,
+				},
+			},
+			"MISSING_REPRESENTATIVE_INTERACTION_METRIC",
+		],
+		[
+			{ coverage: { ...summary.coverage, missingRequired: ["INP"] } },
+			"INCOMPLETE_METRIC_COVERAGE",
+		],
+	]) {
+		assert.throws(
+			() => assertJourneyComplete({ ...summary, ...patch }),
+			new RegExp(code),
+		);
+	}
 	assert.doesNotMatch(
 		JSON.stringify(summary),
 		/secret|private\.example|cookie|authorization/i,
@@ -199,6 +330,30 @@ test("the real browser run boots production config and preserves visual Evidence
 	);
 	assert.match(
 		byName("Query and verify real browser aggregates").run,
+		/validate-performance-readback\.mjs --stats evidence\/performance-stats\.json/,
+	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
+		/ApproximateNumberOfMessagesNotVisible/,
+	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
+		/evidence\/queue-after-cleaner\.json/,
+	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
+		/test "\$queue_total" = "0"/,
+	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
+		/test "\$dlq_visible" = "0"/,
+	);
+	assert.doesNotMatch(
+		byName("Query and verify real browser aggregates").run,
+		/if\(samples<1\)/,
+	);
+	assert.match(
+		byName("Query and verify real browser aggregates").run,
 		/environment=production/,
 	);
 	assert.doesNotMatch(
@@ -220,6 +375,95 @@ test("the real browser run boots production config and preserves visual Evidence
 	assert.equal(upload.with["if-no-files-found"], "error");
 });
 
+test("performance readback rejects partial metric coverage", async () => {
+	const { validatePerformanceReadback } = await import(
+		"./validate-performance-readback.mjs"
+	);
+	const stats = {
+		vitals: ["LCP", "CLS", "INP", "FCP", "TTFB"].map((name) => ({
+			name,
+			unit: name === "CLS" ? "score" : "ms",
+			sampleCount: 1,
+			p50: 1,
+			p75: 1,
+			p95: 1,
+			coverage: "observed",
+		})),
+		navigation: [
+			"navigation.request_wait",
+			"navigation.download",
+			"navigation.dom_ready",
+			"navigation.window_load",
+		].map((name) => ({
+			name,
+			unit: "ms",
+			sampleCount: 1,
+			p50: 1,
+			p75: 1,
+			p95: 1,
+			coverage: "observed",
+		})),
+	};
+	assert.deepEqual(validatePerformanceReadback(stats), {
+		navigationSampleCount: 4,
+		vitalSampleCount: 5,
+	});
+	for (const [section, missing] of [
+		["vitals", "CLS"],
+		["vitals", "INP"],
+		["navigation", "navigation.request_wait"],
+		["navigation", "navigation.window_load"],
+	]) {
+		assert.throws(
+			() =>
+				validatePerformanceReadback({
+					...stats,
+					[section]: stats[section].filter(({ name }) => name !== missing),
+				}),
+			new RegExp(`MISSING_REQUIRED_SAMPLE_${missing.replaceAll(".", "_")}`),
+		);
+	}
+	assert.throws(
+		() =>
+			validatePerformanceReadback({
+				...stats,
+				vitals: stats.vitals.map((metric) =>
+					metric.name === "LCP" ? { ...metric, sampleCount: 0 } : metric,
+				),
+			}),
+		/MISSING_REQUIRED_SAMPLE_LCP/,
+	);
+	for (const [patch, error] of [
+		[{ unit: "count" }, /INVALID_REQUIRED_UNIT_LCP/],
+		[{ p75: null }, /INVALID_REQUIRED_PERCENTILES_LCP/],
+		[{ coverage: "instrumented-no-sample" }, /INVALID_REQUIRED_COVERAGE_LCP/],
+	]) {
+		assert.throws(
+			() =>
+				validatePerformanceReadback({
+					...stats,
+					vitals: stats.vitals.map((metric) =>
+						metric.name === "LCP" ? { ...metric, ...patch } : metric,
+					),
+				}),
+			error,
+		);
+	}
+});
+
+test("the pipeline validator follows the manifest-driven metric contract", async () => {
+	const source = await readFile(
+		"scripts/validate-performance-pipeline.mjs",
+		"utf8",
+	);
+
+	assert.match(source, /performance-journey\.manifest\.json/);
+	assert.match(source, /validate-performance-readback\.mjs/);
+	assert.match(source, /requiredMetrics/);
+	assert.match(source, /unavailableMetrics/);
+	assert.doesNotMatch(source, /"sampleCount"/);
+});
+
 test("ephemeral Evidence lifecycle permissions stay inside the run prefix", async () => {
 	const policy = JSON.parse(
 		await readFile(
@@ -228,25 +472,24 @@ test("ephemeral Evidence lifecycle permissions stay inside the run prefix", asyn
 		),
 	);
 	const list = policy.Statement.find((statement) =>
-		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
-			"ecs:ListTasks",
-		),
+		(Array.isArray(statement.Action)
+			? statement.Action
+			: [statement.Action]
+		).includes("ecs:ListTasks"),
 	);
 	assert.equal(list.Effect, "Allow");
 	assert.equal(list.Resource, "*");
-	assert.equal(
-		list.Condition.StringEquals["aws:RequestedRegion"],
-		"us-east-1",
-	);
+	assert.equal(list.Condition.StringEquals["aws:RequestedRegion"], "us-east-1");
 	assert.equal(
 		list.Condition.ArnLike["ecs:cluster"],
 		"arn:aws:ecs:us-east-1:782086108248:cluster/babysteps-performance-e*",
 	);
 
 	const remove = policy.Statement.find((statement) =>
-		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
-			"ecs:DeleteTaskDefinitions",
-		),
+		(Array.isArray(statement.Action)
+			? statement.Action
+			: [statement.Action]
+		).includes("ecs:DeleteTaskDefinitions"),
 	);
 	assert.equal(remove.Effect, "Allow");
 	assert.deepEqual(remove.Resource, [
@@ -319,7 +562,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(validation.run, /validated=true.*GITHUB_OUTPUT/s);
 	assert.match(validation.run, /stack_state=.*GITHUB_OUTPUT/s);
 
-	assert.match(stepByName("Drop and verify exact run-scoped schema").if, /^always\(\)/);
+	assert.match(
+		stepByName("Drop and verify exact run-scoped schema").if,
+		/^always\(\)/,
+	);
 	assert.match(
 		stepByName("Drop and verify exact run-scoped schema").if,
 		/steps\.validate-target\.outcome == 'success'/,
@@ -328,8 +574,14 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		stepByName("Drop and verify exact run-scoped schema").if,
 		/steps\.validate-target\.outputs\.stack_state == 'present'/,
 	);
-	assert.match(stepByName("Delete exact failed project stack").if, /schema-cleanup\.outcome == 'success'/);
-	assert.match(stepByName("Delete exact failed project stack").if, /database_state != 'schema-initialized'/);
+	assert.match(
+		stepByName("Delete exact failed project stack").if,
+		/schema-cleanup\.outcome == 'success'/,
+	);
+	assert.match(
+		stepByName("Delete exact failed project stack").if,
+		/database_state != 'schema-initialized'/,
+	);
 	assert.match(
 		stepByName("Delete exact failed project stack").if,
 		/steps\.validate-target\.outcome == 'success'/,
@@ -350,10 +602,7 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		orphanedTaskDefinitions.if,
 		/steps\.validate-target\.outputs\.validated == 'true'/,
 	);
-	assert.match(
-		orphanedTaskDefinitions.if,
-		/outputs\.stack_state == 'absent'/,
-	);
+	assert.match(orphanedTaskDefinitions.if, /outputs\.stack_state == 'absent'/);
 	assert.match(
 		orphanedTaskDefinitions.if,
 		/steps\.delete-stack\.outcome == 'success'/,
@@ -366,16 +615,13 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		orphanedTaskDefinitions.run,
 		/babysteps-performance-db-admin-\$ENVIRONMENT_NAME/,
 	);
-	assert.match(orphanedTaskDefinitions.run, /test "\$actual_family" = "\$family"/);
+	assert.match(
+		orphanedTaskDefinitions.run,
+		/test "\$actual_family" = "\$family"/,
+	);
 	const inventory = stepByName("Verify exact prefix and tag inventory is zero");
-	assert.match(
-		inventory.if,
-		/steps\.validate-target\.outcome == 'success'/,
-	);
-	assert.match(
-		inventory.if,
-		/outputs\.stack_state == 'absent'/,
-	);
+	assert.match(inventory.if, /steps\.validate-target\.outcome == 'success'/);
+	assert.match(inventory.if, /outputs\.stack_state == 'absent'/);
 	assert.match(
 		inventory.if,
 		/steps\.delete-task-definitions\.outcome == 'success'/,
@@ -390,7 +636,9 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 
 	const awsWritePattern =
 		/aws (?:ecs run-task|cloudformation delete-stack|ecs delete-task-definitions)\b/;
-	const writeSteps = steps.filter((step) => awsWritePattern.test(step.run ?? ""));
+	const writeSteps = steps.filter((step) =>
+		awsWritePattern.test(step.run ?? ""),
+	);
 	assert.ok(writeSteps.length >= 2);
 	for (const step of writeSteps) {
 		assert.match(
@@ -403,7 +651,9 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 			/steps\.validate-target\.outputs\.validated == 'true'/,
 			`${step.name} can write AWS state without the validated target output`,
 		);
-		if (/aws (?:ecs run-task|cloudformation delete-stack)\b/.test(step.run ?? "")) {
+		if (
+			/aws (?:ecs run-task|cloudformation delete-stack)\b/.test(step.run ?? "")
+		) {
 			assert.match(
 				step.if ?? "",
 				/steps\.validate-target\.outputs\.stack_state == 'present'/,
@@ -412,7 +662,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		}
 	}
 	assert.doesNotMatch(validation.run, awsWritePattern);
-	assert.match(recovery, /APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/);
+	assert.match(
+		recovery,
+		/APPROVAL_REFERENCE:\s*\$\{\{ inputs\.approval_reference \}\}/,
+	);
 	assert.match(recovery, /ecs list-tasks/);
 	assert.match(recovery, /workflow_dispatch:/);
 	assert.match(recovery, /environment: aws-performance/);
@@ -439,7 +692,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 		"/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME",
 		"/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME",
 	]) {
-		assert.ok(recovery.includes(logGroup), `recovery inventory is missing ${logGroup}`);
+		assert.ok(
+			recovery.includes(logGroup),
+			`recovery inventory is missing ${logGroup}`,
+		);
 	}
 	assert.doesNotMatch(recovery, /AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)/);
 });
@@ -456,7 +712,10 @@ test("every SAM deploy supplies the required run and approval hash parameters", 
 		assert.ok(deploys.length > 0, `${workflowPath} must deploy through SAM`);
 		for (const deploy of deploys) {
 			assert.match(deploy.run, /RunId="\$RUN_ID"/);
-			assert.match(deploy.run, /ApprovalReferenceHash="\$APPROVAL_REFERENCE_HASH"/);
+			assert.match(
+				deploy.run,
+				/ApprovalReferenceHash="\$APPROVAL_REFERENCE_HASH"/,
+			);
 		}
 	}
 });
@@ -472,7 +731,9 @@ test("a scheduled TTL janitor dispatches the existing exact recovery deep module
 	assert.equal(janitor.if, "github.event_name == 'schedule'");
 	assert.equal(janitor.permissions.actions, "write");
 	assert.equal(janitor.permissions["id-token"], "write");
-	const run = janitor.steps.find((step) => step.name === "Dispatch one exact expired recovery").run;
+	const run = janitor.steps.find(
+		(step) => step.name === "Dispatch one exact expired recovery",
+	).run;
 	assert.match(run, /gh run list/);
 	assert.match(run, /databaseId/);
 	assert.match(run, /--arg current "\$GITHUB_RUN_ID"/);
@@ -483,16 +744,19 @@ test("a scheduled TTL janitor dispatches the existing exact recovery deep module
 	assert.match(run, /ExpiresAt/);
 	assert.match(run, /aws-performance-recovery\.yml/);
 	assert.match(run, /database_state=schema-initialized/);
-	assert.doesNotMatch(run, /cloudformation (?:delete-stack|update-stack|create-stack)/);
+	assert.doesNotMatch(
+		run,
+		/cloudformation (?:delete-stack|update-stack|create-stack)/,
+	);
 	assert.doesNotMatch(run, /ecs run-task/);
 });
 test("the browser journey installs Chromium with runner dependencies", async () => {
-  const { readFile } = await import("node:fs/promises");
-  const workflow = await readFile(
-    new URL("../.github/workflows/aws-performance.yml", import.meta.url),
-    "utf8",
-  );
+	const { readFile } = await import("node:fs/promises");
+	const workflow = await readFile(
+		new URL("../.github/workflows/aws-performance.yml", import.meta.url),
+		"utf8",
+	);
 
-  assert.match(workflow, /pnpm exec playwright install --with-deps chromium/);
-  assert.doesNotMatch(workflow, /pnpm exec playwright install chromium/);
+	assert.match(workflow, /pnpm exec playwright install --with-deps chromium/);
+	assert.doesNotMatch(workflow, /pnpm exec playwright install chromium/);
 });

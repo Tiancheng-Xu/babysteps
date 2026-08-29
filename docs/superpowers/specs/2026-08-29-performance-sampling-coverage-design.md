@@ -42,12 +42,12 @@
 
 通用 Gate 读取 Journey Manifest，并执行以下固定合同：
 
-1. 在不连接 AWS 的本地受控浏览器中拦截遥测请求，验证路由、代表性交互、批次数、成功响应和指标覆盖。
-2. Core Web Vitals 要求 LCP、CLS、INP；FCP、TTFB 作为诊断指标单列。CLS 为 0 是有效稳定样本；INP 必须来自真实代表性交互，不能用固定值补齐。
+1. 在不连接 AWS 的本地受控浏览器中拦截遥测请求，验证路由、代表性交互、批次数、每批成功响应和指标覆盖；清单声明的受控 hidden/pagehide 只负责让 `web-vitals` 结算真实 Performance API 条目，不写入固定指标值。
+2. Core Web Vitals 要求 LCP、CLS、INP；FCP、TTFB 作为诊断指标单列。只有浏览器 `onCLS` 实际回调的 0 才是有效稳定样本，不为不支持或不可观测环境手写 0；INP 必须来自清单声明的真实代表性交互，不能由无关键盘操作或固定值补齐。
 3. 导航阶段至少要求 `request_wait`、`download`、`dom_ready`、`window_load` 有样本。DNS、TCP、TLS 遇到 localhost、连接复用或协议不适用时可标记 `unavailable`，不得伪造 0 ms。
 4. 本地覆盖 Gate 通过后，才允许进入预算 Gate 与临时 AWS 阶段。
-5. 云端回读必须逐项验证要求指标的 `sampleCount > 0`，不能只验证总样本数大于零。
-6. Cleaner 以有界方式处理队列；若指标仍缺失或队列未达到合同状态，运行失败并进入清理，不把部分数据包装成完成。
+5. 云端回读必须逐项验证要求指标的 `sampleCount > 0`、单位、`coverage=observed` 以及有限且有序的 p50/p75/p95，不能只验证总样本数大于零。
+6. Cleaner 以明显短于 GitHub Job 的三分钟上限处理队列；若指标仍缺失或主队列/DLQ 不为零，运行失败并进入 `always()` 清理，不把部分数据包装成完成。Dashboard-only 截图在浏览器内截断自身遥测，不能在最终 drain 后重新入队。
 
 ### AWS 临时链路
 

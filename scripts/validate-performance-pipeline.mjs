@@ -1,11 +1,15 @@
 import { readFile } from "node:fs/promises";
 
-const [workflow, recovery, template, journey] = await Promise.all([
-	readFile(".github/workflows/aws-performance.yml", "utf8"),
-	readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
-	readFile("aws/performance-template.yaml", "utf8"),
-	readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
-]);
+const [workflow, recovery, template, journey, manifestSource, readback] =
+	await Promise.all([
+		readFile(".github/workflows/aws-performance.yml", "utf8"),
+		readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
+		readFile("aws/performance-template.yaml", "utf8"),
+		readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
+		readFile("scripts/performance-journey.manifest.json", "utf8"),
+		readFile("scripts/validate-performance-readback.mjs", "utf8"),
+	]);
+const manifest = JSON.parse(manifestSource);
 
 const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
@@ -30,8 +34,21 @@ const required = [
 		"shared database readiness gate is missing",
 	],
 	[workflow, "run-task", "controlled ECS cleaner task is missing"],
-	[workflow, "wait tasks-stopped", "ECS task verification is missing"],
-	[workflow, "sampleCount", "real statistics assertion is missing"],
+	[
+		workflow,
+		"CLEANER_WATCHDOG_MAX_ATTEMPTS=36",
+		"bounded ECS cleaner watchdog is missing",
+	],
+	[
+		workflow,
+		"babysteps-performance-cleaner-time-budget-exceeded",
+		"ECS cleaner timeout stop path is missing",
+	],
+	[
+		workflow,
+		"validate-performance-readback.mjs",
+		"exact per-metric statistics assertion is missing",
+	],
 	[
 		workflow,
 		"run-performance-browser-journey.mjs",
@@ -42,8 +59,17 @@ const required = [
 		"APP_URI=http://127.0.0.1:4173",
 		"Worker APP_URI must equal the local Web origin",
 	],
-	[journey, "navigation.dns", "localhost DNS coverage must be unavailable"],
-	[journey, "navigation.tls", "localhost TLS coverage must be unavailable"],
+	[
+		journey,
+		"performance-journey.manifest.json",
+		"browser journey manifest is missing",
+	],
+	[
+		readback,
+		"performance-journey.manifest.json",
+		"readback manifest is missing",
+	],
+	[readback, "requiredMetrics", "readback must enforce required metrics"],
 	[workflow, "schemaAbsenceVerified", "schema absence verification is missing"],
 	[
 		workflow,
@@ -80,10 +106,6 @@ const required = [
 		"remainingProjectResources",
 		"recovery zero-residue inventory is missing",
 	],
-	[journey, '"/tasks"', "Chromium journey must visit tasks"],
-	[journey, '"/profile"', "Chromium journey must visit profile"],
-	[journey, '"/performance"', "Chromium journey must visit performance"],
-	[journey, '"/evidence"', "Chromium journey must visit evidence"],
 	[workflow, "delete-stack", "project cleanup is missing"],
 	[workflow, "DROP SCHEMA", "schema cleanup assertion is missing"],
 	[workflow, "schemaDeleted", "schema deletion evidence gate is missing"],
@@ -102,6 +124,16 @@ const required = [
 const errors = required.flatMap(([source, fragment, message]) =>
 	source.includes(fragment) ? [] : [message],
 );
+for (const path of ["/tasks", "/profile", "/performance", "/evidence"]) {
+	if (!manifest.routes?.some((route) => route.path === path))
+		errors.push(`Chromium journey must visit ${path}`);
+}
+if (!(manifest.requiredMetrics?.length > 0))
+	errors.push("browser journey required metrics are missing");
+for (const metric of ["navigation.dns", "navigation.tls"]) {
+	if (!manifest.unavailableMetrics?.includes(metric))
+		errors.push(`localhost ${metric} coverage must be unavailable`);
+}
 if (/^\s*(?:push|schedule):/m.test(workflow))
 	errors.push("automatic paid deployment triggers are forbidden");
 if (!workflow.includes("concurrency:") || !workflow.includes("github.run_id"))

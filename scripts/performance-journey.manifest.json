@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "appId": "babysteps",
+  "allowedLocalOrigins": ["http://127.0.0.1", "http://localhost"],
+  "routes": [
+    { "path": "/", "heading": "BabySteps · 成长星球" },
+    { "path": "/tasks", "heading": "成长任务市集" },
+    { "path": "/profile", "heading": "个人中心" },
+    { "path": "/performance", "heading": "BabySteps 性能观测站" },
+    { "path": "/evidence", "heading": "链上工作证据" }
+  ],
+  "representativeInteraction": {
+    "route": "/performance",
+    "expectedMetric": "INP",
+    "steps": [
+      { "action": "fill", "role": "textbox", "name": "页面路径", "value": "/performance" },
+      { "action": "click", "role": "button", "name": "应用筛选" }
+    ],
+    "assertion": { "urlSearchParam": "route", "equals": "/performance" }
+  },
+  "requiredMetrics": [
+    "LCP",
+    "CLS",
+    "INP",
+    "FCP",
+    "TTFB",
+    "navigation.request_wait",
+    "navigation.download",
+    "navigation.dom_ready",
+    "navigation.window_load"
+  ],
+  "unavailableMetrics": ["navigation.dns", "navigation.tls"]
+}
