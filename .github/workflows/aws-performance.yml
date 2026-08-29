@@ -311,37 +311,32 @@ jobs:
           api_id="${api_id%%.*}"
           test -n "$api_id" && test "$api_id" != "$api_endpoint"
           aws apigatewayv2 get-api --api-id "$api_id" >/dev/null
-          lambda_count=0
-          for function_name in "babysteps-performance-ingest-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
-            aws lambda get-function --function-name "$function_name" >/dev/null && lambda_count=$((lambda_count + 1))
-          done
+          lambda_count="$(aws lambda list-functions --query "length(Functions[?FunctionName=='babysteps-performance-ingest-$ENVIRONMENT_NAME' || FunctionName=='babysteps-performance-query-$ENVIRONMENT_NAME'])" --output text)"
           log_group_count=0
           for log_group in "/babysteps/performance/$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-ingest-$ENVIRONMENT_NAME" "/aws/lambda/babysteps-performance-query-$ENVIRONMENT_NAME"; do
             count="$(aws logs describe-log-groups --log-group-name-prefix "$log_group" --query "length(logGroups[?logGroupName=='$log_group'])" --output text)"
             log_group_count=$((log_group_count + count))
           done
-          secret_count=0
-          for secret_name in "babysteps-performance-db-$ENVIRONMENT_NAME" "babysteps-performance-origin-$ENVIRONMENT_NAME"; do
-            aws secretsmanager describe-secret --secret-id "$secret_name" >/dev/null && secret_count=$((secret_count + 1))
-          done
+          secret_count="$(aws secretsmanager list-secrets --query "length(SecretList[?Name=='babysteps-performance-db-$ENVIRONMENT_NAME' || Name=='babysteps-performance-origin-$ENVIRONMENT_NAME'])" --output text)"
           security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
           aws ec2 describe-security-groups --group-ids "$security_group" >/dev/null
           echo "RUNTIME_SECURITY_GROUP_ID=$security_group" >> "$GITHUB_ENV"
-          iam_role_count=0
-          for role_name in "babysteps-performance-execution-$ENVIRONMENT_NAME" "babysteps-performance-task-$ENVIRONMENT_NAME" "babysteps-performance-db-admin-$ENVIRONMENT_NAME" "babysteps-performance-query-$ENVIRONMENT_NAME"; do
-            aws iam get-role --role-name "$role_name" >/dev/null && iam_role_count=$((iam_role_count + 1))
-          done
+          iam_role_count="$(aws iam list-roles --query "length(Roles[?RoleName=='babysteps-performance-execution-$ENVIRONMENT_NAME' || RoleName=='babysteps-performance-task-$ENVIRONMENT_NAME' || RoleName=='babysteps-performance-db-admin-$ENVIRONMENT_NAME' || RoleName=='babysteps-performance-query-$ENVIRONMENT_NAME'])" --output text)"
           export stack_status ecr_images ecs_cluster_status ecs_task_count cleaner_exit_code task_definition_count sqs_visible dlq_visible lambda_count log_group_count secret_count iam_role_count
           node - <<'NODE'
           const fs = require("fs");
           const number = (name) => Number(process.env[name]);
+          const cleanerSummaryPath = "evidence/cleaner-summary.json";
+          const cleanerSummary = fs.existsSync(cleanerSummaryPath)
+            ? JSON.parse(fs.readFileSync(cleanerSummaryPath, "utf8"))
+            : null;
           fs.writeFileSync("evidence/control-plane-before-cleanup.json", JSON.stringify({
             stack: { status: process.env.stack_status },
             ecr: { imageCount: number("ecr_images") },
             ecs: { clusterStatus: process.env.ecs_cluster_status, taskCount: number("ecs_task_count"), cleanerExitCode: number("cleaner_exit_code"), taskDefinitionCount: number("task_definition_count") },
             sqs: { visibleMessages: number("sqs_visible"), dlqVisibleMessages: number("dlq_visible") },
             apiGateway: { present: true }, lambda: { count: number("lambda_count") },
-            cloudWatch: { logGroupCount: number("log_group_count") }, cleanerSummary: JSON.parse(fs.readFileSync("evidence/cleaner-summary.json", "utf8")), secrets: { count: number("secret_count") },
+            cloudWatch: { logGroupCount: number("log_group_count") }, cleanerSummary, secrets: { count: number("secret_count") },
             securityGroup: { present: true }, iam: { roleCount: number("iam_role_count") },
             sharedResources: { vpc: "protected-read-only", nat: "protected-read-only", database: "protected-read-only", oidc: "protected-read-only", artifactBucket: "protected-read-only", foundation: "explicit deny cleanup" }
           }, null, 2));
