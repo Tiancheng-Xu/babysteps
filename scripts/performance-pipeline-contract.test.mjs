@@ -128,6 +128,7 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 test("the Chromium journey emits only a bounded sanitized summary", async () => {
 	const {
 		assertJourneyComplete,
+		createTelemetryDeliveryTracker,
 		evaluateJourneyCoverage,
 		journeyManifest,
 		journeyRoutes,
@@ -138,6 +139,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		{
 			appId: journeyManifest.appId,
 			perRouteEventBudget: journeyManifest.perRouteEventBudget,
+			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
 			unavailableMetrics: journeyManifest.unavailableMetrics,
@@ -145,6 +147,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		{
 			appId: "babysteps",
 			perRouteEventBudget: 20,
+			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
 				"LCP",
@@ -161,6 +164,12 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		},
 	);
 	assert.equal(typeof evaluateJourneyCoverage, "function");
+	assert.equal(typeof createTelemetryDeliveryTracker, "function");
+	assert.ok(
+		journeyManifest.telemetryAttemptTimeoutMs * 3 <
+			journeyManifest.telemetryResponseTimeoutMs,
+		"three transport attempts plus backoff must fit inside the lifecycle drain",
+	);
 	const required = [
 		"LCP",
 		"CLS",
@@ -241,7 +250,9 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		batchCount: 2,
 		acceptedBatchCount: 2,
 		rejectedBatchCount: 0,
+		transportFailureCount: 0,
 		eventCount: 14,
+		unacceptedEventCount: 0,
 		representativeMetricObserved: true,
 		privateUrl: "https://private.example/a?token=redacted-fixture",
 		cookie: "session=redacted-fixture",
@@ -257,7 +268,9 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		batchCount: 2,
 		acceptedBatchCount: 2,
 		rejectedBatchCount: 0,
+		transportFailureCount: 0,
 		eventCount: 14,
+		unacceptedEventCount: 0,
 		representativeInteraction: {
 			route: "/performance",
 			metric: "INP",
@@ -270,11 +283,11 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		[{ routes: ["/"] }, "INCOMPLETE_BROWSER_ROUTES"],
 		[{ eventCount: 0 }, "EMPTY_BROWSER_TELEMETRY"],
 		[{ acceptedBatchCount: 0 }, "NO_ACCEPTED_TELEMETRY_BATCH"],
-		[{ rejectedBatchCount: 1 }, "REJECTED_TELEMETRY_BATCH"],
 		[
-			{ batchCount: 2, acceptedBatchCount: 1 },
+			{ batchCount: 2, acceptedBatchCount: 1, transportFailureCount: 0 },
 			"INCOMPLETE_TELEMETRY_RESPONSES",
 		],
+		[{ unacceptedEventCount: 1 }, "UNACCEPTED_TELEMETRY_EVENTS"],
 		[
 			{
 				representativeInteraction: {
@@ -318,6 +331,35 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		),
 		/secret|private\.example|token/i,
 	);
+});
+
+test("the Chromium journey reconciles a transient transport failure by event id", async () => {
+	const { createTelemetryDeliveryTracker } = await import(
+		"./run-performance-browser-journey.mjs"
+	);
+	const tracker = createTelemetryDeliveryTracker();
+	const batch = {
+		events: [
+			{ eventId: "event-1", name: "LCP" },
+			{ eventId: "event-2", name: "navigation.window_load" },
+		],
+	};
+
+	const firstAttempt = tracker.beginAttempt(batch);
+	tracker.markTransportFailure(firstAttempt);
+	assert.equal(tracker.isSettled(), false);
+
+	const retryAttempt = tracker.beginAttempt(batch);
+	tracker.markAccepted(retryAttempt);
+	assert.equal(tracker.isSettled(), true);
+	assert.deepEqual(tracker.snapshot(), {
+		batchCount: 2,
+		acceptedBatchCount: 1,
+		rejectedBatchCount: 0,
+		transportFailureCount: 1,
+		eventCount: 2,
+		unacceptedEventCount: 0,
+	});
 });
 
 test("the real browser run boots production config and preserves visual Evidence", async () => {
@@ -391,6 +433,16 @@ test("the real browser run boots production config and preserves visual Evidence
 		byName("Capture real control-plane snapshot before cleanup").run,
 		/cloudformation describe-stack-resource/,
 	);
+	const controlPlaneReadback = byName(
+		"Capture real control-plane snapshot before cleanup",
+	).run;
+	assert.match(controlPlaneReadback, /lambda list-functions/);
+	assert.match(controlPlaneReadback, /secretsmanager list-secrets/);
+	assert.match(controlPlaneReadback, /iam list-roles/);
+	assert.doesNotMatch(controlPlaneReadback, /lambda get-function/);
+	assert.doesNotMatch(controlPlaneReadback, /secretsmanager describe-secret/);
+	assert.doesNotMatch(controlPlaneReadback, /iam get-role/);
+	assert.match(controlPlaneReadback, /fs\.existsSync\(cleanerSummaryPath\)/);
 	const upload = steps.find(
 		(step) => step.uses === "actions/upload-artifact@v4",
 	);

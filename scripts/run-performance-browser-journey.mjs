@@ -32,6 +32,72 @@ function boundedCount(value) {
 	return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
+export function createTelemetryDeliveryTracker() {
+	const observedEventIds = new Set();
+	const acceptedEventIds = new Set();
+	const openAttempts = new Set();
+	let batchCount = 0;
+	let acceptedBatchCount = 0;
+	let rejectedBatchCount = 0;
+	let transportFailureCount = 0;
+
+	const eventIds = (batch, attemptNumber) =>
+		Array.isArray(batch?.events)
+			? batch.events.map((event, index) =>
+					typeof event?.eventId === "string" && event.eventId.length > 0
+						? event.eventId
+						: `invalid-${attemptNumber}-${index}`,
+				)
+			: [`invalid-${attemptNumber}-batch`];
+	const finish = (attempt) => {
+		if (!openAttempts.delete(attempt)) {
+			throw new Error("TELEMETRY_ATTEMPT_ALREADY_FINISHED");
+		}
+	};
+	const unacceptedEventCount = () =>
+		[...observedEventIds].filter((id) => !acceptedEventIds.has(id)).length;
+
+	return {
+		beginAttempt(batch) {
+			batchCount += 1;
+			const attempt = { eventIds: eventIds(batch, batchCount) };
+			for (const id of attempt.eventIds) observedEventIds.add(id);
+			openAttempts.add(attempt);
+			return attempt;
+		},
+		markAccepted(attempt) {
+			finish(attempt);
+			acceptedBatchCount += 1;
+			for (const id of attempt.eventIds) acceptedEventIds.add(id);
+		},
+		markRejected(attempt) {
+			finish(attempt);
+			rejectedBatchCount += 1;
+		},
+		markTransportFailure(attempt) {
+			finish(attempt);
+			transportFailureCount += 1;
+		},
+		isSettled() {
+			return (
+				openAttempts.size === 0 &&
+				observedEventIds.size > 0 &&
+				unacceptedEventCount() === 0
+			);
+		},
+		snapshot() {
+			return {
+				batchCount,
+				acceptedBatchCount,
+				rejectedBatchCount,
+				transportFailureCount,
+				eventCount: observedEventIds.size,
+				unacceptedEventCount: unacceptedEventCount(),
+			};
+		},
+	};
+}
+
 export function evaluateJourneyCoverage({ observed = [], required = [] }) {
 	const observedNames = new Set(observed);
 	const missing = [...new Set(required)]
@@ -48,14 +114,16 @@ export function assertJourneyComplete(summary) {
 	if (summary.acceptedBatchCount === 0) {
 		throw new Error("NO_ACCEPTED_TELEMETRY_BATCH");
 	}
-	if (summary.rejectedBatchCount > 0) {
-		throw new Error("REJECTED_TELEMETRY_BATCH");
-	}
 	if (
-		summary.acceptedBatchCount + summary.rejectedBatchCount !==
+		summary.acceptedBatchCount +
+			summary.rejectedBatchCount +
+			summary.transportFailureCount !==
 		summary.batchCount
 	) {
 		throw new Error("INCOMPLETE_TELEMETRY_RESPONSES");
+	}
+	if (summary.unacceptedEventCount > 0) {
+		throw new Error("UNACCEPTED_TELEMETRY_EVENTS");
 	}
 	if (summary.coverage.missingRequired.length > 0) {
 		throw new Error("INCOMPLETE_METRIC_COVERAGE");
@@ -88,7 +156,7 @@ async function performRepresentativeInteraction(page, route) {
 	}
 }
 
-async function finalizeControlledLifecycle(page, telemetryCounts) {
+async function finalizeControlledLifecycle(page, deliveryTracker) {
 	const telemetryPollIntervalMs = 100;
 	const telemetryPollAttempts = Math.ceil(
 		journeyManifest.telemetryResponseTimeoutMs / telemetryPollIntervalMs,
@@ -107,12 +175,7 @@ async function finalizeControlledLifecycle(page, telemetryCounts) {
 		),
 	);
 	for (let attempt = 0; attempt < telemetryPollAttempts; attempt += 1) {
-		if (
-			telemetryCounts.accepted() + telemetryCounts.rejected() ===
-			telemetryCounts.sent()
-		) {
-			return;
-		}
+		if (deliveryTracker.isSettled()) return;
 		await page.waitForTimeout(telemetryPollIntervalMs);
 	}
 	throw new Error("TELEMETRY_RESPONSE_TIMEOUT");
@@ -146,7 +209,9 @@ export function sanitizeJourneySummary(input) {
 		batchCount: boundedCount(input.batchCount),
 		acceptedBatchCount: boundedCount(input.acceptedBatchCount),
 		rejectedBatchCount: boundedCount(input.rejectedBatchCount),
+		transportFailureCount: boundedCount(input.transportFailureCount),
 		eventCount: boundedCount(input.eventCount),
+		unacceptedEventCount: boundedCount(input.unacceptedEventCount),
 		representativeInteraction: {
 			route: journeyManifest.representativeInteraction.route,
 			metric: journeyManifest.representativeInteraction.expectedMetric,
@@ -188,10 +253,7 @@ async function runJourney() {
 	if (artifactsDir) await mkdir(artifactsDir, { recursive: true });
 	const observedRoutes = new Set();
 	const coverage = new Set(unavailableCoverage);
-	let batchCount = 0;
-	let acceptedBatchCount = 0;
-	let rejectedBatchCount = 0;
-	let eventCount = 0;
+	const deliveryTracker = createTelemetryDeliveryTracker();
 	let representativeMetricObserved = false;
 	let liveSampleCount = 0;
 	let context;
@@ -213,8 +275,17 @@ async function runJourney() {
 				});
 				return;
 			}
+			let batch;
 			try {
-				const response = await route.fetch();
+				batch = route.request().postDataJSON();
+			} catch {
+				batch = undefined;
+			}
+			const attempt = deliveryTracker.beginAttempt(batch);
+			try {
+				const response = await route.fetch({
+					timeout: journeyManifest.telemetryAttemptTimeoutMs,
+				});
 				const accepted = response.ok();
 				if (!accepted) {
 					process.stdout.write(
@@ -222,10 +293,11 @@ async function runJourney() {
 					);
 				}
 				await route.fulfill({ response });
-				if (accepted) acceptedBatchCount += 1;
-				else rejectedBatchCount += 1;
+				if (accepted) deliveryTracker.markAccepted(attempt);
+				else deliveryTracker.markRejected(attempt);
 			} catch {
-				await route.abort();
+				deliveryTracker.markTransportFailure(attempt);
+				await route.abort().catch(() => undefined);
 			}
 		});
 		video = page.video();
@@ -239,8 +311,6 @@ async function runJourney() {
 			try {
 				const batch = request.postDataJSON();
 				if (!Array.isArray(batch?.events)) return;
-				batchCount += 1;
-				eventCount += batch.events.length;
 				for (const event of batch.events) {
 					if (typeof event?.name !== "string") continue;
 					coverage.add(event.name);
@@ -336,11 +406,7 @@ async function runJourney() {
 							fullPage: true,
 						});
 					}
-					await finalizeControlledLifecycle(page, {
-						accepted: () => acceptedBatchCount,
-						rejected: () => rejectedBatchCount,
-						sent: () => batchCount,
-					});
+					await finalizeControlledLifecycle(page, deliveryTracker);
 					process.stdout.write(`BROWSER_ROUTE_OK ${routeTokens.get(route)}\n`);
 				} catch (error) {
 					throw new Error(sanitizeJourneyFailure(error, route));
@@ -374,10 +440,7 @@ async function runJourney() {
 	const summary = sanitizeJourneySummary({
 		routes: [...observedRoutes],
 		coverage: [...coverage],
-		batchCount,
-		acceptedBatchCount,
-		rejectedBatchCount,
-		eventCount,
+		...deliveryTracker.snapshot(),
 		representativeMetricObserved,
 	});
 	assertJourneyComplete(summary);
