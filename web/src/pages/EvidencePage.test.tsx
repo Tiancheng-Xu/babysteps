@@ -47,8 +47,8 @@ describe("EvidencePage", () => {
 		).toBeTruthy();
 		expect(screen.getByText(/31760380214/u)).toBeTruthy();
 		expect(screen.getByText(/31761586956/u)).toBeTruthy();
-		expect(screen.getAllByText(/33160455921/u).length).toBeGreaterThan(0);
-		expect(screen.getAllByText(/commit e40008e056d2/u).length).toBeGreaterThan(
+		expect(screen.getAllByText(/33279132965/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/commit 1e703caeba2d/u).length).toBeGreaterThan(
 			0,
 		);
 		expect(screen.getAllByText(/5 条真实页面路径/u).length).toBeGreaterThan(0);
