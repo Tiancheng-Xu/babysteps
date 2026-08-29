@@ -146,6 +146,11 @@ function Meta({
 			<span>来源：{source}</span>
 			<span>样本：{samples}</span>
 			<span>新鲜度：{freshness}</span>
+			{samples > 0 && samples < 5 ? (
+				<span className="performance-coverage performance-coverage--low-confidence">
+					低置信度 · n={samples}
+				</span>
+			) : null}
 			{coverage === "partial" ? (
 				<span className="performance-coverage">部分覆盖</span>
 			) : (
@@ -441,7 +446,7 @@ export function PerformanceDashboardPage({
 			) : null}
 			{data ? (
 				<div className="performance-cockpit">
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide performance-panel--priority">
 						<h2>运行状态与总览</h2>
 						<Meta
 							source={source}
@@ -499,7 +504,7 @@ export function PerformanceDashboardPage({
 							</article>
 						</div>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide performance-panel--priority">
 						<h2>Core Web Vitals</h2>
 						<Meta
 							source={source}
@@ -512,7 +517,7 @@ export function PerformanceDashboardPage({
 							caption="Core Web Vitals 百分位与覆盖状态"
 						/>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide">
 						<h2>导航阶段</h2>
 						<Meta
 							source={source}
@@ -525,7 +530,7 @@ export function PerformanceDashboardPage({
 							caption="导航阶段百分位与覆盖状态"
 						/>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--standard">
 						<h2>趋势与版本</h2>
 						<Meta
 							source={source}
@@ -601,7 +606,7 @@ export function PerformanceDashboardPage({
 							</table>
 						</div>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--standard">
 						<h2>页面路径</h2>
 						<Meta
 							source={source}
@@ -646,7 +651,7 @@ export function PerformanceDashboardPage({
 							</table>
 						</div>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide">
 						<h2>资源与主线程</h2>
 						<Meta
 							source={source}
@@ -669,7 +674,7 @@ export function PerformanceDashboardPage({
 							· <Coverage status={data.longTasks.coverage} />
 						</p>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide">
 						<h2>稳定性错误</h2>
 						<Meta
 							source={source}
@@ -693,7 +698,7 @@ export function PerformanceDashboardPage({
 							))}
 						</div>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--wide">
 						<h2>Web3 操作</h2>
 						<Meta
 							source={source}
@@ -718,7 +723,7 @@ export function PerformanceDashboardPage({
 							))}
 						</div>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--compact">
 						<h2>AWS 管道健康</h2>
 						<Meta
 							source={data.pipeline.source}
@@ -734,7 +739,7 @@ export function PerformanceDashboardPage({
 							控制面状态。
 						</p>
 					</section>
-					<section className="performance-panel">
+					<section className="performance-panel performance-panel--compact">
 						<h2>Evidence 与口径</h2>
 						<Meta
 							source={isBundled ? "已验证工作流制品" : source}

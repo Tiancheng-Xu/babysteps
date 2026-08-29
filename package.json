@@ -20,10 +20,15 @@
 		"validate:performance-pipeline": "node scripts/validate-performance-pipeline.mjs",
 		"validate:performance-budget": "node scripts/validate-performance-budget.mjs",
 		"validate:rendering-runtime": "node web/scripts/validate-rendering-runtime.mjs web/dist/_worker.js",
-		"prepare:ipfs": "node scripts/prepare-ipfs-metadata.mjs"
+		"prepare:ipfs": "node scripts/prepare-ipfs-metadata.mjs",
+		"visual:layout": "node scripts/run-visual-gate.mjs layout",
+		"visual:reference": "node scripts/run-visual-gate.mjs reference",
+		"visual:test": "node scripts/run-visual-gate.mjs test",
+		"visual:approve": "node scripts/run-visual-gate.mjs approve"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",
+		"backstopjs": "6.3.25",
 		"multiformats": "14.0.5",
 		"playwright": "1.55.0",
 		"yaml": "^2.8.1"
