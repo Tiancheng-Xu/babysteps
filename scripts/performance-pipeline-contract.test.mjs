@@ -208,7 +208,11 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		/await page\.route\("\*\*\/api\/performance\/events"[\s\S]*if \(dashboardOnly\)[\s\S]*route\.fulfill/,
 	);
 	assert.match(journeySource, /getByRole\("heading"/);
-	assert.match(journeySource, /marketplace-task-card, \.empty-state/);
+	assert.doesNotMatch(
+		journeySource,
+		/marketplace-task-card, \.empty-state/,
+		"route readiness must not wait for asynchronous Sepolia marketplace data",
+	);
 	assert.doesNotMatch(journeySource, /keyboard\.press\("Tab"\)/);
 	assert.match(
 		journeySource,
