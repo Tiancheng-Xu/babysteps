@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "status": "cleanup-verified",
+  "observedAt": "2026-08-29",
+  "sourceRun": {
+    "runId": 33232356133,
+    "status": "cancelled-after-successful-observation",
+    "browserEventCount": 415,
+    "browserBatchCount": 25,
+    "routes": ["/", "/tasks", "/profile", "/performance", "/evidence"],
+    "cleanerInserted": 103,
+    "queueVisibleBeforeCleanup": 80,
+    "queueFullyDrained": false,
+    "schemaCleanupVerified": true,
+    "artifactUploaded": false
+  },
+  "recoveryRuns": [
+    {
+      "runId": 33234792940,
+      "result": "cancelled-after-bounded-stack-delete-wait",
+      "databaseState": "schema-cleanup-verified"
+    },
+    {
+      "runId": 33236950502,
+      "result": "cancelled-after-bounded-stack-delete-wait",
+      "databaseState": "schema-cleanup-verified"
+    },
+    {
+      "runId": 33244161458,
+      "result": "success",
+      "databaseState": "schema-cleanup-verified",
+      "headSha": "798f5570ce41b97bba13efcbfb2d09c5657cf0da",
+      "artifactId": 9712312154,
+      "artifactName": "babysteps-performance-recovery-33244161458",
+      "runUrl": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/33244161458"
+    }
+  ],
+  "preDeleteReadback": {
+    "stack": "babysteps-performance-33232356133",
+    "stackStatus": "DELETE_IN_PROGRESS",
+    "remainingLogicalResource": "RuntimeSecurityGroup",
+    "remainingLogicalResourceStatus": "DELETE_IN_PROGRESS",
+    "ownership": {
+      "stackProjectTag": "babysteps-performance",
+      "stackRunId": "33232356133",
+      "securityGroupProjectTag": "babysteps-performance",
+      "securityGroupRunId": "33232356133"
+    },
+    "dependentNetworkInterface": {
+      "resourceIdPublished": false,
+      "status": "available",
+      "attachmentCount": 0,
+      "requesterManaged": false,
+      "securityGroupReferenceCount": 0,
+      "exactLambdaStillExists": false,
+      "otherLambdaFunctionsUsingSecurityGroup": 0,
+      "matchingEcsClusters": 0,
+      "cloudTrailCreateSource": "babysteps-performance-query-e33232356133",
+      "cloudTrailDeleteAttempts": 10,
+      "ownershipConclusion": "verified exact-run orphan created by the deleted Query Lambda role"
+    }
+  },
+  "approvedCleanup": {
+    "approvedAt": "2026-08-29",
+    "scope": [
+      "the exact unattached network interface proven to belong to run 33232356133",
+      "the exact CloudFormation stack babysteps-performance-33232356133"
+    ],
+    "sharedResourcesProtected": [
+      "shared VPC and subnets",
+      "shared NAT gateway",
+      "shared PostgreSQL instance",
+      "shared GitHub OIDC provider",
+      "shared artifact bucket",
+      "tc-course-shared-foundation",
+      "tc-course-shared-identity"
+    ]
+  },
+  "cleanupResult": {
+    "networkInterfaceDeleted": true,
+    "cloudFormationStackAbsent": true,
+    "remainingProjectResources": 0,
+    "inventory": {
+      "ecr": 0,
+      "ecsClusters": 0,
+      "ecsTasks": 0,
+      "taskDefinitions": 0,
+      "sqsAndDlq": 0,
+      "apiGateway": 0,
+      "lambda": 0,
+      "cloudWatchLogGroups": 0,
+      "secrets": 0,
+      "securityGroups": 0,
+      "securityGroupIngress": 0,
+      "iamRoles": 0
+    },
+    "sharedResources": {
+      "vpc": "protected-read-only",
+      "nat": "protected-read-only",
+      "database": "protected-read-only",
+      "oidc": "protected-read-only",
+      "artifactBucket": "protected-read-only",
+      "foundation": "explicit deny cleanup"
+    },
+    "tagIndexTombstones": {
+      "activeOrBillableResources": 0,
+      "inactiveEcsClusters": 1,
+      "taskDefinitionsDeleting": 2,
+      "interpretation": "eventually consistent non-billable control-plane tombstones; native service inventory and the recovery artifact report zero active project resources"
+    },
+    "accountWideReadback": {
+      "enabledRegionsChecked": 17,
+      "activeProjectResources": 0,
+      "nonzeroActiveRegions": 0,
+      "globalProjectIamRoles": 0
+    },
+    "sharedResourceReadback": {
+      "foundationStack": "CREATE_COMPLETE",
+      "identityStack": "UPDATE_COMPLETE",
+      "natGateway": "available",
+      "database": "available",
+      "databaseSecurityGroup": "present",
+      "oidcProvider": "present",
+      "artifactBucket": "present"
+    },
+    "budgetReadback": {
+      "currency": "USD",
+      "monthlyLimit": 40.0,
+      "actualSpend": 26.085,
+      "forecast": "unavailable",
+      "billingLagWarning": "recheck after 24 to 48 hours"
+    }
+  },
+  "limitations": [
+    "The run proves a real controlled browser-to-AWS-to-PostgreSQL observation path, not sustained production traffic.",
+    "The captured cleaner inserted 103 of 415 generated browser events; 80 SQS messages remained visible before cleanup, so full queue drain is not claimed.",
+    "Recovery Run 33244161458 and artifact 9712312154 prove the exact stack is absent and the project inventory reads zero.",
+    "AWS billing data can lag; recheck account charges after 24 to 48 hours."
+  ]
+}
