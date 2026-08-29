@@ -137,11 +137,13 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.deepEqual(
 		{
 			appId: journeyManifest.appId,
+			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
 			unavailableMetrics: journeyManifest.unavailableMetrics,
 		},
 		{
 			appId: "babysteps",
+			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
 				"LCP",
 				"CLS",
@@ -208,6 +210,10 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		/await page\.route\("\*\*\/api\/performance\/events"[\s\S]*if \(dashboardOnly\)[\s\S]*route\.fulfill/,
 	);
 	assert.match(journeySource, /getByRole\("heading"/);
+	assert.match(
+		journeySource,
+		/journeyManifest\.telemetryResponseTimeoutMs \/ telemetryPollIntervalMs/,
+	);
 	assert.doesNotMatch(
 		journeySource,
 		/marketplace-task-card, \.empty-state/,

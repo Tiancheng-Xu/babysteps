@@ -89,6 +89,10 @@ async function performRepresentativeInteraction(page, route) {
 }
 
 async function finalizeControlledLifecycle(page, telemetryCounts) {
+	const telemetryPollIntervalMs = 100;
+	const telemetryPollAttempts = Math.ceil(
+		journeyManifest.telemetryResponseTimeoutMs / telemetryPollIntervalMs,
+	);
 	await page.evaluate(() => {
 		Object.defineProperty(document, "visibilityState", {
 			configurable: true,
@@ -102,14 +106,14 @@ async function finalizeControlledLifecycle(page, telemetryCounts) {
 			new PageTransitionEvent("pagehide", { persisted: false }),
 		),
 	);
-	for (let attempt = 0; attempt < 30; attempt += 1) {
+	for (let attempt = 0; attempt < telemetryPollAttempts; attempt += 1) {
 		if (
 			telemetryCounts.accepted() + telemetryCounts.rejected() ===
 			telemetryCounts.sent()
 		) {
 			return;
 		}
-		await page.waitForTimeout(100);
+		await page.waitForTimeout(telemetryPollIntervalMs);
 	}
 	throw new Error("TELEMETRY_RESPONSE_TIMEOUT");
 }
