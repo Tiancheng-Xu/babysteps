@@ -1,4 +1,4 @@
-import observation from "../../../docs/evidence/deployment/2026-08-28-performance-aws-final.json";
+import observation from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json";
 import type {
 	PerformanceCoverageStatus,
 	PerformanceDashboardResponse,
@@ -13,8 +13,8 @@ export const VERIFIED_PERFORMANCE_OBSERVATION = {
 	region: observation.workflow.region,
 	browserEventCount: observation.browserJourney.eventCount,
 	cleanerInsertedCount: observation.cleaner.inserted,
-	queueVisibleBeforeCleanup: observation.queueBeforeCleanup.visibleMessages,
-	queueFullyDrained: observation.queueBeforeCleanup.fullyDrained,
+	queueVisibleBeforeCleanup: observation.delivery.queue.visible,
+	queueFullyDrained: observation.delivery.fullyDrained,
 	cleanerExitCode: observation.cleaner.exitCode,
 	projectStackDeleted: observation.cleanup.cloudFormationStackAbsent,
 	remainingProjectResources: observation.cleanup.remainingProjectResources,
@@ -110,12 +110,15 @@ const dashboardVitals: Partial<
 	>
 > = observation.dashboard.vitals;
 
+const dashboardNavigation = observation.dashboard.navigation;
+
 function coverageFor(name: string): PerformanceCoverageStatus {
-	if (name in dashboardVitals || name === "resource.script.duration") {
+	if (
+		name in dashboardVitals ||
+		name in dashboardNavigation ||
+		name === "resource.script.duration"
+	) {
 		return "observed";
-	}
-	if (navigationNames.includes(name as (typeof navigationNames)[number])) {
-		return "unavailable";
 	}
 	return "instrumented-no-sample";
 }
@@ -138,18 +141,24 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 			? { name, unit: "ms", ...metric, coverage: "observed" }
 			: noSample(name, name === "CLS" ? "score" : "ms");
 	}),
-	navigation: navigationNames.map((name) =>
-		noSample(name, "ms", "unavailable"),
-	),
+	navigation: navigationNames.map((name) => ({
+		name,
+		unit: "ms" as const,
+		sampleCount: dashboardNavigation[name].sampleCount,
+		p50: dashboardNavigation[name].p50,
+		p75: dashboardNavigation[name].p75,
+		p95: dashboardNavigation[name].p95,
+		coverage: "observed" as const,
+	})),
 	resources: resourceNames.map((name) =>
 		name === "resource.script.duration"
 			? {
 					name,
 					unit: "ms",
-					sampleCount: observation.dashboard.scriptResourceSampleCount,
-					p50: observation.dashboard.scriptResourceP50Ms,
-					p75: observation.dashboard.scriptResourceP75Ms,
-					p95: observation.dashboard.scriptResourceP95Ms,
+					sampleCount: observation.dashboard.scriptResource.sampleCount,
+					p50: observation.dashboard.scriptResource.p50,
+					p75: observation.dashboard.scriptResource.p75,
+					p95: observation.dashboard.scriptResource.p95,
 					coverage: "observed",
 				}
 			: noSample(name),
@@ -179,14 +188,21 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 		p95: null,
 		coverage: "instrumented-no-sample" as const,
 	})),
-	routes: [],
-	trend: [],
-	versions: [
+	routes: observation.dashboard.routes,
+	trend: [
 		{
-			version: observation.workflow.commit.slice(0, 12),
+			bucketStart: Date.parse(`${observation.observedAt}T00:00:00Z`),
+			name: "LCP",
 			sampleCount: observation.dashboard.vitals.LCP.sampleCount,
 			p75: observation.dashboard.vitals.LCP.p75,
-			p95: observation.dashboard.vitals.LCP.p95,
+		},
+	],
+	versions: [
+		{
+			version: observation.dashboard.version.name,
+			sampleCount: observation.dashboard.version.sampleCount,
+			p75: observation.dashboard.version.p75,
+			p95: observation.dashboard.version.p95,
 		},
 	],
 	coverage: coverageNames.map((name) => ({ name, status: coverageFor(name) })),

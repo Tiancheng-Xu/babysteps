@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 4,
+  "status": "verified-drained-and-cleaned",
+  "observedAt": "2026-08-29",
+  "workflow": {
+    "name": "BabySteps AWS Performance Evidence",
+    "runId": 33279132965,
+    "artifactId": 9722636468,
+    "commit": "1e703caeba2d256936f677eb7ea15f2044cc7dd6",
+    "region": "us-east-1",
+    "mode": "manual temporary validation",
+    "validationSurface": "controlled local Chromium and Vite web with local Worker proxy connected to temporary AWS resources",
+    "provenance": "controlled-browser"
+  },
+  "browserJourney": {
+    "routes": [
+      "/",
+      "/tasks",
+      "/profile",
+      "/performance",
+      "/evidence"
+    ],
+    "batchCount": 14,
+    "acceptedBatchCount": 14,
+    "rejectedBatchCount": 0,
+    "transportFailureCount": 0,
+    "eventCount": 85,
+    "unacceptedEventCount": 0,
+    "lifecycleFinalization": "controlled-browser-hidden-pagehide",
+    "representativeInteraction": {
+      "route": "/performance",
+      "metric": "INP",
+      "observed": true
+    },
+    "observedMetrics": [
+      "CLS",
+      "FCP",
+      "INP",
+      "LCP",
+      "TTFB",
+      "navigation.dom_ready",
+      "navigation.download",
+      "navigation.request_wait",
+      "navigation.tcp",
+      "navigation.window_load",
+      "resource.script.duration"
+    ],
+    "locallyUnavailableMetrics": [
+      "navigation.dns",
+      "navigation.tls"
+    ]
+  },
+  "pipeline": [
+    "Controlled Chromium and Vite journey",
+    "Local Worker proxy implementing the Cloudflare Worker contract",
+    "API Gateway and ingest Lambda",
+    "SQS with DLQ",
+    "on-demand ECS Fargate cleaner",
+    "isolated project PostgreSQL schema",
+    "query Lambda and live dashboard",
+    "sanitized workflow artifact",
+    "schema and stack cleanup"
+  ],
+  "delivery": {
+    "queue": { "visible": 0, "inFlight": 0, "delayed": 0, "total": 0 },
+    "dlq": { "visible": 0, "inFlight": 0, "delayed": 0, "total": 0 },
+    "fullyDrained": true
+  },
+  "cleaner": {
+    "processed": 85,
+    "inserted": 85,
+    "deduplicated": 0,
+    "discarded": 0,
+    "retryableFailures": 0,
+    "writeDurationMs": 360,
+    "durationMs": 21795,
+    "exitCode": 0
+  },
+  "dashboard": {
+    "mode": "live",
+    "source": "live-api",
+    "window": "1h",
+    "visibleSampleCount": 20,
+    "vitals": {
+      "LCP": { "unit": "ms", "sampleCount": 4, "p50": 936, "p75": 992, "p95": 1076 },
+      "CLS": { "unit": "score", "sampleCount": 5, "p50": 0.049301258144718786, "p75": 0.051616072959533604, "p95": 0.09301348165294925 },
+      "INP": { "unit": "ms", "sampleCount": 1, "p50": 48, "p75": 48, "p95": 48 },
+      "FCP": { "unit": "ms", "sampleCount": 5, "p50": 728, "p75": 752, "p95": 992 },
+      "TTFB": { "unit": "ms", "sampleCount": 5, "p50": 3.8999999999068677, "p75": 5.599999999976717, "p95": 8.599999999976717 }
+    },
+    "navigation": {
+      "navigation.dns": { "unit": "ms", "sampleCount": 5, "p50": 0, "p75": 0, "p95": 0 },
+      "navigation.tcp": { "unit": "ms", "sampleCount": 5, "p50": 0, "p75": 0, "p95": 0.19999999995343387 },
+      "navigation.tls": { "unit": "ms", "sampleCount": 5, "p50": 0, "p75": 0, "p95": 0 },
+      "navigation.request_wait": { "unit": "ms", "sampleCount": 5, "p50": 2, "p75": 2.799999999930151, "p95": 4.400000000023283 },
+      "navigation.download": { "unit": "ms", "sampleCount": 5, "p50": 0.5, "p75": 0.5999999999767169, "p95": 0.6000000000931323 },
+      "navigation.dom_ready": { "unit": "ms", "sampleCount": 5, "p50": 617, "p75": 623.6000000000931, "p95": 640.5 },
+      "navigation.window_load": { "unit": "ms", "sampleCount": 5, "p50": 0, "p75": 0, "p95": 0 }
+    },
+    "scriptResource": { "unit": "ms", "sampleCount": 30, "p50": 16.300000000046566, "p75": 17.5, "p95": 31.199999999953434 },
+    "routes": [
+      { "route": "/performance", "sampleCount": 1, "p75": 1076, "p95": 1076 },
+      { "route": "/", "sampleCount": 1, "p75": 992, "p95": 992 },
+      { "route": "/profile", "sampleCount": 1, "p75": 936, "p95": 936 },
+      { "route": "/tasks", "sampleCount": 1, "p75": 924, "p95": 924 }
+    ],
+    "version": { "name": "1e703caeba2d", "sampleCount": 4, "p75": 992, "p95": 1076 },
+    "errorSamples": 0,
+    "confidence": {
+      "overall": "controlled-browser sparse sample",
+      "INP": "low confidence: n=1; identical p50/p75/p95 is expected",
+      "fieldClaim": false
+    },
+    "media": {
+      "desktop": {
+        "path": "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png",
+        "sha256": "f88e684dcc124aa948ada4ee0b406ebde3749add2ce76e6fd90008a27f8c60f7"
+      },
+      "mobile390": {
+        "path": "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png",
+        "sha256": "b1b259b10f136ab0ba537aff94f4f842533bda579b18a95f2c04fbbcec75959d"
+      },
+      "recording": {
+        "path": "docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm",
+        "sha256": "b11406c9a01a1c5ef4b4ab414f5fa0e07960994c1a64c95d123b366cb417f166"
+      }
+    }
+  },
+  "controlPlaneBeforeCleanup": {
+    "stackStatus": "CREATE_COMPLETE",
+    "ecrImageCount": 1,
+    "ecsClusterStatus": "ACTIVE",
+    "ecsTaskCount": 3,
+    "ecsTaskDefinitionCount": 2,
+    "apiGatewayPresent": true,
+    "lambdaCount": 2,
+    "cloudWatchLogGroupCount": 3,
+    "secretCount": 2,
+    "securityGroupPresent": true,
+    "iamRoleCount": 4
+  },
+  "cleanup": {
+    "schemaDeleted": true,
+    "schemaAbsenceVerified": true,
+    "schemaCleanupAttempt": 1,
+    "cloudFormationStackAbsent": true,
+    "remainingProjectResources": 0,
+    "inventory": {
+      "ecr": 0,
+      "ecsClusters": 0,
+      "ecsTasks": 0,
+      "taskDefinitions": 0,
+      "sqsAndDlq": 0,
+      "apiGateway": 0,
+      "lambda": 0,
+      "cloudWatchLogGroups": 0,
+      "secrets": 0,
+      "securityGroups": 0,
+      "securityGroupIngress": 0,
+      "iamRoles": 0
+    },
+    "sharedResources": {
+      "vpc": "protected-read-only",
+      "nat": "protected-read-only",
+      "database": "protected-read-only",
+      "oidc": "protected-read-only",
+      "artifactBucket": "protected-read-only",
+      "foundation": "explicit deny cleanup"
+    }
+  },
+  "security": {
+    "browserAwsCredentials": false,
+    "longLivedAwsAccessKey": false,
+    "githubIdentity": "short-lived OIDC session",
+    "publishedSecrets": false
+  },
+  "limitations": [
+    "This run proves one complete temporary validation lifecycle with controlled browser traffic; it is not production field RUM or traffic-scale evidence.",
+    "INP has one representative interaction sample. Its identical p50, p75 and p95 are mathematically expected and low confidence.",
+    "DNS and TLS durations are zero or locally unavailable because the controlled Web origin used local HTTP and connection reuse; these values are not internet latency claims.",
+    "Long-task, error and Web3 business metrics were instrumented but intentionally not fabricated when the safe journey produced no sample.",
+    "The project stack and project database schema were deleted after evidence capture; the public dashboard uses this verified historical snapshot rather than claiming a continuously running AWS backend.",
+    "Shared VPC, NAT, PostgreSQL, OIDC and artifact storage were protected and were not deleted by project cleanup."
+  ]
+}

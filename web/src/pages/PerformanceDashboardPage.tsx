@@ -429,10 +429,10 @@ export function PerformanceDashboardPage({
 					<p>
 						本轮采集 {VERIFIED_PERFORMANCE_OBSERVATION.browserEventCount}{" "}
 						个浏览器事件， Cleaner 完成{" "}
-						{VERIFIED_PERFORMANCE_OBSERVATION.cleanerInsertedCount} 条写入；
-						清理前仍有{" "}
-						{VERIFIED_PERFORMANCE_OBSERVATION.queueVisibleBeforeCleanup}
-						条待清理，因此不宣称全量排空。临时项目资源已清理；未保存分布的指标保持不可用。
+						{VERIFIED_PERFORMANCE_OBSERVATION.cleanerInsertedCount} 条写入；SQS
+						与 DLQ 已全量排空。临时 Schema、Stack 与 12 类项目资源均已清理。
+						这是受控浏览器稀疏样本，不冒充生产真实用户监控；INP 的 n=1
+						保持低置信度。
 					</p>
 					<a
 						className="performance-link"

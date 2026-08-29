@@ -244,11 +244,11 @@ describe("PerformanceDashboardPage", () => {
 		expect(await screen.findByText("历史快照 · 非实时")).toBeTruthy();
 		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
 		expect(screen.getByRole("status").textContent).toContain("管线失败");
-		expect(screen.getAllByText("Run 33160455921").length).toBeGreaterThan(0);
-		expect(screen.getAllByText("低置信度 · n=3").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("Run 33279132965").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("低置信度 · n=4").length).toBeGreaterThan(0);
 		expect(screen.queryByText(/32626397427/u)).toBeNull();
 		expect(
-			screen.getByText(/415 个浏览器事件.*103 条写入.*80\s*条待清理/u),
+			screen.getByText(/85 个浏览器事件.*85 条写入.*SQS.*DLQ 已全量排空/u),
 		).toBeTruthy();
 
 		const vitalsSection = screen
@@ -257,17 +257,27 @@ describe("PerformanceDashboardPage", () => {
 		expect(vitalsSection).not.toBeNull();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /LCP 1 960 ms 960 ms 960 ms 已观测/u,
+				name: /LCP 4 936 ms 992 ms 1076 ms 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /FCP 1 960 ms 960 ms 960 ms 已观测/u,
+				name: /CLS 5 0\.049 0\.052 0\.093 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /TTFB 1 9 ms 9 ms 9 ms 已观测/u,
+				name: /INP 1 48 ms 48 ms 48 ms 已观测/u,
+			}),
+		).toBeTruthy();
+		expect(
+			within(vitalsSection as HTMLElement).getByRole("row", {
+				name: /FCP 5 728 ms 752 ms 992 ms 已观测/u,
+			}),
+		).toBeTruthy();
+		expect(
+			within(vitalsSection as HTMLElement).getByRole("row", {
+				name: /TTFB 5 4 ms 6 ms 9 ms 已观测/u,
 			}),
 		).toBeTruthy();
 
@@ -277,7 +287,7 @@ describe("PerformanceDashboardPage", () => {
 		expect(resourceSection).not.toBeNull();
 		expect(
 			within(resourceSection as HTMLElement).getByRole("row", {
-				name: /resource\.script\.duration 79 104 ms 138 ms 171 ms 已观测/u,
+				name: /resource\.script\.duration 30 16 ms 18 ms 31 ms 已观测/u,
 			}),
 		).toBeTruthy();
 	});

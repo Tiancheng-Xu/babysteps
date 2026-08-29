@@ -4,16 +4,16 @@ import renderingArchitectureImage from "../../../docs/architecture/starbuddy-ren
 import renderingSequenceImage from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
-import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-28-performance-aws-final.json?url";
-import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm";
+import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
+import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
-import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png";
-import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png";
+import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png";
+import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -538,10 +538,10 @@ export function EvidencePage() {
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
 					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
-					33160455921 在 commit e40008e056d2 上以本地 Chromium、Vite Preview
-					和本地 Worker 代理访问 5 条页面路径，再连接临时 AWS 后端完成 SQS
-					入队、ECS Cleaner、PostgreSQL 聚合与 Live Dashboard 取证；随后删除
-					Schema 与精确项目 Stack，复核 12 类项目资源全部为 0。
+					33279132965 在 commit 1e703caeba2d 上以受控 Chromium、Vite Web 和本地
+					Worker 代理访问 5 条页面路径，再连接临时 AWS 后端完成 SQS 入队、ECS
+					Cleaner、PostgreSQL 聚合与 Live Dashboard 取证；随后删除 Schema
+					与精确项目 Stack，复核队列、DLQ 与 12 类项目资源全部为 0。
 				</p>
 				<section
 					className="evidence-requirement-map"
@@ -557,7 +557,10 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>packages/performance-sdk/src</code>
 							<strong>验证证据</strong>
-							<span>5 条真实页面路径、25 个批次、415 个浏览器事件</span>
+							<span>
+								5 条真实页面路径、14 个批次、{"85 个唯一事件"}
+								；LCP、CLS、INP、FCP、TTFB 与导航阶段均有受控样本
+							</span>
 							<strong>当前状态</strong>
 							<span>已实现并验证</span>
 						</article>
@@ -569,11 +572,11 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>aws/src/performance · aws/performance-template.yaml</code>
 							<strong>验证证据</strong>
-							<code>Run 33160455921</code>
+							<code>Run 33279132965</code>
 							<strong>当前状态</strong>
 							<span>
-								ECS Cleaner 处理并写入 103 条，0 丢弃、0 可重试失败；清理前仍有
-								80 条 SQS 可见消息，未宣称全量排空
+								ECS Cleaner 处理并写入 85 条，0 丢弃、0 可重试失败；SQS 与 DLQ
+								的 visible、in-flight、delayed 均为 0
 							</span>
 						</article>
 						<article>
@@ -588,7 +591,7 @@ export function EvidencePage() {
 							</code>
 							<strong>验证证据</strong>
 							<span>
-								Live API 实测 LCP/FCP/TTFB、导航和脚本资源分位数；Schema
+								Live API 实测 LCP/CLS/INP/FCP/TTFB、导航和脚本资源分位数；Schema
 								与精确项目 Stack 已删除，12 类项目资源全部为 0
 							</span>
 							<a
@@ -689,12 +692,25 @@ export function EvidencePage() {
 						</h4>
 						<ol>
 							<li>
-								<code>Run 33160455921</code>
-								：commit e40008e056d2 的最终合同完成 5 条真实页面路径、415
-								个浏览器事件、ECS Cleaner 103 条幂等写入、Live Dashboard
-								双端截图与录屏；清理前仍有 80 条 SQS
-								可见消息，因此不把本轮描述成全量排空；随后 Schema、精确项目
+								<code>Run 33279132965</code>
+								：commit 1e703caeba2d 的最终合同完成 5 条页面路径、85
+								个唯一事件、14 个接收批次与 85 条幂等写入；LCP 4、CLS 5、INP
+								1、FCP 5、TTFB 5， 导航分项各 5。队列/DLQ 全量排空，Schema、精确
 								Stack 与 12 类项目资源全部归零。
+							</li>
+							<li>
+								<code>Run 33253468433</code>
+								：截图已生成但生命周期 drain 在一次传输失败后只按 attempt
+								计数，导致
+								<code>/tasks</code> 超时。修复改为按 eventId 对账：3 秒单次
+								attempt 超时后允许 SDK
+								以同一事件重试，只有全部唯一事件最终被接收才通过；该失败 Run 的
+								Schema、Stack 与 12 类资源也已验证归零。
+							</li>
+							<li>
+								<code>Run 33160455921</code>
+								：历史快照曾采集 415 条、写入 103 条，但清理前仍有 80 条 SQS
+								可见消息，因此只保留为“部分排空”的旧证据，不再作为当前完成态。
 							</li>
 							<li>
 								<code>Run 31760380214</code>
@@ -869,7 +885,7 @@ export function EvidencePage() {
 					</header>
 					<p>
 						截图和录屏由本地 Chromium、Vite Preview 和本地 Worker 代理连接临时
-						AWS API、SQS、ECS 与 PostgreSQL 后采集；随后 Run 33160455921
+						AWS API、SQS、ECS 与 PostgreSQL 后采集；随后 Run 33279132965
 						删除项目 Schema 与临时 Stack，并用固定清单验证零残留。
 						因此这些媒体证明真实运行窗口，公开页面则诚实保持非实时，不伪装成持续在线
 						AWS 服务。

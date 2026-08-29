@@ -108,10 +108,9 @@ const expectedDiagramAssets = [
 			"项目栈自动清理",
 			"临时 AWS 闭环已验证",
 			"零残留",
-			"Run 33160455921",
-			"415 collected / 103 inserted",
-			"清理前 SQS visible=80",
-			"未验证全量排空",
+			"Run 33279132965",
+			"85 collected / 85 inserted",
+			"SQS / DLQ 全量排空",
 			"12 类项目资源归零",
 		],
 	},
@@ -134,11 +133,10 @@ const expectedDiagramAssets = [
 			"sampleCount",
 			"DROP SCHEMA",
 			"delete-stack",
-			"Run 33160455921",
-			"415 collected",
-			"ECS 103 inserted",
-			"SQS visible=80",
-			"全量队列排空未验证",
+			"Run 33279132965",
+			"85 / 85 事件已验证",
+			"LCP / CLS / INP / FCP / TTFB",
+			"SQS / DLQ / Schema / Stack / 12 类资源归零",
 			"12 类项目资源全部为 0",
 		],
 	},
@@ -267,33 +265,33 @@ const expectedDiagramAssets = [
 	},
 	{
 		kind: "final AWS performance desktop screenshot",
-		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+		path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 1803775,
+		expectedBytes: 1316232,
 		expectedSha256:
-			"49ce112fe7937cde482953aced69bf6f08aba4414367c55aa370a35b0f22d04c",
+			"f88e684dcc124aa948ada4ee0b406ebde3749add2ce76e6fd90008a27f8c60f7",
 	},
 	{
 		kind: "final AWS performance mobile screenshot",
-		path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+		path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 1503359,
+		expectedBytes: 1009269,
 		expectedSha256:
-			"c7177a4283ff33541fded21f36cfff082d52cb6190f299b15b586b097ec09574",
+			"b1b259b10f136ab0ba537aff94f4f842533bda579b18a95f2c04fbbcec75959d",
 	},
 	{
 		kind: "final AWS performance recording",
-		path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+		path: "docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm",
 		minimumWidth: 0,
 		minimumHeight: 0,
 		markers: [],
-		expectedBytes: 624302,
+		expectedBytes: 586854,
 		expectedSha256:
-			"568e2dfd0d0ae4e611f7b3b16766bf3374884073c867e246048cb9ffc367c6aa",
+			"b11406c9a01a1c5ef4b4ab414f5fa0e07960994c1a64c95d123b366cb417f166",
 	},
 ];
 const evidencePageMarkers = [
@@ -329,13 +327,13 @@ const evidencePageMarkers = [
 	"浏览器 SDK → Worker → AWS",
 	"真实样本数与 p50 / p75 / p95",
 	"最终闭环已验证 · 取证后零残留",
-	"commit e40008e056d2",
-	"Run 33160455921",
+	"commit 1e703caeba2d",
+	"Run 33279132965",
 	"5 条真实页面路径",
-	"415 个浏览器事件",
-	"ECS Cleaner 处理并写入 103 条",
-	"80 条 SQS 可见消息",
-	"未宣称全量排空",
+	"85 个唯一事件",
+	"ECS Cleaner 处理并写入 85 条",
+	"SQS 与 DLQ",
+	"全量排空",
 	"12 类项目资源全部为 0",
 	"查看机器可读证据",
 	"要求、实现与证据映射",
@@ -398,42 +396,45 @@ function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
 	if (!machineEvidence || typeof machineEvidence !== "object") {
 		return ["final AWS machine evidence is missing"];
 	}
-	if (machineEvidence.schemaVersion !== 3) {
+	if (machineEvidence.schemaVersion !== 4) {
 		errors.push("final AWS evidence schema version mismatch");
 	}
-	if (machineEvidence.workflow?.runId !== 33160455921) {
+	if (machineEvidence.workflow?.runId !== 33279132965) {
 		errors.push("final AWS evidence Run ID mismatch");
 	}
 	if (
 		machineEvidence.workflow?.commit !==
-		"e40008e056d24199641fa978142f706051889f3b"
+		"1e703caeba2d256936f677eb7ea15f2044cc7dd6"
 	) {
 		errors.push("final AWS evidence commit mismatch");
 	}
 	if (
 		machineEvidence.workflow?.validationSurface !==
-		"local Chromium and Vite preview with local Worker proxy connected to temporary AWS resources"
+		"controlled local Chromium and Vite web with local Worker proxy connected to temporary AWS resources"
 	) {
 		errors.push("final AWS evidence validation surface mismatch");
 	}
 	if (
-		machineEvidence.browserJourney?.batchCount !== 25 ||
-		machineEvidence.browserJourney?.eventCount !== 415
+		machineEvidence.browserJourney?.batchCount !== 14 ||
+		machineEvidence.browserJourney?.acceptedBatchCount !== 14 ||
+		machineEvidence.browserJourney?.rejectedBatchCount !== 0 ||
+		machineEvidence.browserJourney?.transportFailureCount !== 0 ||
+		machineEvidence.browserJourney?.eventCount !== 85 ||
+		machineEvidence.browserJourney?.unacceptedEventCount !== 0
 	) {
 		errors.push("final AWS evidence browser journey counts mismatch");
 	}
 	if (
-		machineEvidence.queueBeforeCleanup?.visibleMessages !== 80 ||
-		machineEvidence.queueBeforeCleanup?.fullyDrained !== false
+		machineEvidence.delivery?.fullyDrained !== true ||
+		machineEvidence.delivery?.queue?.total !== 0 ||
+		machineEvidence.delivery?.dlq?.total !== 0
 	) {
-		errors.push(
-			"final AWS evidence must disclose the unverified full queue drain",
-		);
+		errors.push("final AWS evidence queue and DLQ drain mismatch");
 	}
 	const cleaner = machineEvidence.cleaner;
 	if (
-		cleaner?.processed !== 103 ||
-		cleaner?.inserted !== 103 ||
+		cleaner?.processed !== 85 ||
+		cleaner?.inserted !== 85 ||
 		cleaner?.discarded !== 0 ||
 		cleaner?.retryableFailures !== 0 ||
 		cleaner?.exitCode !== 0
@@ -445,6 +446,30 @@ function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
 		machineEvidence.dashboard?.source !== "live-api"
 	) {
 		errors.push("final AWS evidence dashboard source mismatch");
+	}
+	for (const name of ["LCP", "CLS", "INP", "FCP", "TTFB"]) {
+		const metric = machineEvidence.dashboard?.vitals?.[name];
+		if (
+			!(metric?.sampleCount > 0) ||
+			![metric?.p50, metric?.p75, metric?.p95].every(Number.isFinite) ||
+			metric.p50 > metric.p75 ||
+			metric.p75 > metric.p95
+		) {
+			errors.push(`final AWS evidence ${name} distribution mismatch`);
+		}
+	}
+	for (const name of [
+		"navigation.dns",
+		"navigation.tcp",
+		"navigation.tls",
+		"navigation.request_wait",
+		"navigation.download",
+		"navigation.dom_ready",
+		"navigation.window_load",
+	]) {
+		if (!(machineEvidence.dashboard?.navigation?.[name]?.sampleCount > 0)) {
+			errors.push(`final AWS evidence ${name} sample is missing`);
+		}
 	}
 	const cleanup = machineEvidence.cleanup;
 	if (
@@ -477,13 +502,13 @@ function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
 	}
 	const media = {
 		desktop: {
-			path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-desktop-1440.png",
+			path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png",
 		},
 		mobile390: {
-			path: "docs/evidence/screenshots/2026-08-28-performance-final/performance-live-mobile-390.png",
+			path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png",
 		},
 		recording: {
-			path: "docs/evidence/recordings/2026-08-28-performance-final/performance-live.webm",
+			path: "docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm",
 		},
 	};
 	for (const [name, expected] of Object.entries(media)) {
@@ -669,7 +694,7 @@ async function main() {
 	const evidencePagePath = process.argv[5] ?? "web/src/pages/EvidencePage.tsx";
 	const machineEvidencePath =
 		process.argv[6] ??
-		"docs/evidence/deployment/2026-08-28-performance-aws-final.json";
+		"docs/evidence/deployment/2026-08-29-performance-aws-final.json";
 	const [
 		mapText,
 		architectureText,
