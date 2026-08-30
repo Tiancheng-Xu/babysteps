@@ -14,6 +14,7 @@ import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
 import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png";
 import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png";
+import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -328,6 +329,50 @@ export function EvidencePage() {
 					把同一 evidence hash 写入 Sepolia，Marketplace 再按 purchaseId
 					幂等铸造锁定 SBT。
 				</p>
+				<section
+					className="evidence-requirement-map"
+					aria-labelledby="performance-coverage-semantics-title"
+				>
+					<h3 id="performance-coverage-semantics-title">
+						全路由采样与覆盖语义
+					</h3>
+					<div>
+						<article>
+							<strong>本地实现状态</strong>
+							<span>本地已验证 · 云端样本待刷新</span>
+							<strong>修复内容</strong>
+							<span>
+								把“已有样本、健康零事件、场景未执行、真实缺样本、环境不可用”拆成五种状态，不再把错误为
+								0、Long Task 为 0、未执行 Web3 与 DNS/TLS
+								不可测混写成同一句“无样本”。
+							</span>
+							<strong>路由与安全采样</strong>
+							<span>
+								9 条产品路由 × 4 个视口共 36 项浏览器检查通过；受控 Journey
+								只用真实 Resource Timing 请求覆盖 fetch、XHR、stylesheet 与
+								image，不制造错误、长任务、坏 CLS、钱包授权或链上交易填数。
+							</span>
+							<strong>验证证据</strong>
+							<span>
+								全量测试、typecheck、生产 build、公开内容扫描、根级
+								overflow/pageerror 检查与 BackstopJS 375/390/430/1440 均通过。
+							</span>
+							<a
+								href={performanceCoverageSemanticsUrl}
+								target="_blank"
+								rel="noreferrer"
+							>
+								查看覆盖语义与全路由检查记录
+							</a>
+							<strong>证据边界</strong>
+							<span>
+								当前生产历史快照仍来自 Run 33279132965；只有合并后新的临时 AWS
+								Run
+								完成采集、Cleaner、查询与零残留清理，才能把新增资源覆盖标记为云端已验证。
+							</span>
+						</article>
+					</div>
+				</section>
 				<section
 					className="evidence-requirement-map"
 					aria-label="Web3 产品闭环实现映射"

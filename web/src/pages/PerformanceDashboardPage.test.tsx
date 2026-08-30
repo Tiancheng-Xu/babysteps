@@ -290,6 +290,22 @@ describe("PerformanceDashboardPage", () => {
 				name: /resource\.script\.duration 30 16 ms 18 ms 31 ms 已观测/u,
 			}),
 		).toBeTruthy();
+
+		const navigationSection = screen
+			.getByRole("heading", { name: "导航阶段" })
+			.closest("section");
+		expect(navigationSection).not.toBeNull();
+		for (const name of ["navigation.dns", "navigation.tcp", "navigation.tls"]) {
+			expect(
+				within(navigationSection as HTMLElement).getByRole("row", {
+					name: new RegExp(`${name} 0 — — — 本环境不可用`, "u"),
+				}),
+			).toBeTruthy();
+		}
+
+		expect(screen.getAllByText("本轮未发生（健康）").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("本轮场景未覆盖").length).toBeGreaterThan(0);
+		expect(screen.queryByText("已埋点，当前快照无样本")).toBeNull();
 	});
 
 	it("renders a valid API snapshot without attaching the bundled evidence banner", async () => {

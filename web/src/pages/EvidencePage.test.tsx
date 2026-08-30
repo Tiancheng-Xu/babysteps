@@ -28,6 +28,14 @@ describe("EvidencePage", () => {
 
 	it("shows the final verified AWS performance lifecycle with visible proof", () => {
 		render(<EvidencePage />);
+		expect(
+			screen.getByRole("heading", { name: "全路由采样与覆盖语义" }),
+		).toBeTruthy();
+		expect(screen.getByText("本地已验证 · 云端样本待刷新")).toBeTruthy();
+		expect(screen.getByText(/9 条产品路由 × 4 个视口共 36 项/u)).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "查看覆盖语义与全路由检查记录" }),
+		).toBeTruthy();
 
 		expect(
 			screen.getByRole("heading", {

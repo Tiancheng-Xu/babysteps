@@ -25,8 +25,10 @@ type SectionCoverage = PerformanceCoverageStatus | "partial";
 
 const COVERAGE_LABEL: Record<PerformanceCoverageStatus, string> = {
 	observed: "已观测",
+	"observed-zero": "本轮未发生（健康）",
+	"not-exercised": "本轮场景未覆盖",
 	"instrumented-no-sample": "已埋点，当前快照无样本",
-	unavailable: "不可用",
+	unavailable: "本环境不可用",
 };
 
 function filtersFromUrl(): PerformanceFilters {

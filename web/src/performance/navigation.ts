@@ -30,12 +30,20 @@ export function collectNavigationEvents(
 			entry.domContentLoadedEventEnd,
 		],
 	];
-	const events = timings.map(([name, end, start]) => ({
-		type: "custom" as const,
-		name,
-		value: duration(Number(end), Number(start)),
-		unit: "ms" as const,
-	}));
+	const events = timings.map(([name, end, start]) => {
+		const value = duration(Number(end), Number(start));
+		const connectionPhase =
+			name === "navigation.dns" || name === "navigation.tcp";
+		return {
+			type: "custom" as const,
+			name,
+			value,
+			unit: "ms" as const,
+			...(connectionPhase && value === 0
+				? { outcome: "unavailable" as const }
+				: {}),
+		};
+	});
 	events.splice(2, 0, {
 		type: "custom",
 		name: "navigation.tls",

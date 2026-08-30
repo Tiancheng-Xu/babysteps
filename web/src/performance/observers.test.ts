@@ -55,6 +55,27 @@ describe("performance observers", () => {
 		);
 	});
 
+	it("marks zero DNS and TCP phases unavailable when local reuse has no phase timing", () => {
+		const events = collectNavigationEvents({
+			domainLookupStart: 0,
+			domainLookupEnd: 0,
+			connectStart: 0,
+			connectEnd: 0,
+			secureConnectionStart: 0,
+			requestStart: 1,
+			responseStart: 2,
+			responseEnd: 3,
+			domContentLoadedEventEnd: 4,
+			loadEventEnd: 5,
+		} as PerformanceNavigationTiming);
+
+		for (const name of ["navigation.dns", "navigation.tcp"]) {
+			expect(events).toContainEqual(
+				expect.objectContaining({ name, value: 0, outcome: "unavailable" }),
+			);
+		}
+	});
+
 	it("classifies same-origin image resources without retaining their URL", () => {
 		expect(
 			classifyResource(

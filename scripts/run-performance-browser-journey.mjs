@@ -16,6 +16,10 @@ const unavailableCoverage = journeyManifest.unavailableMetrics;
 const routeTokens = new Map([
 	["/", "HOME"],
 	["/tasks", "TASKS"],
+	["/parent", "PARENT"],
+	["/keepsakes", "KEEPSAKES"],
+	["/provider", "PROVIDER"],
+	["/exchange", "EXCHANGE"],
 	["/profile", "PROFILE"],
 	["/performance", "PERFORMANCE"],
 	["/evidence", "EVIDENCE"],
@@ -156,6 +160,42 @@ async function performRepresentativeInteraction(page, route) {
 	}
 }
 
+async function performSafeResourceProbes(page, route) {
+	if (route !== journeyManifest.safeResourceProbeRoute) return;
+	await page.evaluate(async () => {
+		await fetch("/__performance_probe__/fetch", { cache: "no-store" }).then(
+			(response) => response.json(),
+		);
+		await new Promise((resolve, reject) => {
+			const request = new XMLHttpRequest();
+			request.open("GET", "/__performance_probe__/xhr");
+			request.onload = () => resolve(undefined);
+			request.onerror = () => reject(new Error("RESOURCE_PROBE_XHR_FAILED"));
+			request.send();
+		});
+		await new Promise((resolve, reject) => {
+			const image = new Image();
+			image.onload = () => resolve(undefined);
+			image.onerror = () => reject(new Error("RESOURCE_PROBE_IMAGE_FAILED"));
+			image.src = "/__performance_probe__/image.png";
+		});
+		await new Promise((resolve, reject) => {
+			const link = document.createElement("link");
+			link.rel = "stylesheet";
+			link.href = "/__performance_probe__/style.css";
+			link.onload = () => {
+				link.remove();
+				resolve(undefined);
+			};
+			link.onerror = () => {
+				link.remove();
+				reject(new Error("RESOURCE_PROBE_STYLE_FAILED"));
+			};
+			document.head.append(link);
+		});
+	});
+}
+
 async function finalizeControlledLifecycle(page, deliveryTracker) {
 	const telemetryPollIntervalMs = 100;
 	const telemetryPollAttempts = Math.ceil(
@@ -266,6 +306,41 @@ async function runJourney() {
 				: {}),
 		});
 		const page = await context.newPage();
+		await page.route("**/__performance_probe__/**", async (route) => {
+			const pathname = new URL(route.request().url()).pathname;
+			if (pathname === "/__performance_probe__/fetch") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: '{"ok":true}',
+				});
+				return;
+			}
+			if (pathname === "/__performance_probe__/xhr") {
+				await route.fulfill({ status: 200, body: "ok" });
+				return;
+			}
+			if (pathname === "/__performance_probe__/style.css") {
+				await route.fulfill({
+					status: 200,
+					contentType: "text/css",
+					body: ":root{--performance-probe:1}",
+				});
+				return;
+			}
+			if (pathname === "/__performance_probe__/image.png") {
+				await route.fulfill({
+					status: 200,
+					contentType: "image/png",
+					body: Buffer.from(
+						"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+						"base64",
+					),
+				});
+				return;
+			}
+			await route.abort();
+		});
 		await page.route("**/api/performance/events", async (route) => {
 			if (dashboardOnly) {
 				await route.fulfill({
@@ -383,7 +458,7 @@ async function runJourney() {
 				throw new Error(sanitizeJourneyFailure(error, "/performance"));
 			}
 		} else {
-			for (const { path: route, heading } of journeyRoutes) {
+			for (const [routeIndex, { path: route, heading }] of journeyRoutes.entries()) {
 				process.stdout.write(`BROWSER_ROUTE_START ${routeTokens.get(route)}\n`);
 				try {
 					const response = await page.goto(
@@ -395,6 +470,7 @@ async function runJourney() {
 						.getByRole("heading", { name: heading, exact: true })
 						.waitFor({ state: "visible" });
 					observedRoutes.add(route);
+					await performSafeResourceProbes(page, route);
 					await performRepresentativeInteraction(page, route);
 					await page.waitForTimeout(350);
 					if (artifactsDir) {
@@ -408,6 +484,14 @@ async function runJourney() {
 					}
 					await finalizeControlledLifecycle(page, deliveryTracker);
 					process.stdout.write(`BROWSER_ROUTE_OK ${routeTokens.get(route)}\n`);
+					const completed = routeIndex + 1;
+					if (
+						completed < journeyRoutes.length &&
+						completed % journeyManifest.maxRoutesPerQuotaWindow === 0
+					) {
+						process.stdout.write("BROWSER_QUOTA_WINDOW_PAUSE\n");
+						await page.waitForTimeout(journeyManifest.quotaWindowPauseMs);
+					}
 				} catch (error) {
 					throw new Error(sanitizeJourneyFailure(error, route));
 				}

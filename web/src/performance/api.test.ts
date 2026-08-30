@@ -159,6 +159,23 @@ const response = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("performance query API", () => {
+	it("accepts explicit healthy-zero and not-exercised coverage states", () => {
+		const candidate: PerformanceDashboardResponse = structuredClone(response);
+		candidate.longTasks.coverage = "observed-zero";
+		candidate.longTasks.duration.coverage = "observed-zero";
+		candidate.errors[0] = {
+			...candidate.errors[0],
+			rate: 0,
+			coverage: "observed-zero",
+		};
+		candidate.web3[0] = {
+			...candidate.web3[0],
+			coverage: "not-exercised",
+		};
+
+		expect(isPerformanceDashboardResponse(candidate)).toBe(true);
+	});
+
 	it("accepts a complete explicitly validated dashboard response", async () => {
 		vi.stubGlobal(
 			"fetch",

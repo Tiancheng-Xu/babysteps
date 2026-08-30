@@ -162,7 +162,7 @@ jobs:
         id: local-web
         run: |
           test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
-          RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=20 \
+          RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=30 \
             nohup pnpm --filter @babysteps/web exec vite --mode production --host 127.0.0.1 --port 4173 \
             > "$RUNNER_TEMP/local-web.log" 2>&1 &
           web_pid=$!
