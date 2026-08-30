@@ -31,6 +31,12 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 		localCoverage.steps.map((step) => step.run ?? "").join("\n"),
 		/--local-coverage/,
 	);
+	const localCoverageScript = localCoverage.steps
+		.map((step) => step.run ?? "")
+		.join("\n");
+	assert.match(localCoverageScript, /seq 1 90/);
+	assert.match(localCoverageScript, /kill -0 "\$web_pid"/);
+	assert.match(localCoverageScript, /tail -n 80 "\$web_log"/);
 	assert.doesNotMatch(JSON.stringify(localCoverage), /aws-performance|id-token/);
 	for (const job of Object.values(workflow.jobs)) {
 		for (const step of job.steps ?? []) {

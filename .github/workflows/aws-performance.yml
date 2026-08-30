@@ -54,15 +54,27 @@ jobs:
             pnpm --filter @babysteps/web build
       - name: Prove routes, interactions and metric coverage before AWS
         run: |
+          web_log="$RUNNER_TEMP/local-coverage-web.log"
           RUNNER_TRACKING_ID='' pnpm exec wrangler pages dev web/dist --ip 127.0.0.1 --port 4173 --compatibility-date 2026-07-29 \
-            > "$RUNNER_TEMP/local-coverage-web.log" 2>&1 &
+            > "$web_log" 2>&1 &
           web_pid=$!
           trap 'kill "$web_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then break; fi
+          ready=false
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
+              ready=true
+              break
+            fi
+            if ! kill -0 "$web_pid" 2>/dev/null; then
+              tail -n 80 "$web_log"
+              exit 1
+            fi
             sleep 1
           done
-          curl --fail --silent http://127.0.0.1:4173/ >/dev/null
+          if [ "$ready" != true ]; then
+            tail -n 80 "$web_log"
+            exit 1
+          fi
           node scripts/run-performance-browser-journey.mjs \
             --origin http://127.0.0.1:4173 \
             --local-coverage \
