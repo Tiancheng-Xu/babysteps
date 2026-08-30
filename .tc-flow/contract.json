@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
   "feature": "performance-sampling-coverage-semantics",
-  "version": 2,
-  "contractHash": "502998ee7fe2bd558f6232f7508b1d8061053bde3e19443ba9a5c4124c5b1427",
+  "version": 4,
+  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
   "goal": "Make the controlled BabySteps performance journey cover every safe deterministic scenario while reporting healthy zero, conditional, unavailable, success, and failure states truthfully before any AWS resources are created.",
   "nonGoals": [
     "Manufacturing layout shifts, JavaScript errors, promise rejections, long tasks, wallet signatures, token approvals, swaps, or chain transactions merely to fill the dashboard",
@@ -17,12 +17,15 @@
   ],
   "allowedWritePaths": [
     ".github/workflows/aws-performance.yml",
+    "aws/src/performance/handlers.ts",
     "aws/src/performance/pipeline.ts",
+    "aws/test/performanceHandlers.test.ts",
     "aws/test/performancePipeline.test.ts",
     "scripts/",
     "web/src/features/exchange/",
     "web/src/performance/",
     "web/src/pages/PerformanceDashboardPage.tsx",
+    "web/src/pages/EvidencePage.tsx",
     "web/src/styles.css",
     "docs/evidence/",
     ".tc-flow/"

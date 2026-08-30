@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
+  "feature": "performance-sampling-coverage-semantics",
+  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
+  "node": "N7",
+  "tasks": {
+    "T-001": "pass",
+    "T-002": "pass",
+    "T-003": "pass",
+    "T-004": "pass"
+  },
+  "featureQa": "pass",
+  "repositoryPolicy": "ci-pass",
+  "headBeforeProcessRecords": "ac8931d25406dc11645a306f182c281de4407cb0",
+  "blockers": [],
+  "release": "prd-recording-pending-before-push"
+}

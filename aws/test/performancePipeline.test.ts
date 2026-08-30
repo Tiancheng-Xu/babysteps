@@ -57,6 +57,18 @@ describe("performance ingest", () => {
 		).not.toThrow();
 		expect(() =>
 			parsePerformanceBatch(
+				batch("web3", "web3.rpc.read", "ms", { outcome: "failure" }),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("web3", "web3.rpc.read.error", "ms", {
+					outcome: "success",
+				}),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch(
 				batch("resource", "https://private.example/a?token=x", "ms"),
 			),
 		).toThrow();
@@ -274,7 +286,7 @@ describe("real-sample statistics", () => {
 			}),
 			event({
 				type: "web3",
-				name: "web3.rpc.read",
+				name: "web3.rpc.read.error",
 				outcome: "failure",
 			}),
 		]);
@@ -410,6 +422,13 @@ describe("real-sample statistics", () => {
 		);
 
 		expect(dashboard.freshness).toMatchObject({ observedAt, latestSampleAt });
+		expect(dashboard.observedRoutes).toEqual([
+			{
+				route: "/tasks/:id",
+				sampleCount: 1,
+				latestSampleAt,
+			},
+		]);
 	});
 
 	it("returns only the ten slowest routes", () => {

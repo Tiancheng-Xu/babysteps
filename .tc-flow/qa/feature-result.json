@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
+  "feature": "performance-sampling-coverage-semantics",
+  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
+  "verdict": "pass",
+  "acceptanceCriteria": {
+    "passed": 10,
+    "total": 10
+  },
+  "controlledBrowser": {
+    "routes": "9/9",
+    "events": 215,
+    "acceptedBatches": "39/39",
+    "missingRequired": 0,
+    "requiredMetricFamilies": 23
+  },
+  "responsive": {
+    "matrix": "36/36",
+    "widths": [375, 390, 430, 1440],
+    "rootOverflowFailures": 0,
+    "pageErrors": 0
+  },
+  "visualRegression": {
+    "backstop": "4/4",
+    "layout": "2/2",
+    "candidateDiffs": 0
+  },
+  "tests": {
+    "validators": "99/99",
+    "aws": "90/90",
+    "contracts": "108/108",
+    "web": "293/293",
+    "worker": "62/62",
+    "subgraph": "4/4",
+    "typecheck": "pass",
+    "build": "pass",
+    "deliveryEvidence": "pass",
+    "publicCopy": "pass"
+  },
+  "release": "prd-recording-pending-before-push"
+}

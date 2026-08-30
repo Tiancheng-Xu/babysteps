@@ -118,13 +118,65 @@ export function evaluateJourneyCoverage({ observed = [], required = [] }) {
 	return { complete: missing.length === 0, missing };
 }
 
-function requiredMetricForObservedEvent(name) {
-	if (journeyManifest.requiredMetrics.includes(name)) return name;
-	if (name.endsWith(".error")) {
+const requiredBusinessMetricRoutes = new Map([
+	...journeyManifest.safeReadOnlySettles.flatMap((scenario) =>
+		scenario.expectedMetrics.map((name) => [name, scenario.route]),
+	),
+	...journeyManifest.safeBusinessInteractions.flatMap((scenario) =>
+		(scenario.expectedMetrics ?? [scenario.expectedMetric]).map((name) => [
+			name,
+			scenario.route,
+		]),
+	),
+]);
+
+function normalizedEventRoute(event) {
+	return typeof event?.route === "string" ? event.route.split(/[?#]/u)[0] : "";
+}
+
+export function requiredMetricForObservedEvent(event) {
+	const name = typeof event?.name === "string" ? event.name : "";
+	const eventRoute = normalizedEventRoute(event);
+	if (journeyManifest.requiredMetrics.includes(name)) {
+		const requiredRoute = requiredBusinessMetricRoutes.get(name);
+		if (requiredRoute) {
+			if (event.type !== "web3" || eventRoute !== requiredRoute) {
+				return undefined;
+			}
+			if (event.outcome === "failure" || event.outcome === "unavailable") {
+				return undefined;
+			}
+		}
+		return name;
+	}
+	if (event.type === "web3" && name.endsWith(".error")) {
 		const baseName = name.slice(0, -".error".length);
-		if (journeyManifest.requiredMetrics.includes(baseName)) return baseName;
+		const requiredRoute = requiredBusinessMetricRoutes.get(baseName);
+		if (
+			journeyManifest.requiredWeb3Metrics.includes(baseName) &&
+			requiredRoute === eventRoute &&
+			event.outcome !== "success" &&
+			event.outcome !== "unavailable"
+		) {
+			return baseName;
+		}
 	}
 	return undefined;
+}
+
+export function coverageMetricForObservedEvent(event) {
+	const name = typeof event?.name === "string" ? event.name : "";
+	if (!name) return undefined;
+	const baseName = name.endsWith(".error")
+		? name.slice(0, -".error".length)
+		: name;
+	if (
+		requiredBusinessMetricRoutes.has(name) ||
+		requiredBusinessMetricRoutes.has(baseName)
+	) {
+		return requiredMetricForObservedEvent(event);
+	}
+	return name;
 }
 
 export function assertJourneyComplete(summary) {
@@ -592,21 +644,24 @@ async function runJourney() {
 				if (!Array.isArray(batch?.events)) return;
 				for (const event of batch.events) {
 					if (typeof event?.name !== "string") continue;
+					const eventRoute = normalizedEventRoute(event);
 					for (const interaction of journeyManifest.safeBusinessInteractions) {
 						const outcome = safeBusinessOutcomes[interaction.id];
-						if (event.name === interaction.expectedMetric) {
+						const requiredMetric = requiredMetricForObservedEvent(event);
+						if (
+							requiredMetric === interaction.expectedMetric &&
+							event.name === interaction.expectedMetric
+						) {
 							outcome.successObserved = true;
-						} else if (event.name === `${interaction.expectedMetric}.error`) {
+						} else if (
+							requiredMetric === interaction.expectedMetric &&
+							event.name === `${interaction.expectedMetric}.error`
+						) {
 							outcome.failureObserved = true;
 						}
 					}
-					coverage.add(
-						requiredMetricForObservedEvent(event.name) ?? event.name,
-					);
-					const eventRoute =
-						typeof event.route === "string"
-							? event.route.split(/[?#]/u)[0]
-							: "";
+					const coverageMetric = coverageMetricForObservedEvent(event);
+					if (coverageMetric) coverage.add(coverageMetric);
 					if (
 						event.name ===
 							journeyManifest.representativeInteraction.expectedMetric &&

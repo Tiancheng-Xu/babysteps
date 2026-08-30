@@ -14,3 +14,12 @@
 {"at":"2026-08-13T13:22:20Z","node":"N6","event":"checkpoint-created","result":"local-commits-56812f1-through-68e3e78-plus-final-evidence-pending"}
 {"at":"2026-08-13T13:22:20Z","node":"N7","event":"deployment-decision","result":"feature-branch-only","production":"not-authorized","sepolia-keepsakes":"pending"}
 {"at":"2026-08-13T13:22:20Z","node":"N8","event":"finalized","result":"implementation-and-local-evidence-complete","remaining":["Sepolia keepsake deployment","real draw/fusion/recovery transactions","production publication approval"]}
+{"at":"2026-08-30T10:43:53Z","node":"N1","event":"resumed-isolated-worktree","runId":"d82afde8-7c77-40a2-bd0d-1a9bfd867f39","branch":"tc/performance-sampling-ceeac2b9","base":"origin/main"}
+{"at":"2026-08-30T10:43:53Z","node":"N2","event":"routed","difficulty":"high","strategy":"single-repo-tdd-with-isolated-review"}
+{"at":"2026-08-30T10:43:53Z","node":"N3","event":"contract-amended","version":2,"contractHash":"502998ee7fe2bd558f6232f7508b1d8061053bde3e19443ba9a5c4124c5b1427","tasks":["T-001","T-002","T-003","T-004"]}
+{"at":"2026-08-30T10:43:53Z","node":"N5","event":"tasks-completed","result":"4/4"}
+{"at":"2026-08-30T10:43:53Z","node":"N6","event":"feature-qa-completed","result":"pass","verification":{"validators":"98/98","aws":"90/90","contracts":"108/108","web":"293/293","worker":"62/62","subgraph":"4/4","responsive":"36/36","backstop":"4/4"}}
+{"at":"2026-08-30T10:43:53Z","node":"N7","event":"repository-policy","result":"pass","candidate":"ac8931d25406dc11645a306f182c281de4407cb0","production":"manual-pending"}
+{"at":"2026-08-30T11:22:20Z","node":"N3","event":"contract-amended","version":4,"contractHash":"c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459","reason":"route-and-outcome-fail-closed-plus-prd-recording-before-push"}
+{"at":"2026-08-30T11:22:20Z","node":"N6","event":"feature-qa-rechecked","result":"pass","verification":{"validators":"99/99","aws":"90/90","contracts":"108/108","web":"293/293","worker":"62/62","subgraph":"4/4","responsive":"36/36","backstop":"4/4"}}
+{"at":"2026-08-30T11:22:20Z","node":"N7","event":"release-gate","result":"prd-recording-required-before-push"}

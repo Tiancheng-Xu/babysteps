@@ -52,6 +52,7 @@
       "settledRole": "status",
       "settledNotText": "正在",
       "expectedMetric": "web3.uniswap.quote",
+	  "expectedMetrics": ["contract.read", "web3.uniswap.quote"],
       "safety": "read-only-sepolia",
       "acceptedOutcomes": ["success", "failure"]
     }

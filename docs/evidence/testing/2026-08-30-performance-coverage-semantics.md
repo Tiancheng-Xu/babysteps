@@ -35,6 +35,8 @@ Run `33304145710` 的精确根因不是 INP SDK 未安装：同一页面逐步�
 
 读回 Gate 同步升级为全合同校验：每个必需样本都校验单位、样本数、p50/p75/p95 顺序与 `observed` 状态；DNS/TCP/TLS 必须是空分位数的 `unavailable`；JS/Promise 错误、CSR fallback 与 hydration recoverable error 必须是 `observed-zero`；钱包、身份和写交易能力在这条匿名只读 Journey 中必须是 `not-exercised`。失败的只读报价或合约读取以 `.error` 原始事件进入聚合，并折叠为对应操作的失败样本，绝不冒充成功。
 
+业务指标覆盖进一步绑定到 **事件类型 + 指标名 + 精确路由 + outcome**：`contract.read` 与报价只能来自 `/exchange`，`rpc.read` 与 `web3.rpc.read` 只能来自 `/tasks`；错误路由的同名事件不能再通过 raw-name fallback 补齐覆盖。Web3 基础名只允许成功 outcome，`.error` 名只允许失败 outcome；名称与 outcome 矛盾的事件在 AWS Schema 和本地 Journey 都 fail-closed。云端读回还必须同时匹配候选 commit、`production` 环境、`1h` 窗口、Run 起始时间之后的新鲜度，以及 9 条路由各自的真实样本，旧 Run 或其他版本不能补齐本轮合同。
+
 ## 场景合同
 
 - **强制观测（23 项）**：LCP、CLS、INP、FCP、TTFB；request wait、download、DOM ready、window load；fetch、XHR、script、stylesheet、image、font、generic resource；SSR shell、hydration、SPA route；`contract.read`、`rpc.read`、`web3.rpc.read` 与 Sepolia Uniswap quote。
@@ -51,7 +53,7 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 - `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:delivery-evidence`、`pnpm validate:public-copy` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
 - BackstopJS：375/390/430/1440 共 `4/4` 通过，性能模块布局 Gate `2/2` 通过；候选与已审阅基线无像素差异，没有用 mask 隐藏产品内容。
-- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`205` 个事件、`43/43` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，Long Task 本轮有真实样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整视频与逐路由截图保存在本地临时 Gate 产物中，只有通过云端 Run 后才会进入最终公开 Evidence。
+- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`39/39` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整性能 Journey 视频与逐路由截图保存在本地临时 Gate 产物中；PRD 全功能录屏会在推送前以本地生产构建另行生成，并明确标注其只证明 UI 与安全只读交互。
 - 工作树检查：`git diff --check` 通过；生成代码与用户文件未被带入修改清单。
 
 ## 边界

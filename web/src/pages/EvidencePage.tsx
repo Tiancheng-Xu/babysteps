@@ -348,8 +348,8 @@ export function EvidencePage() {
 							</span>
 							<strong>路由与安全采样</strong>
 							<span>
-								9 条产品路由 × 4 个视口共 36 项浏览器检查通过；受控 Journey
-								完成 23 项强制观测：五项 Web Vitals、导航、七类 Resource
+								9 条产品路由 × 4 个视口共 36 项浏览器检查通过；受控 Journey 完成
+								23 项强制观测：五项 Web Vitals、导航、七类 Resource
 								Timing、三类渲染，以及 contract/RPC/Uniswap
 								只读场景；不制造错误、坏 CLS、钱包授权或链上交易填数。
 							</span>
