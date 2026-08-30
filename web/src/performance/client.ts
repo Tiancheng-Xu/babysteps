@@ -34,6 +34,7 @@ type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 const workerMinuteQuota = 120;
+export const webVitalsReadyMark = "babysteps.web-vitals.ready";
 const coverageCriticalNames = new Set([
 	...webVitalNames,
 	"navigation.request_wait",
@@ -364,6 +365,11 @@ export function createPerformanceClient(
 				});
 				onFCP(report("FCP", "ms"));
 				onTTFB(report("TTFB", "ms"));
+				try {
+					globalThis.performance?.mark(webVitalsReadyMark);
+				} catch {
+					// Telemetry readiness diagnostics must never affect the host app.
+				}
 				finalVitalsListener = () => {
 					if (globalThis.document?.visibilityState !== "hidden") return;
 					void flushAll();

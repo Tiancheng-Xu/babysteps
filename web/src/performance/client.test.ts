@@ -16,6 +16,7 @@ describe("performance client", () => {
 
 	it("observes fast real interactions instead of dropping good INP samples", async () => {
 		const onINP = vi.fn();
+		const mark = vi.spyOn(performance, "mark");
 		const client = createPerformanceClient({
 			environment: "test",
 			version: "v1",
@@ -35,6 +36,7 @@ describe("performance client", () => {
 		expect(onINP.mock.calls[0]?.[1]).toEqual({
 			durationThreshold: 0,
 		});
+		expect(mark).toHaveBeenCalledWith("babysteps.web-vitals.ready");
 		client.stop();
 	});
 
