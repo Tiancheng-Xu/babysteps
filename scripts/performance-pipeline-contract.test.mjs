@@ -161,6 +161,8 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			vitalsReadyTimeoutMs: journeyManifest.vitalsReadyTimeoutMs,
 			representativeInteractionCpuSlowdownRate:
 				journeyManifest.representativeInteractionCpuSlowdownRate,
+			representativeInteractionSettleFrames:
+				journeyManifest.representativeInteractionSettleFrames,
 			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
@@ -176,6 +178,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			vitalsReadyMark: "babysteps.web-vitals.ready",
 			vitalsReadyTimeoutMs: 10_000,
 			representativeInteractionCpuSlowdownRate: 6,
+			representativeInteractionSettleFrames: 2,
 			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
@@ -338,6 +341,11 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 	assert.match(
 		journeySource,
+		/await waitForPaintSettlement\(page\)/,
+		"the representative interaction must keep throttling active through paint",
+	);
+	assert.match(
+		journeySource,
 		/requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/,
 		"the font probe must give the PerformanceObserver a delivery turn",
 	);
@@ -441,6 +449,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			observed: true,
 			source: "controlled-browser",
 			cpuSlowdownRate: 6,
+			paintSettleFrames: 2,
 			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions: [
