@@ -57,6 +57,34 @@ describe("performance ingest", () => {
 		).not.toThrow();
 		expect(() =>
 			parsePerformanceBatch(
+				batch("business", "business.growth.activity", "ms", {
+					outcome: "success",
+				}),
+			),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("business", "business.growth.activity.error", "ms", {
+					outcome: "failure",
+				}),
+			),
+		).not.toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("business", "business.growth.activity", "ms", {
+					outcome: "failure",
+				}),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch(
+				batch("business", "business.dynamic.private", "ms", {
+					outcome: "success",
+				}),
+			),
+		).toThrow();
+		expect(() =>
+			parsePerformanceBatch(
 				batch("web3", "web3.rpc.read", "ms", { outcome: "failure" }),
 			),
 		).toThrow();
@@ -340,6 +368,43 @@ describe("real-sample statistics", () => {
 				status: "observed-zero",
 			});
 		}
+	});
+
+	it("aggregates fixed business operation outcomes without dynamic dimensions", () => {
+		const dashboard = computePerformanceDashboard([
+			event({
+				type: "business",
+				name: "business.growth.activity",
+				outcome: "success",
+				value: 120,
+			}),
+			event({
+				type: "business",
+				name: "business.growth.activity.error",
+				outcome: "failure",
+				value: 180,
+			}),
+		]);
+
+		expect(
+			dashboard.businessOperations.find(
+				({ name }) => name === "business.growth.activity",
+			),
+		).toMatchObject({
+			sampleCount: 2,
+			successCount: 1,
+			failureCount: 1,
+			successRate: 0.5,
+			p50: 120,
+			p75: 180,
+			p95: 180,
+			coverage: "observed",
+		});
+		expect(
+			dashboard.businessOperations.find(
+				({ name }) => name === "business.exchange.swap",
+			),
+		).toMatchObject({ sampleCount: 0, coverage: "instrumented-no-sample" });
 	});
 
 	it.each([

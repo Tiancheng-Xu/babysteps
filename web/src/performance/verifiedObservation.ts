@@ -4,6 +4,7 @@ import type {
 	PerformanceDashboardResponse,
 	PerformanceMetricSummary,
 } from "./api";
+import { businessOperationNames } from "./types";
 
 export const VERIFIED_PERFORMANCE_OBSERVATION = {
 	observedAt: observation.observedAt,
@@ -93,6 +94,7 @@ const coverageNames = [
 	"hydration.recoverable_error",
 	...errorNames,
 	...web3Names,
+	...businessOperationNames,
 ] as const;
 
 function noSample(
@@ -131,6 +133,13 @@ function coverageFor(name: string): PerformanceCoverageStatus {
 		return "observed-zero";
 	}
 	if (web3Names.includes(name as (typeof web3Names)[number])) {
+		return "not-exercised";
+	}
+	if (
+		businessOperationNames.includes(
+			name as (typeof businessOperationNames)[number],
+		)
+	) {
 		return "not-exercised";
 	}
 	if (
@@ -204,6 +213,18 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 		coverage: "observed-zero" as const,
 	})),
 	web3: web3Names.map((name) => ({
+		name,
+		unit: "ms" as const,
+		sampleCount: 0,
+		successCount: 0,
+		failureCount: 0,
+		successRate: null,
+		p50: null,
+		p75: null,
+		p95: null,
+		coverage: "not-exercised" as const,
+	})),
+	businessOperations: businessOperationNames.map((name) => ({
 		name,
 		unit: "ms" as const,
 		sampleCount: 0,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	measureBusinessPerformance,
 	measurePerformance,
 	recordPerformance,
 	setPerformanceClient,
@@ -34,6 +35,25 @@ describe("performance runtime bridge", () => {
 		});
 		expect(record).toHaveBeenCalledWith(
 			expect.objectContaining({ name: "spa.route.duration", value: 24 }),
+		);
+	});
+
+	it("measures a bounded business operation through the configured client", async () => {
+		const markBusinessOperation = vi.fn(async (_name, operation) =>
+			operation(),
+		);
+		setPerformanceClient({
+			markOperation: vi.fn(),
+			markBusinessOperation,
+			record: vi.fn(),
+		} as unknown as PerformanceClient);
+
+		await expect(
+			measureBusinessPerformance("business.profile.write", async () => "saved"),
+		).resolves.toBe("saved");
+		expect(markBusinessOperation).toHaveBeenCalledWith(
+			"business.profile.write",
+			expect.any(Function),
 		);
 	});
 });

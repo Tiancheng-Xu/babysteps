@@ -10,6 +10,28 @@ const [workflow, recovery, template, journey, manifestSource, readback] =
 		readFile("scripts/validate-performance-readback.mjs", "utf8"),
 	]);
 const manifest = JSON.parse(manifestSource);
+const expectedBusinessMetrics = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+];
 
 const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
@@ -130,6 +152,11 @@ for (const path of ["/tasks", "/profile", "/performance", "/evidence"]) {
 }
 if (!(manifest.requiredMetrics?.length > 0))
 	errors.push("browser journey required metrics are missing");
+if (
+	JSON.stringify(manifest.businessMetrics) !==
+	JSON.stringify(expectedBusinessMetrics)
+)
+	errors.push("bounded business metric catalog is incomplete or reordered");
 for (const metric of ["navigation.dns", "navigation.tls"]) {
 	if (!manifest.unavailableMetrics?.includes(metric))
 		errors.push(`localhost ${metric} coverage must be unavailable`);

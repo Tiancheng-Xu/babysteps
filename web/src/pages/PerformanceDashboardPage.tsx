@@ -738,6 +738,34 @@ export function PerformanceDashboardPage({
 							))}
 						</div>
 					</section>
+					<section className="performance-panel performance-panel--wide">
+						<h2>业务操作</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.businessOperations)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.businessOperations)}
+						/>
+						<p className="performance-note">
+							固定低基数名称；只记录耗时与成功/失败，不记录业务结果或用户输入。
+						</p>
+						<div className="performance-list">
+							{data.businessOperations.map((item) => (
+								<p key={item.name}>
+									<code>{item.name}</code>
+									<span>样本 {item.sampleCount}</span>
+									<span>p75 {display(item.p75, item.unit)}</span>
+									<span>
+										成功 {item.successCount} / 失败 {item.failureCount} / 成功率{" "}
+										{item.successRate === null
+											? "—"
+											: `${(item.successRate * 100).toFixed(1)}%`}
+									</span>
+									<Coverage status={item.coverage} />
+								</p>
+							))}
+						</div>
+					</section>
 					<section className="performance-panel performance-panel--compact">
 						<h2>AWS 管道健康</h2>
 						<Meta

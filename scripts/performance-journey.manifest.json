@@ -99,6 +99,28 @@
     "web3.rpc.read",
     "web3.uniswap.quote"
   ],
+  "businessMetrics": [
+    "business.growth.activity",
+    "business.growth.transfer",
+    "business.notebook.write",
+    "business.babycoin.activity",
+    "business.marketplace.approve",
+    "business.marketplace.buy",
+    "business.marketplace.content_unlock",
+    "business.marketplace.completion_submit",
+    "business.provider.create",
+    "business.owner.approve",
+    "business.owner.reject",
+    "business.owner.completion_confirm",
+    "business.keepsake.draw",
+    "business.keepsake.fuse",
+    "business.keepsake.recover",
+    "business.exchange.quote",
+    "business.exchange.swap",
+    "business.identity.login",
+    "business.identity.session",
+    "business.profile.write"
+  ],
   "zeroOrObservedMetrics": ["longtask.duration"],
   "healthyZeroMetrics": [
     "javascript.error",

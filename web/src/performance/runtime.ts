@@ -1,13 +1,30 @@
-import type { PerformanceClient, PerformanceEventInput } from "./types";
+import type {
+	BusinessOperationName,
+	PerformanceClient,
+	PerformanceEventInput,
+} from "./types";
 
 let runtimeClient:
-	| Pick<PerformanceClient, "markOperation" | "record">
+	| Pick<
+			PerformanceClient,
+			"markOperation" | "markBusinessOperation" | "record"
+	  >
 	| undefined;
 
 export function setPerformanceClient(
-	client: Pick<PerformanceClient, "markOperation" | "record">,
+	client: Pick<
+		PerformanceClient,
+		"markOperation" | "markBusinessOperation" | "record"
+	>,
 ) {
 	runtimeClient = client;
+}
+
+export function measureBusinessPerformance<T>(
+	name: BusinessOperationName,
+	operation: () => Promise<T>,
+): Promise<T> {
+	return runtimeClient?.markBusinessOperation(name, operation) ?? operation();
 }
 
 export function measurePerformance<T>(

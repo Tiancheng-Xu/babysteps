@@ -5,6 +5,38 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
 
+const expectedBusinessMetrics = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+];
+
+test("the performance manifest owns the exact bounded business metric catalog", async () => {
+	const manifest = JSON.parse(
+		await readFile("scripts/performance-journey.manifest.json", "utf8"),
+	);
+
+	assert.deepEqual(manifest.businessMetrics, expectedBusinessMetrics);
+	assert.equal(new Set(manifest.businessMetrics).size, 20);
+});
+
 test("the AWS unit suite owns the executable performance event contract", async () => {
 	const source = await readFile("aws/test/performancePipeline.test.ts", "utf8");
 

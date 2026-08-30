@@ -675,4 +675,51 @@ describe("performance client", () => {
 		expect(body).toContain("contract.write");
 		expect(body).not.toContain("private-result");
 	});
+
+	it("measures bounded business success and failure without recording private results", async () => {
+		const bodies: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: (_url, body) => {
+				bodies.push(String(body));
+				return true;
+			},
+			fetcher: vi.fn(),
+			random: () => 0,
+		});
+
+		await expect(
+			client.markBusinessOperation(
+				"business.growth.activity",
+				async () => "private-result",
+			),
+		).resolves.toBe("private-result");
+		await expect(
+			client.markBusinessOperation("business.marketplace.buy", async () => {
+				throw new Error("private-failure");
+			}),
+		).rejects.toThrow("private-failure");
+		await client.flush();
+
+		const events = bodies.flatMap(
+			(body) => JSON.parse(body).events as Array<Record<string, unknown>>,
+		);
+		expect(events).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "business",
+					name: "business.growth.activity",
+					outcome: "success",
+				}),
+				expect.objectContaining({
+					type: "business",
+					name: "business.marketplace.buy.error",
+					outcome: "failure",
+				}),
+			]),
+		);
+		expect(JSON.stringify(events)).not.toContain("private-result");
+		expect(JSON.stringify(events)).not.toContain("private-failure");
+	});
 });

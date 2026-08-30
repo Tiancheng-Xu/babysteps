@@ -37,6 +37,27 @@ function poolFor(client: ScriptedClient): SqlPool {
 }
 
 describe("PostgreSQL completion contract", () => {
+	it("keeps bounded business performance events valid in raw and aggregate storage", async () => {
+		const migration = await readFile(
+			path.join(
+				import.meta.dirname,
+				"..",
+				"migrations",
+				"0002_performance.sql",
+			),
+			"utf8",
+		);
+
+		expect(migration).toMatch(
+			/events[\s\S]*type\s+text\s+not null check \(type in \([^)]*'business'/i,
+		);
+		expect(migration).toMatch(
+			/hourly_aggregates[\s\S]*type\s+text\s+not null check \(type in \([^)]*'business'/i,
+		);
+		expect(migration).toMatch(/performance_events_type_allowed/i);
+		expect(migration).toMatch(/performance_aggregates_type_allowed/i);
+	});
+
 	it("declares unique idempotency, purchase, and nonce constraints without child PII", async () => {
 		const migration = await readFile(
 			path.join(

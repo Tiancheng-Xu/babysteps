@@ -32,6 +32,13 @@
 - Modify: `scripts/run-performance-browser-journey.mjs`
 - Modify: `aws/src/performance/pipeline.ts`
 - Modify: `aws/test/performancePipeline.test.ts`
+- Modify: `aws/migrations/0002_performance.sql`
+- Modify: `aws/test/postgresContract.test.ts`
+- Modify: `web/src/performance/api.ts`
+- Modify: `web/src/performance/api.test.ts`
+- Modify: `web/src/performance/verifiedObservation.ts`
+- Modify: `web/src/pages/PerformanceDashboardPage.tsx`
+- Modify: `web/src/pages/PerformanceDashboardPage.test.tsx`
 - Modify: `scripts/validate-performance-readback.mjs`
 - Modify: `scripts/performance-pipeline-contract.test.mjs`
 - Create: `docs/evidence/testing/2026-08-30-performance-readback-unavailable.md`
@@ -113,7 +120,7 @@ git commit -m "fix: preserve unavailable navigation coverage"
 - Produces: `measureBusinessPerformance<T>(name: BusinessOperationName, operation: () => Promise<T>): Promise<T>`。
 - Produces: 规格中的 20 个固定 `BusinessOperationName`；成功记录原名，失败记录 `${name}.error`，结果和输入不进入事件。
 
-- [ ] **Step 1: 先写类型、隐私和成功/失败测试**
+- [x] **Step 1: 先写类型、隐私和成功/失败测试**
 
 ```ts
 await expect(client.markBusinessOperation("business.growth.activity", async () => "private-result")).resolves.toBe("private-result");
@@ -123,13 +130,13 @@ expect(serialized).toContain("business.marketplace.buy.error");
 expect(serialized).not.toContain("private-result");
 ```
 
-- [ ] **Step 2: 运行 Web 性能测试确认接口尚不存在**
+- [x] **Step 2: 运行 Web 性能测试确认接口尚不存在**
 
 Run: `pnpm --filter @babysteps/web test -- src/performance/client.test.ts src/performance/runtime.test.ts`
 
 Expected: FAIL with `markBusinessOperation is not a function`。
 
-- [ ] **Step 3: 实现业务操作专用 API**
+- [x] **Step 3: 实现业务操作专用 API**
 
 ```ts
 export function measureBusinessPerformance<T>(
@@ -142,11 +149,11 @@ export function measureBusinessPerformance<T>(
 
 客户端事件类型使用 `business`，白名单只包含规格中的固定名称及 `.error`；事件不得包含动态 ID、地址或正文。
 
-- [ ] **Step 4: 在 AWS Schema 与 Dashboard 聚合中加入业务目录**
+- [x] **Step 4: 在 AWS Schema 与 Dashboard 聚合中加入业务目录**
 
 聚合输出 `businessOperations: Array<{name, sampleCount, successCount, failureCount, successRate, p50, p75, p95, coverage}>`；空样本使用 `not-exercised`，不能写成成功 0%。
 
-- [ ] **Step 5: 运行前后端合同测试并提交**
+- [x] **Step 5: 运行前后端合同测试并提交**
 
 Run: `pnpm --filter @babysteps/web test -- src/performance && pnpm --filter @babysteps/aws test && pnpm test:validators`
 

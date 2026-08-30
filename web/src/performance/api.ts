@@ -1,3 +1,5 @@
+import { businessOperationNames } from "./types";
+
 export type PerformanceFilters = {
 	window: "1h" | "24h" | "7d";
 	route?: string;
@@ -17,6 +19,19 @@ export type PerformanceMetricSummary = {
 	name: string;
 	unit: "ms" | "score" | "count";
 	sampleCount: number;
+	p50: number | null;
+	p75: number | null;
+	p95: number | null;
+	coverage: PerformanceCoverageStatus;
+};
+
+export type PerformanceOperationSummary = {
+	name: string;
+	unit: "ms";
+	sampleCount: number;
+	successCount: number;
+	failureCount: number;
+	successRate: number | null;
 	p50: number | null;
 	p75: number | null;
 	p95: number | null;
@@ -50,18 +65,8 @@ export type PerformanceDashboardResponse = {
 		rate: number | null;
 		coverage: PerformanceCoverageStatus;
 	}>;
-	web3: Array<{
-		name: string;
-		unit: "ms";
-		sampleCount: number;
-		successCount: number;
-		failureCount: number;
-		successRate: number | null;
-		p50: number | null;
-		p75: number | null;
-		p95: number | null;
-		coverage: PerformanceCoverageStatus;
-	}>;
+	web3: PerformanceOperationSummary[];
+	businessOperations: PerformanceOperationSummary[];
 	routes: Array<{
 		route: string;
 		sampleCount: number;
@@ -161,6 +166,7 @@ const coverageNames = [
 	"hydration.recoverable_error",
 	...errorNames,
 	...web3Names,
+	...businessOperationNames,
 ] as const;
 const topN = 10;
 
@@ -283,9 +289,9 @@ function isErrorSummary(
 	);
 }
 
-function isWeb3Summary(
+function isOperationSummary(
 	value: unknown,
-): value is PerformanceDashboardResponse["web3"][number] {
+): value is PerformanceOperationSummary {
 	if (!isRecord(value)) return false;
 	if (typeof value.name !== "string" || value.unit !== "ms") return false;
 	if (
@@ -392,8 +398,15 @@ export function isPerformanceDashboardResponse(
 		value.errors.every(isErrorSummary) &&
 		hasExactNames(value.errors, errorNames, (item) => item.name) &&
 		Array.isArray(value.web3) &&
-		value.web3.every(isWeb3Summary) &&
+		value.web3.every(isOperationSummary) &&
 		hasExactNames(value.web3, web3Names, (item) => item.name) &&
+		Array.isArray(value.businessOperations) &&
+		value.businessOperations.every(isOperationSummary) &&
+		hasExactNames(
+			value.businessOperations,
+			businessOperationNames,
+			(item) => item.name,
+		) &&
 		Array.isArray(value.routes) &&
 		value.routes.every(isRouteSummary) &&
 		hasUniqueNamesWithinLimit(value.routes, (item) => item.route) &&
