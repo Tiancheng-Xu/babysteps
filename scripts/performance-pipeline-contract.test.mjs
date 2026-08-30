@@ -28,6 +28,40 @@ const expectedBusinessMetrics = [
 	"business.profile.write",
 ];
 
+const expectedImplementedJourneyIds = [
+	"NAV-01",
+	"WALLET-01",
+	"GROWTH-01",
+	"GROWTH-02",
+	"GROWTH-03",
+	"TRANSFER-01",
+	"NOTE-01",
+	"BABY-01",
+	"BABY-02",
+	"BABY-03",
+	"PARENT-READ-01",
+	"MARKET-READ-01",
+	"MARKET-APPROVE-01",
+	"MARKET-BUY-01",
+	"CONTENT-01",
+	"COMPLETE-SUBMIT-01",
+	"PROVIDER-CREATE-01",
+	"OWNER-APPROVE-01",
+	"OWNER-REJECT-01",
+	"COMPLETION-LOAD-01",
+	"COMPLETION-CONFIRM-01",
+	"KEEPSAKE-DRAW-01",
+	"KEEPSAKE-FUSE-01",
+	"KEEPSAKE-RECOVER-01",
+	"QUOTE-01",
+	"SWAP-01",
+	"IDENTITY-LOGIN-01",
+	"IDENTITY-SESSION-01",
+	"PROFILE-01",
+	"PERF-01",
+	"EVIDENCE-01",
+];
+
 test("the performance manifest owns the exact bounded business metric catalog", async () => {
 	const manifest = JSON.parse(
 		await readFile("scripts/performance-journey.manifest.json", "utf8"),
@@ -35,6 +69,137 @@ test("the performance manifest owns the exact bounded business metric catalog", 
 
 	assert.deepEqual(manifest.businessMetrics, expectedBusinessMetrics);
 	assert.equal(new Set(manifest.businessMetrics).size, 20);
+});
+
+test("implemented feature journeys are exact, bounded, and privacy safe", async () => {
+	const [manifestRaw, schemaRaw] = await Promise.all([
+		readFile("scripts/performance-journey.manifest.json", "utf8"),
+		readFile("scripts/implemented-feature-journey.schema.json", "utf8"),
+	]);
+	const manifest = JSON.parse(manifestRaw);
+	const schema = JSON.parse(schemaRaw);
+	const journeys = manifest.implementedFeatureJourneys;
+
+	assert.deepEqual(
+		journeys.map(({ journeyId }) => journeyId),
+		expectedImplementedJourneyIds,
+	);
+	assert.equal(new Set(expectedImplementedJourneyIds).size, 31);
+	assert.equal(schema.minItems, 31);
+	assert.equal(schema.maxItems, 31);
+	assert.deepEqual(
+		[
+			...new Set(
+				journeys.flatMap(({ businessMetric }) => businessMetric ?? []),
+			),
+		],
+		expectedBusinessMetrics,
+	);
+	assert.doesNotMatch(
+		manifestRaw,
+		/privateKey|mnemonic|cookie|0x[0-9a-fA-F]{40}|\/Users\/|\/home\//u,
+	);
+	for (const journey of journeys) {
+		assert.ok(journey.finalProof.length > 0, journey.journeyId);
+		assert.equal(
+			journey.manualSignature,
+			journey.transaction === "sepolia-write" ||
+				journey.journeyId === "WALLET-01" ||
+				journey.journeyId === "IDENTITY-LOGIN-01" ||
+				journey.journeyId === "IDENTITY-SESSION-01",
+			journey.journeyId,
+		);
+	}
+});
+
+test("implemented feature preflight fails closed and returns only aliases", async () => {
+	const { evaluateImplementedFeaturePreflight } = await import(
+		"./run-implemented-feature-preflight.mjs"
+	);
+	const safeSnapshot = {
+		chainId: 11155111,
+		contractsConfigured: true,
+		roles: {
+			"parent-a": true,
+			"recipient-b": true,
+			"provider-c": true,
+			"owner-relayer-d": true,
+		},
+		balances: { gasReady: true, babyReady: true, growthReady: true },
+		marketplace: { activeTaskCount: 1, allowanceReady: true },
+		keepsakes: {
+			vrfReady: true,
+			fusionSetCount: 1,
+			recoverableRequestCount: 1,
+		},
+		identity: { privyReady: true, workerOriginReady: true },
+		awsRuntime: { state: "ready", budgetGuardPassed: true },
+	};
+
+	assert.equal(evaluateImplementedFeaturePreflight(safeSnapshot).ready, true);
+	const denied = evaluateImplementedFeaturePreflight({
+		...safeSnapshot,
+		roles: { ...safeSnapshot.roles, "provider-c": false },
+	});
+	assert.equal(denied.ready, false);
+	assert.deepEqual(denied.blockers, ["ROLE_PROVIDER_C_UNAVAILABLE"]);
+	assert.doesNotMatch(
+		JSON.stringify(denied),
+		/0x[0-9a-fA-F]{40}|privateKey|mnemonic|cookie/u,
+	);
+});
+
+test("implemented feature result separates execution proof from compensation closure", async () => {
+	const {
+		validateImplementedFeatureClosure,
+		validateImplementedFeatureResult,
+	} = await import("./run-implemented-feature-journey.mjs");
+	const valid = {
+		journeyId: "GROWTH-01",
+		roleAlias: "parent-a",
+		outcome: "success",
+		uiFinalState: true,
+		productReadback: true,
+		telemetryAccepted: true,
+		acceptedEventIds: ["evt-redacted-1"],
+		compensation: {
+			kind: "persistent-test-history",
+			status: "verified-non-reversible",
+		},
+	};
+
+	assert.equal(validateImplementedFeatureResult(valid).valid, true);
+	assert.equal(validateImplementedFeatureClosure([valid]).valid, true);
+	assert.deepEqual(
+		validateImplementedFeatureResult({ ...valid, productReadback: false })
+			.errors,
+		["PRODUCT_READBACK_MISSING"],
+	);
+	const pending = {
+		...valid,
+		journeyId: "PERF-01",
+		compensation: {
+			kind: "clear-query-and-clean-aws",
+			status: "pending-external-proof",
+		},
+	};
+	assert.equal(
+		validateImplementedFeatureResult(pending).valid,
+		true,
+		"browser execution may finish while external cleanup remains explicit",
+	);
+	assert.deepEqual(validateImplementedFeatureClosure([valid, pending]), {
+		valid: false,
+		errors: ["COMPENSATION_PENDING_PERF_01"],
+	});
+	assert.equal(
+		validateImplementedFeatureResult({
+			...valid,
+			compensation: { kind: "clear-note", status: "complete" },
+		}).valid,
+		false,
+		"unknown compensation statuses must fail closed",
+	);
 });
 
 test("the AWS unit suite owns the executable performance event contract", async () => {
@@ -779,10 +944,11 @@ test("the Chromium journey cannot claim unavailable navigation coverage without 
 	});
 
 	assert.deepEqual(summary.coverage.unavailable, []);
-	assert.deepEqual(
-		summary.coverage.missingUnavailable,
-		["navigation.dns", "navigation.tcp", "navigation.tls"],
-	);
+	assert.deepEqual(summary.coverage.missingUnavailable, [
+		"navigation.dns",
+		"navigation.tcp",
+		"navigation.tls",
+	]);
 	assert.throws(() => assertJourneyComplete(summary), {
 		message:
 			"INCOMPLETE_UNAVAILABLE_COVERAGE_NAVIGATION_DNS_NAVIGATION_TCP_NAVIGATION_TLS",
@@ -1072,7 +1238,7 @@ test("conditional wallet, identity, RPC and transaction scenarios have real inst
 	);
 	assert.match(
 		exchangeSource,
-		/catch \(error\) \{[\s\S]*setMessage\(toWalletMessage\(error\)\);[\s\S]*throw error;[\s\S]*\}\)\.catch\(\(\) => undefined\)/,
+		/catch \(error\) \{[\s\S]*setMessage\(toWalletMessage\(error\)\);[\s\S]*throw error;[\s\S]*\}[\s\S]*\),[\s\S]*\)\.catch\(\(\) => undefined\)/,
 		"swap failures must reach the outer metric before the UI swallows rejection",
 	);
 });

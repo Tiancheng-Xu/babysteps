@@ -233,15 +233,15 @@ git commit -m "feat: instrument implemented product journeys"
 - Produces: `implemented-feature-journey.json`，每项包含 `journeyId`、`route`、`roleAlias`、`startedAt`、`finishedAt`、`outcome`、脱敏 receipt/readback、`acceptedEventIds`、`compensation`。
 - Consumes: 用户可见钱包/Privy 会话；脚本只点击页面和等待可见状态。
 
-- [ ] **Step 1: 写 Manifest Schema 和完整性失败测试**
+- [x] **Step 1: 写 Manifest Schema 和完整性失败测试**
 
 要求 Journey ID 精确等于规格矩阵；禁止 `privateKey`、`mnemonic`、`cookie`、完整 `0x` 地址、邮箱和本地绝对路径字段。
 
-- [ ] **Step 2: 写预检 RED 测试**
+- [x] **Step 2: 写预检 RED 测试**
 
 预检必须 fail-closed 核验 Sepolia、角色、余额、allowance、Active task、VRF、Privy/Worker origin 与 AWS Runtime 状态；只返回别名和布尔/计数。
 
-- [ ] **Step 3: 实现 Playwright 可见 UI 状态机**
+- [x] **Step 3: 实现 Playwright 可见 UI 状态机**
 
 ```js
 await runStep({
@@ -255,11 +255,11 @@ await runStep({
 
 签名点写入 `WAITING_FOR_USER_<ROLE>_<ACTION>` 并暂停；不得自动操作扩展钱包、读取密钥或重复发送未知交易。
 
-- [ ] **Step 4: 增加每步 receipt/readback/telemetry/补偿 Gate**
+- [x] **Step 4: 增加每步 receipt/readback/telemetry/补偿 Gate**
 
 只有 UI 成功、receipt/Worker 回读成功、对应业务事件已被接受后才写 `PASS`。拒签、余额不足、冷却、VRF 未完成分别输出稳定错误码。
 
-- [ ] **Step 5: 本地 dry-run 与合同测试**
+- [x] **Step 5: 本地 dry-run 与合同测试**
 
 Run: `node --test --test-name-pattern='implemented feature journey' scripts/performance-pipeline-contract.test.mjs && node scripts/run-implemented-feature-preflight.mjs --mode local-contract`
 

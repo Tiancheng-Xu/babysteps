@@ -1,14 +1,26 @@
 import { readFile } from "node:fs/promises";
 
-const [workflow, recovery, template, journey, manifestSource, readback] =
-	await Promise.all([
-		readFile(".github/workflows/aws-performance.yml", "utf8"),
-		readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
-		readFile("aws/performance-template.yaml", "utf8"),
-		readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
-		readFile("scripts/performance-journey.manifest.json", "utf8"),
-		readFile("scripts/validate-performance-readback.mjs", "utf8"),
-	]);
+const [
+	workflow,
+	recovery,
+	template,
+	journey,
+	manifestSource,
+	readback,
+	implementedJourney,
+	implementedPreflight,
+	implementedSchema,
+] = await Promise.all([
+	readFile(".github/workflows/aws-performance.yml", "utf8"),
+	readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
+	readFile("aws/performance-template.yaml", "utf8"),
+	readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
+	readFile("scripts/performance-journey.manifest.json", "utf8"),
+	readFile("scripts/validate-performance-readback.mjs", "utf8"),
+	readFile("scripts/run-implemented-feature-journey.mjs", "utf8"),
+	readFile("scripts/run-implemented-feature-preflight.mjs", "utf8"),
+	readFile("scripts/implemented-feature-journey.schema.json", "utf8"),
+]);
 const manifest = JSON.parse(manifestSource);
 const expectedBusinessMetrics = [
 	"business.growth.activity",
@@ -87,6 +99,26 @@ const required = [
 		"browser journey manifest is missing",
 	],
 	[
+		implementedJourney,
+		"WAITING_FOR_USER_",
+		"visible wallet journey checkpoints are missing",
+	],
+	[
+		implementedJourney,
+		"telemetryAccepted",
+		"implemented journey telemetry gate is missing",
+	],
+	[
+		implementedPreflight,
+		"AWS_BUDGET_GUARD_NOT_PASSED",
+		"implemented journey Budget Guard preflight is missing",
+	],
+	[
+		implementedSchema,
+		'"maxItems": 31',
+		"implemented journey schema must remain exactly bounded",
+	],
+	[
 		readback,
 		"performance-journey.manifest.json",
 		"readback manifest is missing",
@@ -157,6 +189,17 @@ if (
 	JSON.stringify(expectedBusinessMetrics)
 )
 	errors.push("bounded business metric catalog is incomplete or reordered");
+if (manifest.implementedFeatureJourneys?.length !== 31)
+	errors.push(
+		"implemented feature journey catalog must contain exactly 31 items",
+	);
+if (
+	new Set(
+		manifest.implementedFeatureJourneys?.map(({ journeyId }) => journeyId) ??
+			[],
+	).size !== 31
+)
+	errors.push("implemented feature journey ids must be unique");
 for (const metric of ["navigation.dns", "navigation.tls"]) {
 	if (!manifest.unavailableMetrics?.includes(metric))
 		errors.push(`localhost ${metric} coverage must be unavailable`);
