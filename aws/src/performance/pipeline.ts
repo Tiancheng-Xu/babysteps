@@ -761,9 +761,12 @@ export function computePerformanceDashboard(
 				: summary;
 		}),
 		...rendering,
-		...renderingControlCatalog.map((name) =>
-			summarizeMetric(events, name, "count"),
-		),
+		...renderingControlCatalog.map((name) => {
+			const summary = summarizeMetric(events, name, "count");
+			return summary.sampleCount === 0 && pageObservationCount > 0
+				? { ...summary, coverage: "observed-zero" as const }
+				: summary;
+		}),
 		...errors.map(({ name, coverage: status }) => ({
 			name,
 			coverage: status,

@@ -322,6 +322,12 @@ describe("real-sample statistics", () => {
 			sampleCount: 0,
 			coverage: "not-exercised",
 		});
+		for (const name of ["csr.fallback", "hydration.recoverable_error"]) {
+			expect(dashboard.coverage).toContainEqual({
+				name,
+				status: "observed-zero",
+			});
+		}
 	});
 
 	it.each([

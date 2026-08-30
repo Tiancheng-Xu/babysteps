@@ -118,6 +118,15 @@ export function evaluateJourneyCoverage({ observed = [], required = [] }) {
 	return { complete: missing.length === 0, missing };
 }
 
+function requiredMetricForObservedEvent(name) {
+	if (journeyManifest.requiredMetrics.includes(name)) return name;
+	if (name.endsWith(".error")) {
+		const baseName = name.slice(0, -".error".length);
+		if (journeyManifest.requiredMetrics.includes(baseName)) return baseName;
+	}
+	return undefined;
+}
+
 export function assertJourneyComplete(summary) {
 	if (summary.routes.length !== expectedRoutes.length) {
 		throw new Error("INCOMPLETE_BROWSER_ROUTES");
@@ -207,17 +216,31 @@ async function performRepresentativeInteraction(page, route) {
 			else throw new Error("INVALID_INTERACTION_ACTION");
 			await waitForPaintSettlement(page);
 		}
-		const actual = new URL(page.url()).searchParams.get(
-			interaction.assertion.urlSearchParam,
-		);
-		if (actual !== interaction.assertion.equals) {
-			throw new Error("INTERACTION_ASSERTION_FAILED");
+		for (const assertion of interaction.assertions) {
+			const actual = new URL(page.url()).searchParams.get(
+				assertion.urlSearchParam,
+			);
+			if (actual !== assertion.equals) {
+				throw new Error("INTERACTION_ASSERTION_FAILED");
+			}
 		}
 	} finally {
 		await session
 			.send("Emulation.setCPUThrottlingRate", { rate: 1 })
 			.catch(() => undefined);
 		await session.detach().catch(() => undefined);
+	}
+}
+
+async function performSafeReadOnlySettles(page, route) {
+	const settles = journeyManifest.safeReadOnlySettles.filter(
+		(settle) => settle.route === route,
+	);
+	for (const settle of settles) {
+		await page
+			.getByRole(settle.settledRole)
+			.filter({ hasNotText: settle.settledNotText })
+			.waitFor({ state: "visible" });
 	}
 }
 
@@ -397,10 +420,8 @@ export function sanitizeJourneySummary(input) {
 			metric: journeyManifest.representativeInteraction.expectedMetric,
 			observed: input.representativeMetricObserved === true,
 			source: "controlled-browser",
-			cpuSlowdownRate:
-				journeyManifest.representativeInteractionCpuSlowdownRate,
-			paintSettleFrames:
-				journeyManifest.representativeInteractionSettleFrames,
+			cpuSlowdownRate: journeyManifest.representativeInteractionCpuSlowdownRate,
+			paintSettleFrames: journeyManifest.representativeInteractionSettleFrames,
 			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions,
@@ -579,12 +600,9 @@ async function runJourney() {
 							outcome.failureObserved = true;
 						}
 					}
-					const failedBusinessMetric =
-						journeyManifest.safeBusinessInteractions.find(
-							(interaction) =>
-								event.name === `${interaction.expectedMetric}.error`,
-						)?.expectedMetric;
-					coverage.add(failedBusinessMetric ?? event.name);
+					coverage.add(
+						requiredMetricForObservedEvent(event.name) ?? event.name,
+					);
 					const eventRoute =
 						typeof event.route === "string"
 							? event.route.split(/[?#]/u)[0]
@@ -654,7 +672,10 @@ async function runJourney() {
 				throw new Error(sanitizeJourneyFailure(error, "/performance"));
 			}
 		} else {
-			for (const [routeIndex, { path: route, heading }] of journeyRoutes.entries()) {
+			for (const [
+				routeIndex,
+				{ path: route, heading },
+			] of journeyRoutes.entries()) {
 				process.stdout.write(`BROWSER_ROUTE_START ${routeTokens.get(route)}\n`);
 				try {
 					const response = await page.goto(
@@ -666,6 +687,7 @@ async function runJourney() {
 						.getByRole("heading", { name: heading, exact: true })
 						.waitFor({ state: "visible" });
 					observedRoutes.add(route);
+					await performSafeReadOnlySettles(page, route);
 					await performSafeResourceProbes(page, route);
 					await performRepresentativeInteraction(page, route);
 					await performSafeBusinessInteractions(page, route);

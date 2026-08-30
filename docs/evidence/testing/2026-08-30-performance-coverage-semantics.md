@@ -2,7 +2,7 @@
 
 ## 结论
 
-本次修复只调整性能指标的覆盖语义、受控浏览器 Journey、SDK 的低优先级公平采样与 Dashboard 展示，不把本地验证冒充新的云端闭环。生产历史快照仍来自 Run `33279132965`。首次新云端尝试 Run [`33292966972`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33292966972) 已安全失败并完成零残留清理，因此没有替换该历史快照。
+本次修复只调整性能指标的覆盖语义、受控浏览器 Journey、SDK 的低优先级公平采样与 Dashboard 展示，不把本地验证冒充新的云端闭环。生产历史快照仍来自 Run `33279132965`。首次新云端尝试 Run [`33292966972`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33292966972) 已安全失败并完成零残留清理；后续 Run [`33304145710`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33304145710) 又在无 AWS 权限的 `local-coverage` 前置 Job 因缺少 INP 而停止，`prove-and-clean` 被跳过，因此也没有创建 AWS Runtime、没有替换历史快照。
 
 ## 根因与修复
 
@@ -31,9 +31,13 @@
 
 SSR 场景还发现一项独立缺陷：客户端静态路由树包含 `Suspense`，服务端静态树缺少对应流式边界标记，导致所有路由触发 React hydration recoverable error。修复后服务端保留不含 Privy 的专用静态树，但与客户端使用相同的 Error Boundary 与 Suspense 外壳；钱包、查询和身份 Provider 仍只在 hydration 完成后挂载。逐路由复核为 9/9 无 recoverable error、无 CSR fallback、无 `pageerror`。
 
+Run `33304145710` 的精确根因不是 INP SDK 未安装：同一页面逐步诊断证明 `onINP(..., { durationThreshold: 0 })` 能产生真实 Event Timing 样本，但原“填写页面路径并应用筛选”交互在 CI 中偶尔低于浏览器可报告阈值。候选修复在 6 倍 CPU 降速下继续使用真实 UI，追加“历史快照”模式切换并等待两个绘制帧；不插入忙循环，也不伪造 INP。另一个缺口来自 `/tasks`：Sepolia 市集读取通常在路由标题出现后才完成，旧 Journey 过早离开页面。现在 Manifest 明确等待只读状态结束，再验收 `rpc.read` 与 `web3.rpc.read`；整个过程不连接钱包、不签名、不发交易。
+
+读回 Gate 同步升级为全合同校验：每个必需样本都校验单位、样本数、p50/p75/p95 顺序与 `observed` 状态；DNS/TCP/TLS 必须是空分位数的 `unavailable`；JS/Promise 错误、CSR fallback 与 hydration recoverable error 必须是 `observed-zero`；钱包、身份和写交易能力在这条匿名只读 Journey 中必须是 `not-exercised`。失败的只读报价或合约读取以 `.error` 原始事件进入聚合，并折叠为对应操作的失败样本，绝不冒充成功。
+
 ## 场景合同
 
-- **强制观测（19 项）**：LCP、CLS、INP、FCP、TTFB；request wait、download、DOM ready、window load；fetch、XHR、stylesheet、image、font、generic resource；SSR shell、hydration、SPA route；Sepolia Uniswap quote。
+- **强制观测（23 项）**：LCP、CLS、INP、FCP、TTFB；request wait、download、DOM ready、window load；fetch、XHR、script、stylesheet、image、font、generic resource；SSR shell、hydration、SPA route；`contract.read`、`rpc.read`、`web3.rpc.read` 与 Sepolia Uniswap quote。
 - **零次或真实观测均有效**：Long Task。快速、健康页面没有 Long Task 时必须聚合为 `observed-zero`（次数与总耗时为 0、分位数为空）；若确实发生则必须提供真实 `longtask.duration` 样本，不能为了通过 Gate 人为阻塞主线程。
 - **健康零事件**：JS error、Promise rejection 的八个分类、hydration recoverable error、CSR fallback。任意一项在 Journey 中出现都会直接失败，不再把错误样本当成“覆盖成功”。
 - **有条件执行**：Privy 登录、钱包连接、challenge/sign/verify、合约写入、approve、swap、transaction receipt。代码与 Schema 必须存在真实埋点 owner，但没有用户授权、测试资产和 Gas 时保持 `not-exercised`，不能自动签名或发送交易。
@@ -43,11 +47,11 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 
 ## 验证
 
-- 全量测试：validators `98/98`、AWS `90/90`、contracts `108/108`、Web `291/291`、Worker `62/62`、Subgraph `4/4` 全通过。
-- `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:public-artifact` 通过；CSS 仅保留 8 条既有 warning，无 error。
+- 全量测试：validators `98/98`、AWS `90/90`、contracts `108/108`、Web `293/293`、Worker `62/62`、Subgraph `4/4` 全通过。
+- `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:delivery-evidence`、`pnpm validate:public-copy` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
-- BackstopJS：人工检查 candidate/diff 后更新基线，375/390/430/1440 共 `4/4` 通过；没有用 mask 隐藏产品内容。
-- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`41/41` 批次接受、拒绝与传输失败均为 `0`；19 项强制观测全部覆盖，`missingRequired=[]`；Long Task 本轮有真实样本；12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功，也没有发起授权、Swap 或链上写入。完整视频保存在本地临时 Gate 产物中，只有通过云端 Run 后才会进入最终公开 Evidence。
+- BackstopJS：375/390/430/1440 共 `4/4` 通过，性能模块布局 Gate `2/2` 通过；候选与已审阅基线无像素差异，没有用 mask 隐藏产品内容。
+- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`205` 个事件、`43/43` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，Long Task 本轮有真实样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整视频与逐路由截图保存在本地临时 Gate 产物中，只有通过云端 Run 后才会进入最终公开 Evidence。
 - 工作树检查：`git diff --check` 通过；生成代码与用户文件未被带入修改清单。
 
 ## 边界

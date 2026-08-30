@@ -349,8 +349,9 @@ export function EvidencePage() {
 							<strong>路由与安全采样</strong>
 							<span>
 								9 条产品路由 × 4 个视口共 36 项浏览器检查通过；受控 Journey
-								只用真实 Resource Timing 请求覆盖 fetch、XHR、stylesheet 与
-								image，不制造错误、长任务、坏 CLS、钱包授权或链上交易填数。
+								完成 23 项强制观测：五项 Web Vitals、导航、七类 Resource
+								Timing、三类渲染，以及 contract/RPC/Uniswap
+								只读场景；不制造错误、坏 CLS、钱包授权或链上交易填数。
 							</span>
 							<strong>验证证据</strong>
 							<span>
@@ -366,8 +367,9 @@ export function EvidencePage() {
 							</a>
 							<strong>证据边界</strong>
 							<span>
-								当前生产历史快照仍来自 Run 33279132965；只有合并后新的临时 AWS
-								Run
+								Run 33304145710 在无 AWS 权限的本地前置 Gate 因缺少 INP
+								停止，云端 Job 被跳过；当前生产历史快照仍来自 Run
+								33279132965。只有合并后新的临时 AWS Run
 								完成采集、Cleaner、查询与零残留清理，才能把新增资源覆盖标记为云端已验证。
 							</span>
 						</article>
