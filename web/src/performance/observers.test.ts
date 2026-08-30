@@ -29,6 +29,29 @@ describe("performance observers", () => {
 		);
 	});
 
+	it("records the edge SSR shell duration from a same-document Server-Timing entry", () => {
+		const events = collectNavigationEvents({
+			domainLookupStart: 0,
+			domainLookupEnd: 0,
+			connectStart: 0,
+			connectEnd: 0,
+			secureConnectionStart: 0,
+			requestStart: 1,
+			responseStart: 2,
+			responseEnd: 3,
+			domContentLoadedEventEnd: 4,
+			loadEventEnd: 5,
+			serverTiming: [{ name: "babysteps_ssr", duration: 12.5 }],
+		} as unknown as PerformanceNavigationTiming);
+
+		expect(events).toContainEqual({
+			type: "custom",
+			name: "ssr.shell.duration",
+			value: 12.5,
+			unit: "ms",
+		});
+	});
+
 	it("marks an unavailable TLS phase and does not overlap DOM and load", () => {
 		const events = collectNavigationEvents({
 			domainLookupStart: 1,
@@ -111,6 +134,22 @@ describe("performance observers", () => {
 				"https://app.example",
 			),
 		).toMatchObject({ name, category });
+	});
+
+	it("recognizes a CSS-initiated font without retaining its URL", () => {
+		expect(
+			classifyResource(
+				{
+					initiatorType: "css",
+					duration: 18,
+					name: "https://app.example/assets/probe.woff2",
+				} as PerformanceResourceTiming,
+				"https://app.example",
+			),
+		).toMatchObject({
+			name: "resource.font.duration",
+			category: "font",
+		});
 	});
 
 	it("emits long-task count, total, max, and duration", () => {

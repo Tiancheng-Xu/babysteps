@@ -259,6 +259,151 @@ describe("performance client", () => {
 		});
 	});
 
+	it("does not let repeated script timings starve distinct resource coverage", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 50,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 100; index += 1) {
+			client.record({
+				type: "resource",
+				name: "resource.script.duration",
+				value: index,
+				unit: "ms",
+				category: "script",
+			});
+		}
+		for (const category of ["fetch", "xhr", "stylesheet", "image"] as const) {
+			client.record({
+				type: "resource",
+				name: `resource.${category}.duration`,
+				value: 1,
+				unit: "ms",
+				category,
+			});
+		}
+
+		await client.flush();
+		await client.flush();
+
+		const names = sent.flatMap((body) =>
+			JSON.parse(body).events.map((event: { name: string }) => event.name),
+		);
+		expect(names).toEqual(
+			expect.arrayContaining([
+				"resource.fetch.duration",
+				"resource.xhr.duration",
+				"resource.stylesheet.duration",
+				"resource.image.duration",
+			]),
+		);
+		expect(
+			names.filter((name: string) => name === "resource.script.duration"),
+		).toHaveLength(1);
+	});
+
+	it("does not let modulepreload stylesheet timings starve rendering and later resource categories", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 50,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 100; index += 1) {
+			client.record({
+				type: "resource",
+				name: "resource.stylesheet.duration",
+				value: index,
+				unit: "ms",
+				category: "stylesheet",
+			});
+		}
+		client.record({
+			type: "custom",
+			name: "hydration.duration",
+			value: 12,
+			unit: "ms",
+		});
+		client.record({
+			type: "resource",
+			name: "resource.font.duration",
+			value: 8,
+			unit: "ms",
+			category: "font",
+		});
+		client.record({
+			type: "resource",
+			name: "resource.duration",
+			value: 4,
+			unit: "ms",
+		});
+
+		await client.flush();
+
+		const names = JSON.parse(sent[0] ?? "").events.map(
+			(event: { name: string }) => event.name,
+		);
+		expect(names).toEqual(
+			expect.arrayContaining([
+				"hydration.duration",
+				"resource.font.duration",
+				"resource.duration",
+			]),
+		);
+		expect(
+			names.filter((name: string) => name === "resource.stylesheet.duration"),
+		).toHaveLength(2);
+	});
+
+	it("preserves repeated non-script diagnostics inside the low-priority budget", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		client.record({
+			type: "custom",
+			name: "longtask.duration",
+			value: 51,
+			unit: "ms",
+		});
+		client.record({
+			type: "custom",
+			name: "longtask.duration",
+			value: 72,
+			unit: "ms",
+		});
+
+		await client.flush();
+
+		expect(
+			JSON.parse(sent[0] ?? "").events.filter(
+				(event: { name: string }) => event.name === "longtask.duration",
+			),
+		).toHaveLength(2);
+	});
+
 	it("reserves one third of the minute budget for vitals, errors, and Web3", async () => {
 		const sent: string[] = [];
 		const client = createPerformanceClient({
@@ -296,6 +441,98 @@ describe("performance client", () => {
 		expect(sent.join("\n")).toContain('"name":"LCP"');
 		expect(sent.join("\n")).toContain('"name":"error.javascript.unknown"');
 		expect(sent.join("\n")).toContain('"name":"contract.read"');
+	});
+
+	it("does not let repeated RPC diagnostics starve a later SPA interaction", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 50,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 100; index += 1) {
+			client.record({
+				type: "web3",
+				name: index % 2 === 0 ? "rpc.read" : "web3.rpc.read",
+				value: index,
+				unit: "ms",
+			});
+		}
+		client.record({
+			type: "custom",
+			name: "spa.route.duration",
+			value: 20,
+			unit: "ms",
+		});
+
+		await client.flush();
+		await client.flush();
+
+		const names = sent.flatMap((body) =>
+			JSON.parse(body).events.map((event: { name: string }) => event.name),
+		);
+		expect(names).toContain("spa.route.duration");
+		expect(names.filter((name: string) => name === "rpc.read")).toHaveLength(2);
+		expect(
+			names.filter((name: string) => name === "web3.rpc.read"),
+		).toHaveLength(2);
+	});
+
+	it("reserves coverage-critical browser metrics after unrelated diagnostics fill the low-priority lane", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 50,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 20; index += 1) {
+			client.record({
+				type: "custom",
+				name: `diagnostic.${index}`,
+				value: index,
+				unit: "ms",
+			});
+		}
+		for (const name of [
+			"resource.xhr.duration",
+			"resource.image.duration",
+			"resource.font.duration",
+			"spa.route.duration",
+		]) {
+			client.record({
+				type: name.startsWith("resource.") ? "resource" : "custom",
+				name,
+				value: 8,
+				unit: "ms",
+			});
+		}
+
+		await client.flush();
+		await client.flush();
+
+		const names = sent.flatMap((body) =>
+			JSON.parse(body).events.map((event: { name: string }) => event.name),
+		);
+		expect(names).toEqual(
+			expect.arrayContaining([
+				"resource.xhr.duration",
+				"resource.image.duration",
+				"resource.font.duration",
+				"spa.route.duration",
+			]),
+		);
 	});
 
 	it("backs off network failures and pagehide does not immediately retry them", async () => {

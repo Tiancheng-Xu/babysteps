@@ -34,6 +34,57 @@ type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 const workerMinuteQuota = 120;
+const coverageCriticalNames = new Set([
+	...webVitalNames,
+	"navigation.request_wait",
+	"navigation.download",
+	"navigation.dom_ready",
+	"navigation.window_load",
+	"resource.duration",
+	"resource.fetch.duration",
+	"resource.xhr.duration",
+	"resource.stylesheet.duration",
+	"resource.image.duration",
+	"resource.font.duration",
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+	"longtask.duration",
+	"web3.uniswap.quote",
+]);
+const lowPriorityNameLimits = new Map<string, number>([
+	["resource.duration", 2],
+	["resource.fetch.duration", 2],
+	["resource.xhr.duration", 2],
+	["resource.script.duration", 1],
+	["resource.stylesheet.duration", 2],
+	["resource.image.duration", 2],
+	["resource.font.duration", 2],
+]);
+const highPriorityNameLimits = new Map<string, number>([
+	["rpc.read", 2],
+	["web3.rpc.read", 2],
+	["navigation.request_wait", 1],
+	["navigation.download", 1],
+	["navigation.dom_ready", 1],
+	["navigation.window_load", 1],
+	["resource.duration", 2],
+	["resource.fetch.duration", 2],
+	["resource.xhr.duration", 2],
+	["resource.stylesheet.duration", 2],
+	["resource.image.duration", 2],
+	["resource.font.duration", 2],
+	["spa.route.duration", 1],
+	["ssr.shell.duration", 1],
+	["hydration.duration", 1],
+	["longtask.duration", 2],
+	["LCP", 2],
+	["CLS", 2],
+	["INP", 2],
+	["FCP", 2],
+	["TTFB", 2],
+	["web3.uniswap.quote", 2],
+]);
 
 export function normalizeMaxEventsPerMinute(value: number): number {
 	if (!Number.isSafeInteger(value)) return workerMinuteQuota;
@@ -57,24 +108,46 @@ export function createPerformanceClient(
 		((url, data) => globalThis.navigator?.sendBeacon?.(url, data) ?? false);
 	const fetcher = options.fetcher ?? globalThis.fetch?.bind(globalThis);
 	const loadWebVitals = options.loadWebVitals ?? (() => import("web-vitals"));
-	const highPriority: QueuedEvent[] = [];
+	const urgentPriority: QueuedEvent[] = [];
+	const coveragePriority: QueuedEvent[] = [];
 	const lowPriority: QueuedEvent[] = [];
 	const pendingRetries: PendingRetry[] = [];
 	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
+	let coverageCriticalMinuteCount = 0;
 	let lowPriorityMinuteCount = 0;
+	const lowPriorityNameCounts = new Map<string, number>();
+	const highPriorityNameCounts = new Map<string, number>();
 	let timer: ReturnType<typeof setInterval> | undefined;
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
 	let started = false;
 	let finalVitalsListener: (() => void) | undefined;
 	const isHighPriority = (event: PerformanceEventInput) =>
+		event.type === "metric" ||
+		event.type === "error" ||
+		event.type === "web3" ||
+		coverageCriticalNames.has(safeMetricName(event.name));
+	const isCoverageCritical = (event: PerformanceEventInput) =>
+		event.type === "error" ||
+		coverageCriticalNames.has(safeMetricName(event.name));
+	const isUrgent = (event: PerformanceEventInput) =>
 		event.type === "metric" || event.type === "error" || event.type === "web3";
-	const queueSize = () => highPriority.length + lowPriority.length;
-	const enqueue = (event: QueuedEvent) =>
-		(isHighPriority(event) ? highPriority : lowPriority).push(event);
+	const queueSize = () =>
+		urgentPriority.length + coveragePriority.length + lowPriority.length;
+	const enqueue = (event: QueuedEvent) => {
+		if (isUrgent(event)) urgentPriority.push(event);
+		else if (coverageCriticalNames.has(safeMetricName(event.name))) {
+			coveragePriority.push(event);
+		} else lowPriority.push(event);
+	};
 	const dequeue = () => {
-		const queue = highPriority.length > 0 ? highPriority : lowPriority;
+		const queue =
+			urgentPriority.length > 0
+				? urgentPriority
+				: coveragePriority.length > 0
+					? coveragePriority
+					: lowPriority;
 		return queue.splice(0, batchSize);
 	};
 	const onError = (event: ErrorEvent) => {
@@ -105,22 +178,46 @@ export function createPerformanceClient(
 			if (current - minuteStartedAt >= 60_000) {
 				minuteStartedAt = current;
 				minuteCount = 0;
+				coverageCriticalMinuteCount = 0;
 				lowPriorityMinuteCount = 0;
+				lowPriorityNameCounts.clear();
+				highPriorityNameCounts.clear();
 			}
 			const highPriority = isHighPriority(input);
+			const coverageCritical = isCoverageCritical(input);
 			const lowPriorityLimit = Math.floor((maxEventsPerMinute * 2) / 3);
+			const coverageReserve =
+				maxEventsPerMinute >= 10 ? Math.ceil(maxEventsPerMinute / 2) : 0;
+			const nonCoverageCount = minuteCount - coverageCriticalMinuteCount;
+			const safeName = safeMetricName(input.name);
+			const nameLimit = highPriority
+				? highPriorityNameLimits.get(safeName)
+				: lowPriorityNameLimits.get(safeName);
+			const nameCounts = highPriority
+				? highPriorityNameCounts
+				: lowPriorityNameCounts;
 			if (
 				random() >= sampleRate ||
 				minuteCount >= maxEventsPerMinute ||
+				(!coverageCritical &&
+					nonCoverageCount >= maxEventsPerMinute - coverageReserve) ||
+				(nameLimit !== undefined &&
+					(nameCounts.get(safeName) ?? 0) >= nameLimit) ||
 				(!highPriority && lowPriorityMinuteCount >= lowPriorityLimit)
 			)
 				return;
 			if (!Number.isFinite(input.value)) return;
 			minuteCount += 1;
-			if (!highPriority) lowPriorityMinuteCount += 1;
+			if (coverageCritical) coverageCriticalMinuteCount += 1;
+			if (!highPriority) {
+				lowPriorityMinuteCount += 1;
+			}
+			if (nameLimit !== undefined) {
+				nameCounts.set(safeName, (nameCounts.get(safeName) ?? 0) + 1);
+			}
 			enqueue({
 				...input,
-				name: safeMetricName(input.name),
+				name: safeName,
 				eventId: crypto.randomUUID(),
 				timestamp: current,
 				route: normalizeRoute(route()),

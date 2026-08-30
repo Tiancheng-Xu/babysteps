@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 
 import { publicAppConfig } from "../../contracts/web3Contracts";
+import { measurePerformance } from "../../performance/runtime";
 import { createIdentityApi, type Profile } from "./identityApi";
 import {
 	deriveIdentitySummary,
@@ -74,8 +75,8 @@ export function PrivyIdentityPanel() {
 		setPhase("signing");
 		setMessage("请在钱包中签署一次无 Gas 登录消息。");
 		try {
-			await api.login(getAddress(signer.address), (value) =>
-				signer.sign(value),
+			await measurePerformance("web3.privy.login", () =>
+				api.login(getAddress(signer.address), (value) => signer.sign(value)),
 			);
 			const nextProfile = await api.getProfile();
 			setProfile(nextProfile);

@@ -10,6 +10,8 @@ describe("edge SSR route rendering", () => {
 		).text();
 		expect(html).toContain("BabySteps · 成长星球");
 		expect(html).toContain("连接测试钱包后继续链上成长");
+		expect(html).toContain("<!--$-->");
+		expect(html).toContain("<!--/$-->");
 		expect(html).not.toContain("可用 BabyCoin");
 		expect(html).not.toMatch(/authorization|cookie|private key/iu);
 	});

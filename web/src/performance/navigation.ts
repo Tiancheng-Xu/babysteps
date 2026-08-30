@@ -12,6 +12,7 @@ type NavigationEntry = Pick<
 	| "responseEnd"
 	| "domContentLoadedEventEnd"
 	| "loadEventEnd"
+	| "serverTiming"
 >;
 
 export function collectNavigationEvents(
@@ -56,5 +57,16 @@ export function collectNavigationEvents(
 			? {}
 			: { outcome: "unavailable" as const }),
 	});
+	const ssr = Array.from(entry.serverTiming ?? []).find(
+		(timing) => timing.name === "babysteps_ssr",
+	);
+	if (ssr && Number.isFinite(ssr.duration) && ssr.duration >= 0) {
+		events.push({
+			type: "custom",
+			name: "ssr.shell.duration",
+			value: ssr.duration,
+			unit: "ms",
+		});
+	}
 	return events;
 }

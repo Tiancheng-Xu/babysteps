@@ -21,6 +21,17 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	);
 	const workflow = parse(source);
 	assert.ok(workflow);
+	const localCoverage = workflow.jobs["local-coverage"];
+	assert.ok(localCoverage, "local coverage job must gate AWS creation");
+	assert.deepEqual(workflow.jobs["prove-and-clean"].needs, [
+		"validate",
+		"local-coverage",
+	]);
+	assert.match(
+		localCoverage.steps.map((step) => step.run ?? "").join("\n"),
+		/--local-coverage/,
+	);
+	assert.doesNotMatch(JSON.stringify(localCoverage), /aws-performance|id-token/);
 	for (const job of Object.values(workflow.jobs)) {
 		for (const step of job.steps ?? []) {
 			assert.doesNotMatch(
@@ -137,14 +148,19 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	} = await import("./run-performance-browser-journey.mjs");
 	assert.deepEqual(
 		{
+			schemaVersion: journeyManifest.schemaVersion,
 			appId: journeyManifest.appId,
 			perRouteEventBudget: journeyManifest.perRouteEventBudget,
 			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
+			zeroOrObservedMetrics: journeyManifest.zeroOrObservedMetrics,
+			healthyZeroMetrics: journeyManifest.healthyZeroMetrics,
+			conditionalMetrics: journeyManifest.conditionalMetrics,
 			unavailableMetrics: journeyManifest.unavailableMetrics,
 		},
 		{
+			schemaVersion: 2,
 			appId: "babysteps",
 			perRouteEventBudget: 30,
 			telemetryAttemptTimeoutMs: 3_000,
@@ -163,7 +179,45 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 				"resource.xhr.duration",
 				"resource.stylesheet.duration",
 				"resource.image.duration",
+				"resource.font.duration",
+				"resource.duration",
+				"spa.route.duration",
+				"ssr.shell.duration",
+				"hydration.duration",
+				"web3.uniswap.quote",
 			],
+			zeroOrObservedMetrics: ["longtask.duration"],
+			healthyZeroMetrics: [
+				"javascript.error",
+				"promise.rejection",
+				"error.javascript.type_error",
+				"error.javascript.network",
+				"error.javascript.timeout",
+				"error.javascript.unknown",
+				"error.promise.type_error",
+				"error.promise.network",
+				"error.promise.timeout",
+				"error.promise.unknown",
+				"csr.fallback",
+				"hydration.recoverable_error",
+			],
+			conditionalMetrics: {
+				wallet: ["wallet.connect"],
+				identity: [
+					"web3.privy.login",
+					"auth.challenge",
+					"auth.sign",
+					"auth.verify",
+				],
+				transaction: [
+					"contract.write",
+					"web3.uniswap.swap",
+					"approve.submit",
+					"approve.receipt",
+					"transaction.submit",
+					"transaction.receipt",
+				],
+			},
 			unavailableMetrics: [
 				"navigation.dns",
 				"navigation.tcp",
@@ -192,6 +246,12 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		"resource.xhr.duration",
 		"resource.stylesheet.duration",
 		"resource.image.duration",
+		"resource.font.duration",
+		"resource.duration",
+		"spa.route.duration",
+		"ssr.shell.duration",
+		"hydration.duration",
+		"web3.uniswap.quote",
 	];
 	assert.deepEqual(evaluateJourneyCoverage({ observed: required, required }), {
 		complete: true,
@@ -251,6 +311,23 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.match(journeySource, /TELEMETRY_BATCH_REJECTED_/);
 	assert.match(journeySource, /performSafeResourceProbes/);
 	assert.match(journeySource, /__performance_probe__\/fetch/);
+	assert.match(journeySource, /__performance_probe__\/font\.woff2/);
+	assert.match(journeySource, /performance-probe-font\.base64/);
+	assert.doesNotMatch(journeySource, /backstop_data/);
+	const probeFont = Buffer.from(
+		(await readFile(
+			"scripts/fixtures/performance-probe-font.base64",
+			"utf8",
+		)).trim(),
+		"base64",
+	);
+	assert.equal(probeFont.subarray(0, 4).toString("ascii"), "wOF2");
+	assert.match(journeySource, /__performance_probe__\/beacon/);
+	assert.match(journeySource, /performSafeBusinessInteractions/);
+	assert.match(
+		journeySource,
+		/performSpaNavigation[\s\S]*waitForURL[\s\S]*waitForTimeout\(500\)/,
+	);
 	assert.match(journeySource, /quotaWindowPauseMs/);
 	assert.doesNotMatch(journeySource, /while\s*\([^)]*performance\.now/su);
 	assert.match(
@@ -285,6 +362,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		],
 		coverage: [
 			...required,
+			"longtask.duration",
 			"navigation.dns",
 			"navigation.tcp",
 			"navigation.tls",
@@ -296,6 +374,12 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		eventCount: 14,
 		unacceptedEventCount: 0,
 		representativeMetricObserved: true,
+		safeBusinessOutcomes: {
+			"sepolia-uniswap-quote": {
+				successObserved: false,
+				failureObserved: true,
+			},
+		},
 		privateUrl: "https://private.example/a?token=redacted-fixture",
 		cookie: "session=redacted-fixture",
 		body: { authorization: "redacted-fixture" },
@@ -313,7 +397,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			"/evidence",
 		],
 		coverage: {
-			observed: [...required].sort(),
+			observed: [...required, "longtask.duration"].sort(),
 			unavailable: ["navigation.dns", "navigation.tcp", "navigation.tls"],
 			missingRequired: [],
 		},
@@ -327,6 +411,22 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			route: "/performance",
 			metric: "INP",
 			observed: true,
+		},
+		safeBusinessInteractions: [
+			{
+				id: "sepolia-uniswap-quote",
+				route: "/exchange",
+				metric: "web3.uniswap.quote",
+				safety: "read-only-sepolia",
+				acceptedOutcomes: ["success", "failure"],
+				successObserved: false,
+				failureObserved: true,
+			},
+		],
+		zeroOrObserved: [{ name: "longtask.duration", observed: true }],
+		healthyZero: {
+			expected: [...journeyManifest.healthyZeroMetrics].sort(),
+			unexpectedObserved: [],
 		},
 		lifecycleFinalization: "controlled-browser-hidden-pagehide",
 	});
@@ -350,6 +450,18 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			"MISSING_REPRESENTATIVE_INTERACTION_METRIC",
 		],
 		[
+			{
+				safeBusinessInteractions: summary.safeBusinessInteractions.map(
+					(interaction) => ({
+						...interaction,
+						successObserved: false,
+						failureObserved: false,
+					}),
+				),
+			},
+			"MISSING_SAFE_BUSINESS_INTERACTION_OUTCOME",
+		],
+		[
 			{ coverage: { ...summary.coverage, missingRequired: ["INP"] } },
 			"INCOMPLETE_METRIC_COVERAGE",
 		],
@@ -359,6 +471,48 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			new RegExp(code),
 		);
 	}
+	assert.throws(
+		() =>
+			assertJourneyComplete({
+				...summary,
+				coverage: {
+					...summary.coverage,
+					missingRequired: [
+						"resource.xhr.duration",
+						"resource.stylesheet.duration",
+					],
+				},
+			}),
+		{
+			message:
+				"INCOMPLETE_METRIC_COVERAGE_RESOURCE_STYLESHEET_DURATION_RESOURCE_XHR_DURATION",
+		},
+	);
+	assert.throws(
+		() =>
+			assertJourneyComplete({
+				...summary,
+				healthyZero: {
+					...summary.healthyZero,
+					unexpectedObserved: ["hydration.recoverable_error"],
+				},
+			}),
+		{
+			message:
+				"UNHEALTHY_CONTROLLED_JOURNEY_HYDRATION_RECOVERABLE_ERROR",
+		},
+	);
+	assert.throws(
+		() =>
+			assertJourneyComplete({
+				...summary,
+				healthyZero: {
+					...summary.healthyZero,
+					unexpectedObserved: ["javascript.error"],
+				},
+			}),
+		{ message: "UNHEALTHY_CONTROLLED_JOURNEY_JAVASCRIPT_ERROR" },
+	);
 	assert.doesNotMatch(
 		JSON.stringify(summary),
 		/secret|private\.example|cookie|authorization/i,
@@ -425,7 +579,11 @@ test("the real browser run boots production config and preserves visual Evidence
 
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
-		/--mode production/,
+		/pnpm --filter @babysteps\/web build/,
+	);
+	assert.match(
+		byName("Start local Web at the exact Worker APP_URI origin").run,
+		/wrangler pages dev web\/dist/,
 	);
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
@@ -502,6 +660,40 @@ test("the real browser run boots production config and preserves visual Evidence
 	assert.equal(upload.with["if-no-files-found"], "error");
 });
 
+test("conditional wallet, identity, RPC and transaction scenarios have real instrumentation owners", async () => {
+	const owners = [
+		["web/src/components/WalletPanel.tsx", "wallet.connect"],
+		["web/src/features/identity/PrivyIdentityPanel.tsx", "web3.privy.login"],
+		["web/src/features/identity/identityApi.ts", "auth.challenge"],
+		["web/src/features/identity/identityApi.ts", "auth.sign"],
+		["web/src/features/identity/identityApi.ts", "auth.verify"],
+		["web/src/config/wagmi.ts", "rpc.read"],
+		["web/src/config/wagmi.ts", "web3.rpc.read"],
+		["web/src/features/exchange/useUniswapSwap.ts", "contract.read"],
+		["web/src/features/exchange/useUniswapSwap.ts", "contract.write"],
+		["web/src/features/exchange/useUniswapSwap.ts", "approve.submit"],
+		["web/src/features/exchange/useUniswapSwap.ts", "approve.receipt"],
+		["web/src/features/exchange/useUniswapSwap.ts", "transaction.submit"],
+		["web/src/features/exchange/useUniswapSwap.ts", "transaction.receipt"],
+	];
+	for (const [path, metric] of owners) {
+		assert.match(
+			await readFile(path, "utf8"),
+			new RegExp(metric.replaceAll(".", "\\.")),
+			`${metric} is missing its real product instrumentation owner`,
+		);
+	}
+	const exchangeSource = await readFile(
+		"web/src/features/exchange/useUniswapSwap.ts",
+		"utf8",
+	);
+	assert.match(
+		exchangeSource,
+		/catch \(error\) \{[\s\S]*setMessage\(toWalletMessage\(error\)\);[\s\S]*throw error;[\s\S]*\}\)\.catch\(\(\) => undefined\)/,
+		"swap failures must reach the outer metric before the UI swallows rejection",
+	);
+});
+
 test("performance readback rejects partial metric coverage", async () => {
 	const { validatePerformanceReadback } = await import(
 		"./validate-performance-readback.mjs"
@@ -535,6 +727,8 @@ test("performance readback rejects partial metric coverage", async () => {
 			"resource.xhr.duration",
 			"resource.stylesheet.duration",
 			"resource.image.duration",
+			"resource.font.duration",
+			"resource.duration",
 		].map((name) => ({
 			name,
 			unit: "ms",
@@ -544,11 +738,63 @@ test("performance readback rejects partial metric coverage", async () => {
 			p95: 1,
 			coverage: "observed",
 		})),
+		rendering: [
+			"spa.route.duration",
+			"ssr.shell.duration",
+			"hydration.duration",
+		].map((name) => ({
+			name,
+			unit: "ms",
+			sampleCount: 1,
+			p50: 1,
+			p75: 1,
+			p95: 1,
+			coverage: "observed",
+		})),
+		longTasks: {
+			count: 1,
+			totalDurationMs: 75,
+			maxDurationMs: 75,
+			duration: {
+				name: "longtask.duration",
+				unit: "ms",
+				sampleCount: 1,
+				p50: 75,
+				p75: 75,
+				p95: 75,
+				coverage: "observed",
+			},
+			coverage: "observed",
+		},
+		web3: [
+			{
+				name: "web3.uniswap.quote",
+				unit: "ms",
+				sampleCount: 1,
+				successCount: 1,
+				failureCount: 0,
+				successRate: 1,
+				p50: 1,
+				p75: 1,
+				p95: 1,
+				coverage: "observed",
+			},
+		],
+		coverage: [
+			"spa.route.duration",
+			"ssr.shell.duration",
+			"hydration.duration",
+		].map((name) => ({ name, status: "observed" })),
 	};
 	assert.deepEqual(validatePerformanceReadback(stats), {
 		navigationSampleCount: 4,
 		vitalSampleCount: 5,
-		resourceSampleCount: 4,
+		resourceSampleCount: 6,
+		longTaskSampleCount: 1,
+		web3SampleCount: 1,
+		web3SuccessCount: 1,
+		web3FailureCount: 0,
+		renderingSampleCount: 3,
 	});
 	for (const [section, missing] of [
 		["vitals", "CLS"],
@@ -557,6 +803,8 @@ test("performance readback rejects partial metric coverage", async () => {
 		["navigation", "navigation.window_load"],
 		["resources", "resource.fetch.duration"],
 		["resources", "resource.image.duration"],
+		["rendering", "hydration.duration"],
+		["web3", "web3.uniswap.quote"],
 	]) {
 		assert.throws(
 			() =>
@@ -567,6 +815,57 @@ test("performance readback rejects partial metric coverage", async () => {
 			new RegExp(`MISSING_REQUIRED_SAMPLE_${missing.replaceAll(".", "_")}`),
 		);
 	}
+	assert.throws(
+		() =>
+			validatePerformanceReadback({
+				...stats,
+				coverage: stats.coverage.filter(
+					({ name }) => name !== "hydration.duration",
+				),
+			}),
+		/MISSING_REQUIRED_COVERAGE_hydration_duration/,
+	);
+	assert.deepEqual(
+		validatePerformanceReadback({
+			...stats,
+			longTasks: {
+				count: 0,
+				totalDurationMs: 0,
+				maxDurationMs: null,
+				duration: {
+					name: "longtask.duration",
+					unit: "ms",
+					sampleCount: 0,
+					p50: null,
+					p75: null,
+					p95: null,
+					coverage: "observed-zero",
+				},
+				coverage: "observed-zero",
+			},
+		}),
+		{
+			navigationSampleCount: 4,
+			vitalSampleCount: 5,
+			resourceSampleCount: 6,
+			longTaskSampleCount: 0,
+			web3SampleCount: 1,
+			web3SuccessCount: 1,
+			web3FailureCount: 0,
+			renderingSampleCount: 3,
+		},
+	);
+	assert.throws(
+		() =>
+			validatePerformanceReadback({
+				...stats,
+				web3: stats.web3.map((metric) => ({
+					...metric,
+					failureCount: 1,
+				})),
+			}),
+		/INVALID_REQUIRED_OUTCOME_COUNTS_web3_uniswap_quote/,
+	);
 	assert.throws(
 		() =>
 			validatePerformanceReadback({

@@ -312,6 +312,7 @@ export type PerformanceDashboardResponse = {
 	vitals: PerformanceMetricSummary[];
 	navigation: PerformanceMetricSummary[];
 	resources: PerformanceMetricSummary[];
+	rendering: PerformanceMetricSummary[];
 	longTasks: {
 		count: number;
 		totalDurationMs: number;
@@ -403,6 +404,8 @@ const renderingCatalog = [
 	"csr.fallback",
 	"hydration.recoverable_error",
 ] as const;
+const renderingDurationCatalog = renderingCatalog.slice(0, 3);
+const renderingControlCatalog = renderingCatalog.slice(3);
 const topN = 10;
 
 export function isAllowedPerformanceMetricName(name: string): boolean {
@@ -718,6 +721,9 @@ export function computePerformanceDashboard(
 				left.name.localeCompare(right.name),
 		)
 		.slice(0, topN);
+	const rendering = renderingDurationCatalog.map((name) =>
+		summarizeMetric(events, name, "ms"),
+	);
 	const errors = errorCatalog
 		.map((name) => {
 			const matching = events.filter((event) => event.name === name);
@@ -754,14 +760,9 @@ export function computePerformanceDashboard(
 				? { ...summary, coverage: "observed-zero" as const }
 				: summary;
 		}),
-		...renderingCatalog.map((name) =>
-			summarizeMetric(
-				events,
-				name,
-				name === "csr.fallback" || name === "hydration.recoverable_error"
-					? "count"
-					: "ms",
-			),
+		...rendering,
+		...renderingControlCatalog.map((name) =>
+			summarizeMetric(events, name, "count"),
 		),
 		...errors.map(({ name, coverage: status }) => ({
 			name,
@@ -782,6 +783,7 @@ export function computePerformanceDashboard(
 		vitals,
 		navigation,
 		resources,
+		rendering,
 		longTasks: {
 			count,
 			totalDurationMs: durationValues.reduce(

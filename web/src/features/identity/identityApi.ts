@@ -1,5 +1,7 @@
 import type { Address, Hex } from "viem";
 
+import { measurePerformance } from "../../performance/runtime";
+
 type Fetcher = typeof fetch;
 
 type Challenge = {
@@ -43,16 +45,18 @@ export function createIdentityApi(apiUrl: string, fetcher: Fetcher = fetch) {
 			address: Address,
 			signMessage: (message: string) => Promise<string>,
 		): Promise<Session> {
-			const challenge = await readJson<Challenge>(
-				await request("/api/auth/challenges", {
+			const challenge = await measurePerformance("auth.challenge", () =>
+				request("/api/auth/challenges", {
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ address, action: "login" }),
-				}),
+				}).then(readJson<Challenge>),
 			);
-			const signature = (await signMessage(challenge.message)) as Hex;
-			return readJson<Session>(
-				await request("/api/auth/sessions", {
+			const signature = (await measurePerformance("auth.sign", () =>
+				signMessage(challenge.message),
+			)) as Hex;
+			return measurePerformance("auth.verify", () =>
+				request("/api/auth/sessions", {
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({
@@ -60,7 +64,7 @@ export function createIdentityApi(apiUrl: string, fetcher: Fetcher = fetch) {
 						message: challenge.message,
 						signature,
 					}),
-				}),
+				}).then(readJson<Session>),
 			);
 		},
 

@@ -46,6 +46,7 @@ test("performance modules use priority and content density instead of equal half
 		const overview = await sectionBox(page, "运行状态与总览");
 		const vitals = await sectionBox(page, "Core Web Vitals");
 		const navigation = await sectionBox(page, "导航阶段");
+		const rendering = await sectionBox(page, "渲染与路由");
 		const trends = await sectionBox(page, "趋势与版本");
 		const routes = await sectionBox(page, "页面路径");
 		const resources = await sectionBox(page, "资源与主线程");
@@ -58,6 +59,7 @@ test("performance modules use priority and content density instead of equal half
 			["overview", overview],
 			["Core Web Vitals", vitals],
 			["navigation", navigation],
+			["rendering and routing", rendering],
 			["resources", resources],
 			["stability errors", errors],
 			["Web3 operations", web3],

@@ -36,6 +36,7 @@ export type PerformanceDashboardResponse = {
 	vitals: PerformanceMetricSummary[];
 	navigation: PerformanceMetricSummary[];
 	resources: PerformanceMetricSummary[];
+	rendering: PerformanceMetricSummary[];
 	longTasks: {
 		count: number;
 		totalDurationMs: number;
@@ -110,6 +111,11 @@ const resourceNames = [
 	"resource.stylesheet.duration",
 	"resource.image.duration",
 	"resource.font.duration",
+] as const;
+const renderingMetricNames = [
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
 ] as const;
 const errorNames = [
 	"javascript.error",
@@ -378,6 +384,9 @@ export function isPerformanceDashboardResponse(
 		Array.isArray(value.resources) &&
 		value.resources.every(isMetricSummary) &&
 		hasExactNames(value.resources, resourceNames, (item) => item.name) &&
+		Array.isArray(value.rendering) &&
+		value.rendering.every(isMetricSummary) &&
+		hasExactNames(value.rendering, renderingMetricNames, (item) => item.name) &&
 		isLongTasks(value.longTasks) &&
 		Array.isArray(value.errors) &&
 		value.errors.every(isErrorSummary) &&

@@ -3,7 +3,7 @@ import type { Address } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-	connect: vi.fn(),
+	connectAsync: vi.fn(),
 	disconnect: vi.fn(),
 	switchChainAsync: vi.fn(),
 	useAccount: vi.fn(),
@@ -46,7 +46,7 @@ describe("WalletPanel", () => {
 			isConnected: true,
 		});
 		mocks.useConnect.mockReturnValue({
-			connect: mocks.connect,
+			connectAsync: mocks.connectAsync,
 			connectors: [{ id: "metaMask", name: "MetaMask" }],
 			error: undefined,
 			isPending: false,
@@ -96,7 +96,7 @@ describe("WalletPanel", () => {
 			isConnected: false,
 		});
 		mocks.useConnect.mockReturnValue({
-			connect: mocks.connect,
+			connectAsync: mocks.connectAsync,
 			connectors: [{ id: "metaMask", name: "MetaMask" }],
 			error: undefined,
 			isPending: true,

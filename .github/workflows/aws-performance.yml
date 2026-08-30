@@ -37,9 +37,41 @@ jobs:
         run: pnpm validate:performance-budget
       - run: pnpm validate:performance-pipeline
 
+  local-coverage:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.17.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build the exact Edge SSR artifact without AWS
+        run: |
+          VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=30 \
+            pnpm --filter @babysteps/web build
+      - name: Prove routes, interactions and metric coverage before AWS
+        run: |
+          RUNNER_TRACKING_ID='' pnpm exec wrangler pages dev web/dist --ip 127.0.0.1 --port 4173 --compatibility-date 2026-07-29 \
+            > "$RUNNER_TEMP/local-coverage-web.log" 2>&1 &
+          web_pid=$!
+          trap 'kill "$web_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4173/ >/dev/null
+          node scripts/run-performance-browser-journey.mjs \
+            --origin http://127.0.0.1:4173 \
+            --local-coverage \
+            --artifacts-dir "$RUNNER_TEMP/local-coverage-artifacts" \
+            --output "$RUNNER_TEMP/local-coverage-journey.json"
+
   prove-and-clean:
     if: github.ref == 'refs/heads/main' && inputs.run_cloud_validation == true
-    needs: validate
+    needs: [validate, local-coverage]
     runs-on: ubuntu-latest
     # VPC Lambda deletion can spend ~20 minutes waiting for AWS-managed
     # Hyperplane ENIs to drain. Keep the cleanup gate alive long enough to
@@ -163,7 +195,8 @@ jobs:
         run: |
           test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
           RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=30 \
-            nohup pnpm --filter @babysteps/web exec vite --mode production --host 127.0.0.1 --port 4173 \
+            pnpm --filter @babysteps/web build
+          RUNNER_TRACKING_ID='' nohup pnpm exec wrangler pages dev web/dist --ip 127.0.0.1 --port 4173 --compatibility-date 2026-07-29 \
             > "$RUNNER_TEMP/local-web.log" 2>&1 &
           web_pid=$!
           echo "pid=$web_pid" >> "$GITHUB_OUTPUT"

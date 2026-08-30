@@ -2,6 +2,7 @@ import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
 
 import { hasMetaMaskProvider } from "../features/wallet/walletState";
+import { measurePerformance } from "../performance/runtime";
 
 function shortenAddress(address: string) {
 	return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -16,7 +17,7 @@ function networkName(chainId?: number) {
 
 export function WalletPanel() {
 	const { address, chainId, isConnected } = useAccount();
-	const { connect, connectors, isPending } = useConnect();
+	const { connectAsync, connectors, isPending } = useConnect();
 	const { disconnect } = useDisconnect();
 	const { switchChainAsync } = useSwitchChain();
 	const metaMask = connectors.find(
@@ -102,9 +103,12 @@ export function WalletPanel() {
 					type="button"
 					className="button button--web3"
 					disabled={!metaMask || isPending}
-					onClick={() =>
-						metaMask ? connect({ connector: metaMask }) : undefined
-					}
+					onClick={() => {
+						if (!metaMask) return;
+						void measurePerformance("wallet.connect", () =>
+							connectAsync({ connector: metaMask }),
+						).catch(() => undefined);
+					}}
 				>
 					{isPending ? "正在连接测试钱包" : "连接 MetaMask"}
 				</button>

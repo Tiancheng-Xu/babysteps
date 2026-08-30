@@ -36,13 +36,18 @@ class RenderTimeoutError extends Error {
 	}
 }
 
-function documentHeaders(mode: "ssr" | "csr-fallback", cacheControl: string) {
+function documentHeaders(
+	mode: "ssr" | "csr-fallback",
+	cacheControl: string,
+	serverTiming?: string,
+) {
 	return new Headers({
 		...SECURITY_HEADERS,
 		"cache-control": cacheControl,
 		"content-type": "text/html; charset=utf-8",
 		vary: "Accept",
 		"x-babysteps-render-mode": mode,
+		...(serverTiming ? { "server-timing": serverTiming } : {}),
 	});
 }
 
@@ -141,6 +146,7 @@ export function createPagesHandler(options: HandlerOptions = {}) {
 
 			try {
 				const app = await renderWithTimeout(render, url.pathname, timeoutMs);
+				const durationMs = Math.max(0, now() - startedAt);
 				const isPersonalized =
 					routeForPath(url.pathname)?.renderPolicy === "client-shell";
 				const isRequestSpecific =
@@ -152,6 +158,7 @@ export function createPagesHandler(options: HandlerOptions = {}) {
 					isPersonalized || isRequestSpecific || classification.status === 404
 						? "private, no-store"
 						: "public, max-age=0, must-revalidate",
+					`babysteps_ssr;dur=${durationMs}`,
 				);
 				logger.info(
 					JSON.stringify({
@@ -159,7 +166,7 @@ export function createPagesHandler(options: HandlerOptions = {}) {
 						mode: "ssr",
 						pathname: url.pathname,
 						status: classification.status,
-						durationMs: now() - startedAt,
+						durationMs,
 					}),
 				);
 				return new Response(
