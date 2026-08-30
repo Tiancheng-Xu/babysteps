@@ -97,6 +97,9 @@ export function createTelemetryDeliveryTracker() {
 				unacceptedEventCount() === 0
 			);
 		},
+		isAccepted(eventId) {
+			return typeof eventId === "string" && acceptedEventIds.has(eventId);
+		},
 		snapshot() {
 			return {
 				batchCount,
@@ -108,6 +111,13 @@ export function createTelemetryDeliveryTracker() {
 			};
 		},
 	};
+}
+
+export function isTelemetryLifecycleSettled(deliveryTracker, requiredEventId) {
+	if (!deliveryTracker.isSettled()) return false;
+	if (!requiredEventId) return true;
+	const eventId = requiredEventId();
+	return deliveryTracker.isAccepted(eventId);
 }
 
 export function evaluateJourneyCoverage({ observed = [], required = [] }) {
@@ -263,8 +273,10 @@ async function performRepresentativeInteraction(page, route) {
 				name: step.name,
 				exact: true,
 			});
-			if (step.action === "fill") await locator.fill(step.value);
-			else if (step.action === "click") await locator.click();
+			if (step.action === "type") {
+				await locator.clear();
+				await locator.pressSequentially(step.value, { delay: 20 });
+			} else if (step.action === "click") await locator.click();
 			else throw new Error("INVALID_INTERACTION_ACTION");
 			await waitForPaintSettlement(page);
 		}
@@ -394,7 +406,11 @@ async function performSafeResourceProbes(page, route) {
 	});
 }
 
-async function finalizeControlledLifecycle(page, deliveryTracker) {
+async function finalizeControlledLifecycle(
+	page,
+	deliveryTracker,
+	requiredEventId,
+) {
 	const telemetryPollIntervalMs = 100;
 	const telemetryPollAttempts = Math.ceil(
 		journeyManifest.telemetryResponseTimeoutMs / telemetryPollIntervalMs,
@@ -413,7 +429,7 @@ async function finalizeControlledLifecycle(page, deliveryTracker) {
 		),
 	);
 	for (let attempt = 0; attempt < telemetryPollAttempts; attempt += 1) {
-		if (deliveryTracker.isSettled()) return;
+		if (isTelemetryLifecycleSettled(deliveryTracker, requiredEventId)) return;
 		await page.waitForTimeout(telemetryPollIntervalMs);
 	}
 	throw new Error("TELEMETRY_RESPONSE_TIMEOUT");
@@ -530,6 +546,7 @@ async function runJourney() {
 		]),
 	);
 	let representativeMetricObserved = false;
+	let representativeMetricEventId;
 	let liveSampleCount = 0;
 	let context;
 	let video;
@@ -668,6 +685,12 @@ async function runJourney() {
 						eventRoute === journeyManifest.representativeInteraction.route
 					) {
 						representativeMetricObserved = true;
+						if (
+							representativeMetricEventId === undefined &&
+							typeof event.eventId === "string"
+						) {
+							representativeMetricEventId = event.eventId;
+						}
 					}
 				}
 			} catch {
@@ -757,7 +780,13 @@ async function runJourney() {
 						});
 					}
 					await performSpaNavigation(page, route);
-					await finalizeControlledLifecycle(page, deliveryTracker);
+					await finalizeControlledLifecycle(
+						page,
+						deliveryTracker,
+						route === journeyManifest.representativeInteraction.route
+							? () => representativeMetricEventId
+							: undefined,
+					);
 					process.stdout.write(`BROWSER_ROUTE_OK ${routeTokens.get(route)}\n`);
 					const completed = routeIndex + 1;
 					if (

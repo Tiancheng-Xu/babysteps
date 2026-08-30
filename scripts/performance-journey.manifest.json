@@ -26,7 +26,7 @@
     "route": "/performance",
     "expectedMetric": "INP",
     "steps": [
-      { "action": "fill", "role": "textbox", "name": "页面路径", "value": "/performance" },
+      { "action": "type", "role": "textbox", "name": "页面路径", "value": "/performance" },
       { "action": "click", "role": "button", "name": "应用筛选" },
       { "action": "click", "role": "button", "name": "历史快照" }
     ],

@@ -232,7 +232,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 				expectedMetric: "INP",
 				steps: [
 					{
-						action: "fill",
+						action: "type",
 						role: "textbox",
 						name: "页面路径",
 						value: "/performance",
@@ -488,6 +488,11 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		journeySource,
 		/await waitForPaintSettlement\(page\)/,
 		"the representative interaction must keep throttling active through paint",
+	);
+	assert.match(
+		journeySource,
+		/step\.action === "type"[\s\S]*pressSequentially/,
+		"the controlled INP scenario must emit real keyboard input instead of assigning a value",
 	);
 	assert.match(
 		journeySource,
@@ -838,6 +843,38 @@ test("the Chromium journey reconciles a transient transport failure by event id"
 	});
 });
 
+test("route-specific telemetry cannot reuse an earlier settled batch", async () => {
+	const { createTelemetryDeliveryTracker, isTelemetryLifecycleSettled } =
+		await import("./run-performance-browser-journey.mjs");
+	const tracker = createTelemetryDeliveryTracker();
+	const earlier = tracker.beginAttempt({
+		events: [{ eventId: "earlier-lcp", name: "LCP" }],
+	});
+	tracker.markAccepted(earlier);
+
+	let representativeEventId;
+	assert.equal(
+		isTelemetryLifecycleSettled(tracker, () => representativeEventId),
+		false,
+		"an earlier accepted route must not satisfy the representative route",
+	);
+
+	representativeEventId = "performance-inp";
+	const representative = tracker.beginAttempt({
+		events: [{ eventId: representativeEventId, name: "INP" }],
+	});
+	assert.equal(
+		isTelemetryLifecycleSettled(tracker, () => representativeEventId),
+		false,
+		"an open representative batch must not be treated as delivered",
+	);
+	tracker.markAccepted(representative);
+	assert.equal(
+		isTelemetryLifecycleSettled(tracker, () => representativeEventId),
+		true,
+	);
+});
+
 test("the real browser run boots production config and preserves visual Evidence", async () => {
 	const source = await readFile(
 		".github/workflows/aws-performance.yml",
@@ -874,9 +911,7 @@ test("the real browser run boots production config and preserves visual Evidence
 		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40/,
 	);
 	assert.equal(
-		(
-			source.match(/VITE_PERFORMANCE_REPORT_ALL_CHANGES=true/gu) ?? []
-		).length,
+		(source.match(/VITE_PERFORMANCE_REPORT_ALL_CHANGES=true/gu) ?? []).length,
 		2,
 		"both controlled-browser builds must report each real INP change without changing production RUM defaults",
 	);

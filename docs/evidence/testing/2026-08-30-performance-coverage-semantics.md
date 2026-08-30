@@ -35,6 +35,8 @@ Run `33304145710` 的精确根因不是 INP SDK 未安装：同一页面逐步�
 
 Run [`33309628686`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33309628686) 在合并后的精确 main 提交上再次于 `local-coverage` fail-closed：9/9 路由均完成，但新增的精确路由 Gate 发现 INP 最终生命周期回调没有绑定到 `/performance`，因此 `prove-and-clean` 被跳过，AWS Runtime 仍未创建。根因是 `web-vitals` 默认只在页面生命周期结算最终 INP；CI 的快速页面切换会把回调延后到另一条路由。修复仅在受控浏览器构建中启用 `reportAllChanges`，让同一个真实 Event Timing 交互在当前路由立即上报；生产 RUM 默认值不变，仍保持每个页面生命周期的最终 INP 口径。本地复核为 9/9 路由、`215` 个事件、`40/40` 批次接受、`representativeInteraction.route=/performance`、`metric=INP`、`observed=true`。
 
+Run [`33310685523`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33310685523) 证明只启用 `reportAllChanges` 仍不足以消除 Linux runner 的 freshness race：9/9 路由再次完成，但生命周期排空函数看到“此前路由的累计批次已经 settled”后可提前返回，而 `/performance` 的 INP 仍在 `web-vitals` idle callback 中等待处理；下一次导航随后销毁旧 Document。该 Run 同样在 `local-coverage` 停止，`prove-and-clean` 被跳过，未创建 AWS Runtime。修复把代表性交互由直接赋值的 `fill()` 改为真实逐键输入，并把排空条件升级为“精确 `/performance` INP `eventId` 已被接收且全部批次 settled”；旧路由的 accepted batch 不再能满足新路由。整个过程仍使用真实 Event Timing，不插入忙循环、不生成合成指标，也不放宽路由 Gate。最终候选本地复核为 9/9 路由、`206` 个事件、`45/45` 批次接受、精确 `/performance` INP 已接收、`missingRequired=[]`、健康错误/降级 `unexpectedObserved=[]`。
+
 读回 Gate 同步升级为全合同校验：每个必需样本都校验单位、样本数、p50/p75/p95 顺序与 `observed` 状态；DNS/TCP/TLS 必须是空分位数的 `unavailable`；JS/Promise 错误、CSR fallback 与 hydration recoverable error 必须是 `observed-zero`；钱包、身份和写交易能力在这条匿名只读 Journey 中必须是 `not-exercised`。失败的只读报价或合约读取以 `.error` 原始事件进入聚合，并折叠为对应操作的失败样本，绝不冒充成功。
 
 业务指标覆盖进一步绑定到 **事件类型 + 指标名 + 精确路由 + outcome**：`contract.read` 与报价只能来自 `/exchange`，`rpc.read` 与 `web3.rpc.read` 只能来自 `/tasks`；错误路由的同名事件不能再通过 raw-name fallback 补齐覆盖。Web3 基础名只允许成功 outcome，`.error` 名只允许失败 outcome；名称与 outcome 矛盾的事件在 AWS Schema 和本地 Journey 都 fail-closed。云端读回还必须同时匹配候选 commit、`production` 环境、`1h` 窗口、Run 起始时间之后的新鲜度，以及 9 条路由各自的真实样本，旧 Run 或其他版本不能补齐本轮合同。
@@ -51,7 +53,7 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 
 ## 验证
 
-- 全量测试：validators `99/99`、AWS `90/90`、contracts `108/108`、Web `293/293`、Worker `62/62`、Subgraph `4/4` 全通过。
+- 全量测试：validators `100/100`、AWS `90/90`、contracts `108/108`、Web `293/293`、Worker `62/62`、Subgraph `4/4` 全通过。
 - `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:delivery-evidence`、`pnpm validate:public-copy` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
 - BackstopJS：375/390/430/1440 共 `4/4` 通过，性能模块布局 Gate `2/2` 通过；候选与已审阅基线无像素差异，没有用 mask 隐藏产品内容。
