@@ -6,6 +6,8 @@ import { NotFoundPage, ServerRouteShell } from "../app/ServerRouteShell";
 import { CourseEvidenceFooter } from "../components/CourseEvidenceFooter";
 import { ProductNavigation } from "../components/ProductNavigation";
 import { HomePage } from "../pages/HomePage";
+import { completeRouteTransition } from "../performance/routeTransition";
+import { recordPerformance } from "../performance/runtime";
 import { ROUTE_DEFINITIONS, viewForPath } from "./routeDefinitions";
 
 const GrowthMarketplacePage = lazy(() =>
@@ -67,6 +69,15 @@ export function AppRoutes({ interactive = true }: { interactive?: boolean }) {
 
 	useEffect(() => {
 		document.documentElement.dataset.currentView = currentView;
+		const duration = completeRouteTransition();
+		if (duration !== undefined) {
+			recordPerformance({
+				type: "custom",
+				name: "spa.route.duration",
+				value: duration,
+				unit: "ms",
+			});
+		}
 	}, [currentView]);
 
 	return (

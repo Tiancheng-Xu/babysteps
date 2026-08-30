@@ -532,6 +532,19 @@ export function PerformanceDashboardPage({
 							caption="导航阶段百分位与覆盖状态"
 						/>
 					</section>
+					<section className="performance-panel performance-panel--wide">
+						<h2>渲染与路由</h2>
+						<Meta
+							source={source}
+							samples={totalSamples(data.rendering)}
+							freshness={freshness}
+							coverage={sectionCoverage(data.rendering)}
+						/>
+						<MetricTable
+							items={data.rendering}
+							caption="SSR、水合与 SPA 路由性能"
+						/>
+					</section>
 					<section className="performance-panel performance-panel--standard">
 						<h2>趋势与版本</h2>
 						<Meta

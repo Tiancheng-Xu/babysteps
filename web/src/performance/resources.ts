@@ -6,7 +6,6 @@ const resourceCategories: Record<string, PerformanceCategory> = {
 	xmlhttprequest: "xhr",
 	script: "script",
 	link: "stylesheet",
-	css: "stylesheet",
 	img: "image",
 	image: "image",
 	font: "font",
@@ -24,7 +23,15 @@ export function classifyResource(
 	}
 	if (resourceOrigin !== origin || !Number.isFinite(entry.duration))
 		return undefined;
-	const category = resourceCategories[entry.initiatorType.toLowerCase()];
+	const initiatorType = entry.initiatorType.toLowerCase();
+	let category = resourceCategories[initiatorType];
+	if (initiatorType === "css") {
+		const pathname = new URL(entry.name, origin).pathname.toLowerCase();
+		if (/\.(?:woff2?|ttf|otf|eot)$/u.test(pathname)) category = "font";
+		else if (/\.(?:avif|gif|jpe?g|png|svg|webp)$/u.test(pathname)) {
+			category = "image";
+		}
+	}
 	return {
 		type: "resource",
 		name: category ? `resource.${category}.duration` : "resource.duration",

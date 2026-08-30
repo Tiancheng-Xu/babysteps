@@ -4,6 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const probeFont = Buffer.from(
+	readFileSync(
+		new URL("./fixtures/performance-probe-font.base64", import.meta.url),
+		"utf8",
+	).trim(),
+	"base64",
+);
+
 export const journeyManifest = JSON.parse(
 	readFileSync(
 		new URL("./performance-journey.manifest.json", import.meta.url),
@@ -143,6 +151,21 @@ export function assertJourneyComplete(summary) {
 	if (!summary.representativeInteraction.observed) {
 		throw new Error("MISSING_REPRESENTATIVE_INTERACTION_METRIC");
 	}
+	if (
+		summary.safeBusinessInteractions.some(
+			(interaction) =>
+				!interaction.successObserved && !interaction.failureObserved,
+		)
+	) {
+		throw new Error("MISSING_SAFE_BUSINESS_INTERACTION_OUTCOME");
+	}
+	if (summary.healthyZero.unexpectedObserved.length > 0) {
+		throw new Error(
+			`UNHEALTHY_CONTROLLED_JOURNEY_${summary.healthyZero.unexpectedObserved
+				.map((name) => name.toUpperCase().replace(/[^A-Z0-9]+/gu, "_"))
+				.join("_")}`,
+		);
+	}
 }
 
 async function performRepresentativeInteraction(page, route) {
@@ -166,6 +189,40 @@ async function performRepresentativeInteraction(page, route) {
 	if (actual !== interaction.assertion.equals) {
 		throw new Error("INTERACTION_ASSERTION_FAILED");
 	}
+}
+
+async function performSafeBusinessInteractions(page, route) {
+	const interactions = journeyManifest.safeBusinessInteractions.filter(
+		(interaction) => interaction.route === route,
+	);
+	for (const interaction of interactions) {
+		for (const step of interaction.steps) {
+			const locator = page.getByRole(step.role, {
+				name: step.name,
+				exact: true,
+			});
+			if (step.action === "fill") await locator.fill(step.value);
+			else if (step.action === "click") await locator.click();
+			else throw new Error("INVALID_BUSINESS_INTERACTION_ACTION");
+		}
+		await page
+			.getByRole(interaction.settledRole)
+			.filter({ hasNotText: interaction.settledNotText })
+			.waitFor({ state: "visible" });
+	}
+}
+
+async function performSpaNavigation(page, route) {
+	const scenario = journeyManifest.spaNavigation;
+	if (route !== scenario.route) return;
+	await page
+		.getByRole(scenario.role, { name: scenario.name, exact: true })
+		.click();
+	await page.waitForURL((url) => url.pathname === scenario.expectedPath);
+	await page.evaluate(
+		() => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+	);
+	await page.waitForTimeout(500);
 }
 
 async function performSafeResourceProbes(page, route) {
@@ -201,6 +258,17 @@ async function performSafeResourceProbes(page, route) {
 			};
 			document.head.append(link);
 		});
+		const fontStyle = document.createElement("style");
+		fontStyle.textContent =
+			'@font-face{font-family:"BabyStepsProbe";src:url("/__performance_probe__/font.woff2") format("woff2");font-display:block}';
+		document.head.append(fontStyle);
+		await document.fonts.load('12px "BabyStepsProbe"');
+		fontStyle.remove();
+		const sent = navigator.sendBeacon(
+			"/__performance_probe__/beacon",
+			new Blob(["ok"], { type: "text/plain" }),
+		);
+		if (!sent) throw new Error("RESOURCE_PROBE_BEACON_FAILED");
 	});
 }
 
@@ -247,6 +315,23 @@ export function sanitizeJourneySummary(input) {
 		observed,
 		required: journeyManifest.requiredMetrics,
 	});
+	const unexpectedObserved = journeyManifest.healthyZeroMetrics
+		.filter((name) => observed.includes(name))
+		.sort();
+	const safeBusinessInteractions = journeyManifest.safeBusinessInteractions.map(
+		(interaction) => {
+			const outcome = input.safeBusinessOutcomes?.[interaction.id];
+			return {
+				id: interaction.id,
+				route: interaction.route,
+				metric: interaction.expectedMetric,
+				safety: interaction.safety,
+				acceptedOutcomes: [...interaction.acceptedOutcomes],
+				successObserved: outcome?.successObserved === true,
+				failureObserved: outcome?.failureObserved === true,
+			};
+		},
+	);
 	return {
 		routes,
 		coverage: {
@@ -265,6 +350,15 @@ export function sanitizeJourneySummary(input) {
 			metric: journeyManifest.representativeInteraction.expectedMetric,
 			observed: input.representativeMetricObserved === true,
 		},
+		safeBusinessInteractions,
+		zeroOrObserved: journeyManifest.zeroOrObservedMetrics.map((name) => ({
+			name,
+			observed: observed.includes(name),
+		})),
+		healthyZero: {
+			expected: [...journeyManifest.healthyZeroMetrics].sort(),
+			unexpectedObserved,
+		},
 		lifecycleFinalization: "controlled-browser-hidden-pagehide",
 	};
 }
@@ -279,6 +373,7 @@ async function runJourney() {
 	const output = readOption("--output") ?? "evidence/browser-journey.json";
 	const artifactsDir = readOption("--artifacts-dir");
 	const dashboardOnly = process.argv.includes("--dashboard-only");
+	const localCoverage = process.argv.includes("--local-coverage");
 	const version = readOption("--version");
 	if (!origin) throw new Error("MISSING_ORIGIN");
 	if (dashboardOnly && !/^[0-9a-f]{12}$/u.test(version ?? "")) {
@@ -302,6 +397,12 @@ async function runJourney() {
 	const observedRoutes = new Set();
 	const coverage = new Set(unavailableCoverage);
 	const deliveryTracker = createTelemetryDeliveryTracker();
+	const safeBusinessOutcomes = Object.fromEntries(
+		journeyManifest.safeBusinessInteractions.map((interaction) => [
+			interaction.id,
+			{ successObserved: false, failureObserved: false },
+		]),
+	);
 	let representativeMetricObserved = false;
 	let liveSampleCount = 0;
 	let context;
@@ -347,6 +448,18 @@ async function runJourney() {
 				});
 				return;
 			}
+			if (pathname === "/__performance_probe__/font.woff2") {
+				await route.fulfill({
+					status: 200,
+					contentType: "font/woff2",
+					body: probeFont,
+				});
+				return;
+			}
+			if (pathname === "/__performance_probe__/beacon") {
+				await route.fulfill({ status: 204 });
+				return;
+			}
 			await route.abort();
 		});
 		await page.route("**/api/performance/events", async (route) => {
@@ -365,6 +478,15 @@ async function runJourney() {
 				batch = undefined;
 			}
 			const attempt = deliveryTracker.beginAttempt(batch);
+			if (localCoverage) {
+				await route.fulfill({
+					status: 202,
+					contentType: "application/json",
+					body: '{"accepted":true}',
+				});
+				deliveryTracker.markAccepted(attempt);
+				return;
+			}
 			try {
 				const response = await route.fetch({
 					timeout: journeyManifest.telemetryAttemptTimeoutMs,
@@ -396,7 +518,20 @@ async function runJourney() {
 				if (!Array.isArray(batch?.events)) return;
 				for (const event of batch.events) {
 					if (typeof event?.name !== "string") continue;
-					coverage.add(event.name);
+					for (const interaction of journeyManifest.safeBusinessInteractions) {
+						const outcome = safeBusinessOutcomes[interaction.id];
+						if (event.name === interaction.expectedMetric) {
+							outcome.successObserved = true;
+						} else if (event.name === `${interaction.expectedMetric}.error`) {
+							outcome.failureObserved = true;
+						}
+					}
+					const failedBusinessMetric =
+						journeyManifest.safeBusinessInteractions.find(
+							(interaction) =>
+								event.name === `${interaction.expectedMetric}.error`,
+						)?.expectedMetric;
+					coverage.add(failedBusinessMetric ?? event.name);
 					const eventRoute =
 						typeof event.route === "string"
 							? event.route.split(/[?#]/u)[0]
@@ -480,6 +615,7 @@ async function runJourney() {
 					observedRoutes.add(route);
 					await performSafeResourceProbes(page, route);
 					await performRepresentativeInteraction(page, route);
+					await performSafeBusinessInteractions(page, route);
 					await page.waitForTimeout(350);
 					if (artifactsDir) {
 						await page.screenshot({
@@ -490,6 +626,7 @@ async function runJourney() {
 							fullPage: true,
 						});
 					}
+					await performSpaNavigation(page, route);
 					await finalizeControlledLifecycle(page, deliveryTracker);
 					process.stdout.write(`BROWSER_ROUTE_OK ${routeTokens.get(route)}\n`);
 					const completed = routeIndex + 1;
@@ -534,6 +671,7 @@ async function runJourney() {
 		coverage: [...coverage],
 		...deliveryTracker.snapshot(),
 		representativeMetricObserved,
+		safeBusinessOutcomes,
 	});
 	assertJourneyComplete(summary);
 	await writeFile(output, `${JSON.stringify(summary, null, 2)}\n`, {

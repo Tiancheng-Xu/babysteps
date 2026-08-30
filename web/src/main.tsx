@@ -50,9 +50,13 @@ function ClientApplication({
 
 	return (
 		<StrictMode>
-			<Providers>
-				<App interactive={interactive} />
-			</Providers>
+			{interactive ? (
+				<Providers>
+					<App interactive />
+				</Providers>
+			) : (
+				<App interactive={false} />
+			)}
 		</StrictMode>
 	);
 }

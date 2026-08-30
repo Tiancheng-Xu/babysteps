@@ -72,7 +72,8 @@ export function useUniswapSwap() {
 	const quote = useCallback(
 		() =>
 			measurePerformance("web3.uniswap.quote", async () => {
-				if (!babyCoinAddress || !amountIn || amountIn <= 0n) {
+				const targetToken = babyCoinAddress;
+				if (!targetToken || !amountIn || amountIn <= 0n) {
 					setPhase("error");
 					setMessage("请输入有效数量，并先配置 BABY 合约地址。");
 					return;
@@ -80,21 +81,23 @@ export function useUniswapSwap() {
 				setPhase("quoting");
 				setMessage("正在从 Sepolia Uniswap v3 QuoterV2 读取报价…");
 				try {
-					const simulation = await simulateContract(wagmiConfig, {
-						address: uniswapV3Sepolia.quoterV2,
-						abi: uniswapQuoterV2Abi,
-						functionName: "quoteExactInputSingle",
-						args: [
-							{
-								tokenIn: selected.address,
-								tokenOut: babyCoinAddress,
-								amountIn,
-								fee: uniswapV3Sepolia.fee,
-								sqrtPriceLimitX96: 0n,
-							},
-						],
-						chainId: sepolia.id,
-					});
+					const simulation = await measurePerformance("contract.read", () =>
+						simulateContract(wagmiConfig, {
+							address: uniswapV3Sepolia.quoterV2,
+							abi: uniswapQuoterV2Abi,
+							functionName: "quoteExactInputSingle",
+							args: [
+								{
+									tokenIn: selected.address,
+									tokenOut: targetToken,
+									amountIn,
+									fee: uniswapV3Sepolia.fee,
+									sqrtPriceLimitX96: 0n,
+								},
+							],
+							chainId: sepolia.id,
+						}),
+					);
 					const result = simulation.result;
 					const output = Array.isArray(result) ? result[0] : undefined;
 					if (typeof output !== "bigint" || output <= 0n) {
@@ -107,6 +110,7 @@ export function useUniswapSwap() {
 				} catch (error) {
 					setPhase("error");
 					setMessage(toWalletMessage(error));
+					throw error;
 				}
 			}),
 		[amountIn, selected.address],
@@ -164,20 +168,28 @@ export function useUniswapSwap() {
 					if (allowance < amountIn) {
 						setPhase("approving");
 						setMessage("请确认仅授权本次输入数量，不使用无限授权。");
-						const approvalHash = await writeContractAsync({
-							address: selected.address,
-							abi: exchangeErc20Abi,
-							functionName: "approve",
-							args: [
-								uniswapV3Sepolia.swapRouter02,
-								finiteApprovalAmount(amountIn),
-							],
-							chainId: sepolia.id,
-						});
-						await waitForTransactionReceipt(wagmiConfig, {
-							hash: approvalHash,
-							chainId: sepolia.id,
-						});
+						const approvalHash = await measurePerformance(
+							"approve.submit",
+							() =>
+								measurePerformance("contract.write", () =>
+									writeContractAsync({
+										address: selected.address,
+										abi: exchangeErc20Abi,
+										functionName: "approve",
+										args: [
+											uniswapV3Sepolia.swapRouter02,
+											finiteApprovalAmount(amountIn),
+										],
+										chainId: sepolia.id,
+									}),
+								),
+						);
+						await measurePerformance("approve.receipt", () =>
+							waitForTransactionReceipt(wagmiConfig, {
+								hash: approvalHash,
+								chainId: sepolia.id,
+							}),
+						);
 					}
 
 					setPhase("swapping");
@@ -199,21 +211,28 @@ export function useUniswapSwap() {
 						account: address,
 						chainId: sepolia.id,
 					});
-					const hash = await writeContractAsync(simulation.request);
-					await waitForTransactionReceipt(wagmiConfig, {
-						hash,
-						chainId: sepolia.id,
-					});
+					const hash = await measurePerformance("transaction.submit", () =>
+						measurePerformance("contract.write", () =>
+							writeContractAsync(simulation.request),
+						),
+					);
+					await measurePerformance("transaction.receipt", () =>
+						waitForTransactionReceipt(wagmiConfig, {
+							hash,
+							chainId: sepolia.id,
+						}),
+					);
 					setTransactionHash(hash);
 					setPhase("success");
 					setMessage("兑换已在 Sepolia 确认；测试资产没有真实价值。");
 				} catch (error) {
 					setPhase("error");
 					setMessage(toWalletMessage(error));
+					throw error;
 				} finally {
 					pendingRef.current = false;
 				}
-			}),
+			}).catch(() => undefined),
 		[
 			address,
 			amountIn,

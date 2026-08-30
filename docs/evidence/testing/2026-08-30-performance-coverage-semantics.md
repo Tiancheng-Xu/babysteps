@@ -21,19 +21,31 @@
 - `instrumented-no-sample`：埋点已启用但确实缺少样本；
 - `unavailable`：当前环境不能提供可信测量。
 
-受控 Journey 扩展到 `/`、`/tasks`、`/parent`、`/keepsakes`、`/provider`、`/exchange`、`/profile`、`/performance`、`/evidence` 共 9 条路由；只在 `/performance` 使用浏览器真实 Resource Timing 请求安全采集 fetch、XHR、stylesheet 与 image。它不会故意制造错误、长任务、坏 CLS、钱包授权、Swap 或链上交易来填数。
+受控 Journey 扩展到 `/`、`/tasks`、`/parent`、`/keepsakes`、`/provider`、`/exchange`、`/profile`、`/performance`、`/evidence` 共 9 条路由；在 `/performance` 使用同源、无用户数据的探针采集 fetch、XHR、stylesheet、image、font 与 generic Resource Timing，在首页执行真实 SPA 路由切换，在兑换页只执行 Sepolia 报价读取。报价场景的成功与失败分别记录：二者都能证明场景已执行，但失败绝不冒充成功。Journey 不会故意制造错误、坏 CLS、钱包授权、Swap 或链上写交易来填数。
 
-首次云端尝试中，9 条路由全部通过，但最终 Coverage Gate 拒绝了缺少 XHR 与 stylesheet 的不完整样本。根因不是 AWS 接收失败，而是 Vite 模块加载产生大量重复 `resource.script.duration`，先占满了 SDK 每分钟的低优先级额度，导致后到的资源类别被饥饿。修复后，同一个低优先级指标名在每页面、每分钟只保留首条；总体事件上限与高优先级预留不变，不增加 Worker 或 AWS 配额。Coverage Gate 同时只输出白名单内缺失指标的脱敏 token，后续失败不再只有笼统错误。
+为避免先创建 AWS 资源、后发现浏览器合同不完整，`aws-performance.yml` 现在把同一份生产 Edge SSR 产物和同一份 Journey Manifest 放进独立的 `local-coverage` 前置 Job。该 Job 不申请 GitHub OIDC、没有 AWS 环境变量，只有 9 路由、代表性交互、资源探针、渲染指标和覆盖语义全部通过后，后续临时 AWS Job 才能开始。
+
+首次云端尝试中，9 条路由全部通过，但最终 Coverage Gate 拒绝了缺少 XHR 与 stylesheet 的不完整样本。根因不是 AWS 接收失败，而是模块加载与 RPC 诊断先占满 SDK 每分钟额度，导致后到的资源类别和 SPA 路由耗时被饥饿。修复后，队列明确分为业务错误与 Web Vitals、合同必需覆盖、普通诊断三层；生产每分钟额度的一半保留给合同必需指标，同一高频指标另有有界上限。总体事件上限不变，不增加 Worker 或 AWS 配额。Coverage Gate 同时只输出白名单内缺失指标的脱敏 token，后续失败不再只有笼统错误。
+
+SSR 场景还发现一项独立缺陷：客户端静态路由树包含 `Suspense`，服务端静态树缺少对应流式边界标记，导致所有路由触发 React hydration recoverable error。修复后服务端保留不含 Privy 的专用静态树，但与客户端使用相同的 Error Boundary 与 Suspense 外壳；钱包、查询和身份 Provider 仍只在 hydration 完成后挂载。逐路由复核为 9/9 无 recoverable error、无 CSR fallback、无 `pageerror`。
+
+## 场景合同
+
+- **强制观测（19 项）**：LCP、CLS、INP、FCP、TTFB；request wait、download、DOM ready、window load；fetch、XHR、stylesheet、image、font、generic resource；SSR shell、hydration、SPA route；Sepolia Uniswap quote。
+- **零次或真实观测均有效**：Long Task。快速、健康页面没有 Long Task 时必须聚合为 `observed-zero`（次数与总耗时为 0、分位数为空）；若确实发生则必须提供真实 `longtask.duration` 样本，不能为了通过 Gate 人为阻塞主线程。
+- **健康零事件**：JS error、Promise rejection 的八个分类、hydration recoverable error、CSR fallback。任意一项在 Journey 中出现都会直接失败，不再把错误样本当成“覆盖成功”。
+- **有条件执行**：Privy 登录、钱包连接、challenge/sign/verify、合约写入、approve、swap、transaction receipt。代码与 Schema 必须存在真实埋点 owner，但没有用户授权、测试资产和 Gas 时保持 `not-exercised`，不能自动签名或发送交易。
+- **环境不可用**：DNS、TCP、TLS 在本地同源与连接复用下不输出伪造值，保持 `unavailable`。
 
 Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gate 失败而严格跳过，没有把部分数据发布成成功 Evidence。Artifact `9726707324` 证明：临时 Schema 已删除且复核不存在，CloudFormation Stack 不存在，12 类项目资源剩余数为 `0`；共享 VPC、NAT、RDS、OIDC、Artifact Bucket 与 Foundation 保持只读保护。
 
 ## 验证
 
-- 全量测试：validators、AWS、contracts、Web、Worker、Subgraph 全通过；Web `282/282`、Worker `62/62`、contracts `108/108`。
+- 全量测试：validators `98/98`、AWS `90/90`、contracts `108/108`、Web `291/291`、Worker `62/62`、Subgraph `4/4` 全通过。
 - `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:public-artifact` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
 - BackstopJS：人工检查 candidate/diff 后更新基线，375/390/430/1440 共 `4/4` 通过；没有用 mask 隐藏产品内容。
-- 修复后本地同构 Journey：9/9 路由、`156` 个事件、`24/24` 批次接受、拒绝与传输失败均为 `0`；LCP、CLS、INP、FCP、TTFB、四个导航阶段以及 fetch、XHR、stylesheet、image 全部覆盖，`missingRequired=[]`。
+- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`41/41` 批次接受、拒绝与传输失败均为 `0`；19 项强制观测全部覆盖，`missingRequired=[]`；Long Task 本轮有真实样本；12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功，也没有发起授权、Swap 或链上写入。完整视频保存在本地临时 Gate 产物中，只有通过云端 Run 后才会进入最终公开 Evidence。
 - 工作树检查：`git diff --check` 通过；生成代码与用户文件未被带入修改清单。
 
 ## 边界
@@ -41,4 +53,4 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 - 首次 AWS Runtime 只使用现有受控临时资源与自清理路径；它已删除，且未修改或取消 AWS Free 计划。
 - `observed-zero` 只表示本轮受控窗口内没有观测到事件，不证明线上永远不会出错或永远没有 Long Task。
 - `not-exercised` 不等于功能失败；它明确表示本轮安全采样没有执行需要身份、资产、Gas 或外部授权的动作。
-- 公平采样修复目前为本地已验证、云端待补验；新的资源样本与 9 路由统计仍必须由新的临时 Run、Cleaner 写入、Dashboard 查询和零残留清理共同证明。
+- 全场景合同修复目前为本地已验证、云端待补验；新的资源、渲染、Long Task、只读 Web3 样本与 9 路由统计仍必须由新的临时 Run、Cleaner 写入、Dashboard 查询和零残留清理共同证明。

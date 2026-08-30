@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "appId": "babysteps",
   "perRouteEventBudget": 30,
   "maxRoutesPerQuotaWindow": 4,
@@ -27,6 +27,28 @@
     ],
     "assertion": { "urlSearchParam": "route", "equals": "/performance" }
   },
+  "spaNavigation": {
+    "route": "/",
+    "role": "link",
+    "name": "成长任务",
+    "expectedPath": "/tasks",
+    "expectedMetric": "spa.route.duration"
+  },
+  "safeBusinessInteractions": [
+    {
+      "id": "sepolia-uniswap-quote",
+      "route": "/exchange",
+      "steps": [
+        { "action": "fill", "role": "textbox", "name": "输入数量", "value": "1" },
+        { "action": "click", "role": "button", "name": "读取链上报价" }
+      ],
+      "settledRole": "status",
+      "settledNotText": "正在",
+      "expectedMetric": "web3.uniswap.quote",
+      "safety": "read-only-sepolia",
+      "acceptedOutcomes": ["success", "failure"]
+    }
+  ],
   "safeResourceProbeRoute": "/performance",
   "requiredMetrics": [
     "LCP",
@@ -41,7 +63,45 @@
     "resource.fetch.duration",
     "resource.xhr.duration",
     "resource.stylesheet.duration",
-    "resource.image.duration"
+    "resource.image.duration",
+    "resource.font.duration",
+    "resource.duration",
+    "spa.route.duration",
+    "ssr.shell.duration",
+    "hydration.duration",
+    "web3.uniswap.quote"
   ],
+  "zeroOrObservedMetrics": ["longtask.duration"],
+  "healthyZeroMetrics": [
+    "javascript.error",
+    "promise.rejection",
+    "error.javascript.type_error",
+    "error.javascript.network",
+    "error.javascript.timeout",
+    "error.javascript.unknown",
+    "error.promise.type_error",
+    "error.promise.network",
+    "error.promise.timeout",
+    "error.promise.unknown",
+    "csr.fallback",
+    "hydration.recoverable_error"
+  ],
+  "conditionalMetrics": {
+    "wallet": ["wallet.connect"],
+    "identity": [
+      "web3.privy.login",
+      "auth.challenge",
+      "auth.sign",
+      "auth.verify"
+    ],
+    "transaction": [
+      "contract.write",
+      "web3.uniswap.swap",
+      "approve.submit",
+      "approve.receipt",
+      "transaction.submit",
+      "transaction.receipt"
+    ]
+  },
   "unavailableMetrics": ["navigation.dns", "navigation.tcp", "navigation.tls"]
 }

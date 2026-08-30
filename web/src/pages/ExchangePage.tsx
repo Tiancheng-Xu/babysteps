@@ -65,7 +65,7 @@ export function ExchangePage() {
 						<button
 							className="button"
 							type="button"
-							onClick={exchange.quote}
+							onClick={() => void exchange.quote().catch(() => undefined)}
 							disabled={!exchange.canQuote || exchange.phase === "quoting"}
 						>
 							{exchange.phase === "quoting" ? "报价中…" : "读取链上报价"}

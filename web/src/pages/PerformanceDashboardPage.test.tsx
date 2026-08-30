@@ -109,6 +109,11 @@ const liveStats = {
 		metric(name, name === "CLS" ? "score" : "ms"),
 	),
 	navigation: navigationNames.map((name) => metric(name)),
+	rendering: [
+		"spa.route.duration",
+		"ssr.shell.duration",
+		"hydration.duration",
+	].map((name) => metric(name)),
 	resources: resourceNames.map((name) => metric(name)),
 	longTasks: {
 		count: 0,
@@ -159,7 +164,7 @@ describe("PerformanceDashboardPage", () => {
 		window.history.replaceState({}, "", "/performance");
 	});
 
-	it("renders the ten data-driven cockpit sections with coverage and provenance", async () => {
+	it("renders the eleven data-driven cockpit sections with coverage and provenance", async () => {
 		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
 		await screen.findAllByText("42");
@@ -167,6 +172,7 @@ describe("PerformanceDashboardPage", () => {
 			"运行状态与总览",
 			"Core Web Vitals",
 			"导航阶段",
+			"渲染与路由",
 			"趋势与版本",
 			"页面路径",
 			"资源与主线程",

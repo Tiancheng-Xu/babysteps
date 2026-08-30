@@ -361,10 +361,27 @@ describe("real-sample statistics", () => {
 		},
 	);
 
-	it("includes every fixed rendering metric in coverage", () => {
-		const names = computePerformanceDashboard([]).coverage.map(
-			({ name }) => name,
-		);
+	it("returns full rendering summaries and every fixed rendering metric in coverage", () => {
+		const dashboard = computePerformanceDashboard([
+			event({ name: "spa.route.duration", value: 12 }),
+			event({ name: "ssr.shell.duration", value: 8 }),
+			event({ name: "hydration.duration", value: 24 }),
+		]);
+		const names = dashboard.coverage.map(({ name }) => name);
+
+		expect(dashboard.rendering).toEqual([
+			expect.objectContaining({
+				name: "spa.route.duration",
+				unit: "ms",
+				sampleCount: 1,
+				p50: 12,
+				p75: 12,
+				p95: 12,
+				coverage: "observed",
+			}),
+			expect.objectContaining({ name: "ssr.shell.duration", sampleCount: 1 }),
+			expect.objectContaining({ name: "hydration.duration", sampleCount: 1 }),
+		]);
 
 		expect(names).toEqual(
 			expect.arrayContaining([

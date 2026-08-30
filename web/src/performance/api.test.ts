@@ -27,6 +27,11 @@ const resourceNames = [
 	"resource.image.duration",
 	"resource.font.duration",
 ] as const;
+const renderingMetricNames = [
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+] as const;
 const errorNames = [
 	"javascript.error",
 	"promise.rejection",
@@ -119,6 +124,7 @@ const response = {
 	),
 	navigation: navigationNames.map((name) => emptyMetric(name)),
 	resources: resourceNames.map((name) => emptyMetric(name)),
+	rendering: renderingMetricNames.map((name) => emptyMetric(name)),
 	longTasks: {
 		count: 0,
 		totalDurationMs: 0,
@@ -229,6 +235,10 @@ describe("performance query API", () => {
 				...response,
 				resources: [...response.resources, response.resources[0]],
 			},
+		],
+		[
+			"missing rendering metric",
+			{ ...response, rendering: response.rendering.slice(0, -1) },
 		],
 		["missing Web3 operation", { ...response, web3: response.web3.slice(1) }],
 		[

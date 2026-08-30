@@ -47,9 +47,11 @@ describe("Cloudflare Pages SSR worker", () => {
 	});
 
 	it("returns SSR generated through React Web Streams with truthful headers", async () => {
+		const times = [100, 112];
 		const handler = createPagesHandler({
 			render: vi.fn(async () => appStream("<h1>星宝纪念馆</h1>")),
 			version: "test-build",
+			now: () => times.shift() ?? 112,
 		});
 		const response = await handler.fetch(
 			new Request("https://example.test/keepsakes", {
@@ -60,6 +62,7 @@ describe("Cloudflare Pages SSR worker", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("x-babysteps-render-mode")).toBe("ssr");
 		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(response.headers.get("server-timing")).toBe("babysteps_ssr;dur=12");
 		expect(await response.text()).toContain("<h1>星宝纪念馆</h1>");
 	});
 

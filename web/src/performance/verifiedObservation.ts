@@ -41,6 +41,11 @@ const resourceNames = [
 	"resource.image.duration",
 	"resource.font.duration",
 ] as const;
+const renderingMetricNames = [
+	"spa.route.duration",
+	"ssr.shell.duration",
+	"hydration.duration",
+] as const;
 const errorNames = [
 	"javascript.error",
 	"promise.rejection",
@@ -181,6 +186,9 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 					coverage: "observed",
 				}
 			: noSample(name, "ms", "not-exercised"),
+	),
+	rendering: renderingMetricNames.map((name) =>
+		noSample(name, "ms", "not-exercised"),
 	),
 	longTasks: {
 		count: 0,
