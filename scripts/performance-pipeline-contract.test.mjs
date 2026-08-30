@@ -319,6 +319,21 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	assert.match(journeySource, /__performance_probe__\/fetch/);
 	assert.match(journeySource, /__performance_probe__\/font\.woff2/);
 	assert.match(journeySource, /performance-probe-font\.base64/);
+	assert.match(
+		journeySource,
+		/performance\.getEntriesByName\(fontResourceUrl\)/,
+		"the font probe must wait for a real Resource Timing entry",
+	);
+	assert.match(
+		journeySource,
+		/document\.fonts\.load\([^,]+, "BabySteps"\)/,
+		"the font probe must request glyphs from the tracked fixture",
+	);
+	assert.match(
+		journeySource,
+		/requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/,
+		"the font probe must give the PerformanceObserver a delivery turn",
+	);
 	assert.doesNotMatch(journeySource, /backstop_data/);
 	const probeFont = Buffer.from(
 		(await readFile(
