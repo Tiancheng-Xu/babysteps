@@ -117,6 +117,13 @@ test("implemented feature preflight fails closed and returns only aliases", asyn
 		"./run-implemented-feature-preflight.mjs"
 	);
 	const safeSnapshot = {
+		provenance: "live-readonly",
+		collectedAt: "2026-08-30T12:00:00.000Z",
+		sources: {
+			sepolia: "public-rpc-readonly",
+			product: "production-ui-readonly",
+			aws: "oidc-readonly-inventory",
+		},
 		chainId: 11155111,
 		contractsConfigured: true,
 		roles: {
@@ -133,20 +140,77 @@ test("implemented feature preflight fails closed and returns only aliases", asyn
 			recoverableRequestCount: 1,
 		},
 		identity: { privyReady: true, workerOriginReady: true },
-		awsRuntime: { state: "ready", budgetGuardPassed: true },
+		awsRuntime: {
+			state: "stopped",
+			budgetGuardPassed: true,
+			zeroResidueVerified: true,
+		},
 	};
 
-	assert.equal(evaluateImplementedFeaturePreflight(safeSnapshot).ready, true);
-	const denied = evaluateImplementedFeaturePreflight({
-		...safeSnapshot,
-		roles: { ...safeSnapshot.roles, "provider-c": false },
-	});
+	assert.equal(
+		evaluateImplementedFeaturePreflight(safeSnapshot, {
+			now: Date.parse("2026-08-30T12:01:00.000Z"),
+		}).ready,
+		true,
+	);
+	const denied = evaluateImplementedFeaturePreflight(
+		{
+			...safeSnapshot,
+			roles: { ...safeSnapshot.roles, "provider-c": false },
+		},
+		{ now: Date.parse("2026-08-30T12:01:00.000Z") },
+	);
 	assert.equal(denied.ready, false);
 	assert.deepEqual(denied.blockers, ["ROLE_PROVIDER_C_UNAVAILABLE"]);
 	assert.doesNotMatch(
 		JSON.stringify(denied),
 		/0x[0-9a-fA-F]{40}|privateKey|mnemonic|cookie/u,
 	);
+});
+
+test("implemented feature live preflight rejects stale evidence and a running AWS runtime", async () => {
+	const { evaluateImplementedFeaturePreflight } = await import(
+		"./run-implemented-feature-preflight.mjs"
+	);
+	const snapshot = {
+		provenance: "live-readonly",
+		collectedAt: "2026-08-30T11:00:00.000Z",
+		sources: {
+			sepolia: "public-rpc-readonly",
+			product: "production-ui-readonly",
+			aws: "oidc-readonly-inventory",
+		},
+		chainId: 11155111,
+		contractsConfigured: true,
+		roles: {
+			"parent-a": true,
+			"recipient-b": true,
+			"provider-c": true,
+			"owner-relayer-d": true,
+		},
+		balances: { gasReady: true, babyReady: true, growthReady: true },
+		marketplace: { activeTaskCount: 1, allowanceReady: true },
+		keepsakes: {
+			vrfReady: true,
+			fusionSetCount: 1,
+			recoverableRequestCount: 1,
+		},
+		identity: { privyReady: true, workerOriginReady: true },
+		awsRuntime: {
+			state: "running",
+			budgetGuardPassed: true,
+			zeroResidueVerified: false,
+		},
+	};
+	const result = evaluateImplementedFeaturePreflight(snapshot, {
+		now: Date.parse("2026-08-30T12:00:00.000Z"),
+	});
+	assert.equal(result.ready, false);
+	assert.deepEqual(result.blockers, [
+		"PREFLIGHT_SNAPSHOT_STALE",
+		"AWS_ZERO_RESIDUE_UNVERIFIED",
+		"AWS_RUNTIME_NOT_STOPPED",
+	]);
 });
 
 test("implemented feature result separates execution proof from compensation closure", async () => {

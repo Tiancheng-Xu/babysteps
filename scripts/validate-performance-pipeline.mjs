@@ -10,6 +10,8 @@ const [
 	implementedJourney,
 	implementedPreflight,
 	implementedSchema,
+	controlWorkflow,
+	bootstrapContract,
 ] = await Promise.all([
 	readFile(".github/workflows/aws-performance.yml", "utf8"),
 	readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
@@ -20,6 +22,8 @@ const [
 	readFile("scripts/run-implemented-feature-journey.mjs", "utf8"),
 	readFile("scripts/run-implemented-feature-preflight.mjs", "utf8"),
 	readFile("scripts/implemented-feature-journey.schema.json", "utf8"),
+	readFile(".github/workflows/aws-performance-control.yml", "utf8"),
+	readFile("scripts/performance-control-bootstrap.mjs", "utf8"),
 ]);
 const manifest = JSON.parse(manifestSource);
 const expectedBusinessMetrics = [
@@ -112,6 +116,36 @@ const required = [
 		implementedPreflight,
 		"AWS_BUDGET_GUARD_NOT_PASSED",
 		"implemented journey Budget Guard preflight is missing",
+	],
+	[
+		implementedPreflight,
+		"AWS_RUNTIME_NOT_STOPPED",
+		"implemented journey preflight must refuse a running AWS runtime",
+	],
+	[
+		implementedPreflight,
+		"PREFLIGHT_SNAPSHOT_STALE",
+		"implemented journey preflight must reject stale readback",
+	],
+	[
+		controlWorkflow,
+		"babysteps-performance-control-bootstrap-v1",
+		"dedicated stopped bootstrap source is missing",
+	],
+	[
+		controlWorkflow,
+		"Publish initial verified stopped bootstrap callback",
+		"stopped bootstrap callback step is missing",
+	],
+	[
+		bootstrapContract,
+		"insert-initial-stopped-row",
+		"bootstrap must remain insert-only for an absent control row",
+	],
+	[
+		bootstrapContract,
+		"github-actions-artifact+aws-zero-residue-readback",
+		"bootstrap dual-authority cleanup proof is missing",
 	],
 	[
 		implementedSchema,

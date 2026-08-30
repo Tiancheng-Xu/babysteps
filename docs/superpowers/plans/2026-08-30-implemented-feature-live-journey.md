@@ -363,7 +363,7 @@ git commit -m "docs: publish implemented feature journey evidence"
 - Consumes: Tasks 1–6 全部绿色提交。
 - Produces: PR、GitHub Actions Run、Cloudflare deployment、生产 URL、AWS artifact、零残留 JSON。
 
-- [ ] **Step 1: 运行本地确定性总 Gate**
+- [x] **Step 1: 运行本地确定性总 Gate**
 
 Run: `pnpm check && pnpm test && pnpm typecheck && pnpm build && pnpm validate:performance-pipeline && pnpm validate:performance-budget && pnpm visual:test`
 

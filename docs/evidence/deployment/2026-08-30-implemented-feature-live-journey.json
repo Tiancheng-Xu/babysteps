@@ -45,6 +45,22 @@
     "publicContent": "passed",
     "deliveryEvidence": "passed"
   },
+  "preflightContract": {
+    "status": "local-verified",
+    "provenance": "fresh-live-readonly-snapshot-required",
+    "maxSnapshotAgeSeconds": 300,
+    "requiredAwsState": "stopped-and-zero-residue",
+    "cloudReadback": "pending"
+  },
+  "controlPlaneBootstrap": {
+    "status": "local-verified-cloud-not-dispatched",
+    "source": "babysteps-performance-control-bootstrap-v1",
+    "operation": "bootstrap-stopped-state",
+    "generation": 1,
+    "firstInsertOnly": true,
+    "authority": "github-actions-artifact+aws-zero-residue-readback",
+    "evidence": "docs/evidence/testing/2026-08-30-performance-control-stopped-bootstrap.md"
+  },
   "finalRun": null,
   "exclusions": [
     "Provider D1 draft editing",
@@ -57,6 +73,7 @@
   ],
   "limitations": [
     "This checkpoint proves deterministic local contracts and UI coverage only.",
-    "Sepolia transactions, visible wallet confirmations, AWS Live aggregation, final recording, cleanup and production readback remain pending Task 7."
+    "Sepolia transactions, visible wallet confirmations, AWS Live aggregation, final recording, cleanup and production readback remain pending Task 7.",
+    "The stopped safety bootstrap is locally verified but has not been dispatched and has not created a production D1 row."
   ]
 }

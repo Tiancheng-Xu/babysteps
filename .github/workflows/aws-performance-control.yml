@@ -7,7 +7,7 @@ on:
         description: Fixed BabySteps performance lifecycle operation
         required: true
         type: choice
-        options: [preflight, start, stop]
+        options: [bootstrap, preflight, start, stop]
       operation_id:
         description: Control-plane idempotency identifier
         required: false
@@ -78,10 +78,15 @@ jobs:
           if test "$EVENT_NAME" = "workflow_dispatch"; then
             ACTION="$REQUESTED_ACTION"
             OPERATION_ID="$REQUESTED_OPERATION_ID"
-            [[ "$ACTION" =~ ^(preflight|start|stop)$ ]]
+            [[ "$ACTION" =~ ^(bootstrap|preflight|start|stop)$ ]]
             if test "$ACTION" = "preflight"; then
               test -z "$REQUESTED_OPERATION_ID"
               test -z "$REQUESTED_GENERATION"
+              test -z "$REQUESTED_EXPIRES_AT"
+              test -z "$REQUESTED_ESTIMATED_COST_USD"
+            elif test "$ACTION" = "bootstrap"; then
+              [[ "$REQUESTED_OPERATION_ID" =~ ^bootstrap-babysteps-stopped-[A-Za-z0-9._:-]{8,96}$ ]]
+              test "$REQUESTED_GENERATION" = "1"
               test -z "$REQUESTED_EXPIRES_AT"
               test -z "$REQUESTED_ESTIMATED_COST_USD"
             else
@@ -156,6 +161,12 @@ jobs:
             generation=0
             expires_at=""
             source=operator-readonly-preflight
+          elif test "$action" = "bootstrap"; then
+            test "$stack_presence" = 3
+            operation_id="$REQUESTED_OPERATION_ID"
+            generation=1
+            expires_at=""
+            source=babysteps-performance-control-bootstrap-v1
           elif test "$action" = "stop"; then
             set +e
             aws_classify_to_file active-operation.json ssm-parameter aws ssm get-parameter --name "$ACTIVE_OPERATION_PARAMETER"
@@ -194,7 +205,7 @@ jobs:
           echo "source=$source" >> "$GITHUB_OUTPUT"
           echo "EXPIRES_AT=$expires_at" >> "$GITHUB_ENV"
       - name: Verify protected shared foundation is ready
-        if: steps.resolve.outputs.action != 'noop' && steps.resolve.outputs.action != 'idempotent-stop' && steps.resolve.outputs.action != 'preflight'
+        if: steps.resolve.outputs.action != 'noop' && steps.resolve.outputs.action != 'idempotent-stop' && steps.resolve.outputs.action != 'preflight' && steps.resolve.outputs.action != 'bootstrap'
         run: |
           test "$(aws ec2 describe-nat-gateways --nat-gateway-ids '${{ vars.AWS_SHARED_NAT_GATEWAY_ID }}' --query 'NatGateways[0].State' --output text)" = "available"
           test "$(aws rds describe-db-instances --db-instance-identifier '${{ vars.AWS_SHARED_DATABASE_INSTANCE_ID }}' --query 'DBInstances[0].DBInstanceStatus' --output text)" = "available"
@@ -426,16 +437,16 @@ jobs:
           echo "state=$marker_state" >> "$GITHUB_OUTPUT"
       - name: Verify zero project residue
         id: zero-residue
-        if: always() && (steps.delete-stack.outcome == 'success' || steps.resolve.outputs.action == 'idempotent-stop' || steps.resolve.outputs.action == 'preflight')
+        if: always() && (steps.delete-stack.outcome == 'success' || steps.resolve.outputs.action == 'idempotent-stop' || steps.resolve.outputs.action == 'preflight' || steps.resolve.outputs.action == 'bootstrap')
         env:
           ACTION: ${{ steps.resolve.outputs.action }}
           SCHEMA_CLEANUP_OUTCOME: ${{ steps.schema-cleanup.outcome }}
         run: |
           source scripts/aws-performance-control-state.sh
           mkdir -p evidence
-          if test "$ACTION" = "preflight"; then
+          if test "$ACTION" = "preflight" || test "$ACTION" = "bootstrap"; then
             aws sts get-caller-identity >/dev/null
-            printf '{"oidcIdentityVerified":true,"mode":"read-only-preflight"}\n' > evidence/preflight.json
+            printf '{"oidcIdentityVerified":true,"mode":"read-only-%s"}\n' "$ACTION" > evidence/preflight.json
           fi
           assert_absent() {
             local kind="$1" output_file="$2"
@@ -521,6 +532,29 @@ jobs:
             --argjson iamRoles "$iam_role_count" \
             --argjson cloudWatchLogGroups "$log_group_count" \
             '{cloudFormationStackAbsent:true,schemaDeleted:(if $schemaDeleted=="true" then true else $schemaDeleted end),remainingRunnableProjectResources:0,inventory:{ecsClusters:$ecsClusters,ecsTasks:$ecsTasks,taskDefinitions:$taskDefinitions,cloudWatchLogGroups:$cloudWatchLogGroups,iamRoles:$iamRoles},sharedFoundationProtected:true}' > evidence/cleanup-readback.json
+      - name: Publish initial verified stopped bootstrap callback
+        id: bootstrap-stopped-callback
+        if: steps.resolve.outputs.action == 'bootstrap' && steps.zero-residue.outcome == 'success'
+        env:
+          CALLBACK_HMAC_SECRET: ${{ secrets.PERFORMANCE_CONTROL_CALLBACK_HMAC_SECRET }}
+          OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+          GENERATION: ${{ steps.resolve.outputs.generation }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: |
+          source scripts/aws-performance-control-state.sh
+          delivery_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-bootstrap-stopped"
+          occurred_at="$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')"
+          node scripts/performance-control-bootstrap.mjs \
+            --evidence docs/evidence/deployment/2026-08-29-performance-aws-final.json \
+            --current-readback evidence/cleanup-readback.json \
+            --delivery-id "$delivery_id" \
+            --operation-id "$OPERATION_ID" \
+            --generation "$GENERATION" \
+            --workflow-run-id "$WORKFLOW_RUN_ID" \
+            --occurred-at "$occurred_at" \
+            --output evidence/bootstrap-stopped-callback.json
+          body="$(cat evidence/bootstrap-stopped-callback.json)"
+          performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
       - name: Mark persistent cleanup state required
         id: marker-required
         if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.schema-cleanup.outcome != 'success' || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && steps.cleanup-marker.outputs.state != 'cleanup_verified') || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))

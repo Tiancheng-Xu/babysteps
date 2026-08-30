@@ -10,12 +10,25 @@ async function loadWorkflow() {
 	const source = await readFile(WORKFLOW, "utf8").catch(() => "");
 	assert.notEqual(source, "", `${WORKFLOW} must exist`);
 	const workflow = parse(source);
-	assert.ok(workflow && typeof workflow === "object", "workflow must parse as YAML");
-	assert.ok(workflow.on && workflow.jobs, "workflow must declare triggers and jobs");
+	assert.ok(
+		workflow && typeof workflow === "object",
+		"workflow must parse as YAML",
+	);
+	assert.ok(
+		workflow.on && workflow.jobs,
+		"workflow must declare triggers and jobs",
+	);
 	const jobs = Object.values(workflow.jobs);
-	assert.equal(jobs.length, 1, "one serialized lifecycle job must own all operations");
+	assert.equal(
+		jobs.length,
+		1,
+		"one serialized lifecycle job must own all operations",
+	);
 	const job = jobs[0];
-	assert.ok(Array.isArray(job.steps), "lifecycle job must contain parsed steps");
+	assert.ok(
+		Array.isArray(job.steps),
+		"lifecycle job must contain parsed steps",
+	);
 	return { source, workflow, job, steps: job.steps };
 }
 
@@ -41,7 +54,12 @@ test("parsed workflow exposes the exact v1 dispatch inputs plus scheduled safety
 		"generation",
 		"operation_id",
 	]);
-	assert.deepEqual(dispatch.inputs.action.options, ["preflight", "start", "stop"]);
+	assert.deepEqual(dispatch.inputs.action.options, [
+		"bootstrap",
+		"preflight",
+		"start",
+		"stop",
+	]);
 	assert.equal(dispatch.inputs.action.type, "choice");
 	assert.equal(dispatch.inputs.action.required, true);
 	assert.equal(dispatch.inputs.operation_id.required, false);
@@ -55,6 +73,49 @@ test("parsed workflow exposes the exact v1 dispatch inputs plus scheduled safety
 	});
 	assert.equal(job.environment, "aws-performance");
 	assert.equal(job.permissions["id-token"], "write");
+});
+
+test("stopped bootstrap is read-only, generation one, and cannot impersonate a normal stop", async () => {
+	const { steps } = await loadWorkflow();
+	const validation = stepByName(steps, "Validate untrusted control request");
+	assert.match(validation.run, /bootstrap/);
+	assert.match(validation.run, /REQUESTED_GENERATION" = "1"/);
+	assert.match(validation.run, /test -z "\$REQUESTED_EXPIRES_AT"/);
+	assert.match(validation.run, /test -z "\$REQUESTED_ESTIMATED_COST_USD"/);
+
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(resolve.run, /action" = "bootstrap"/);
+	assert.match(
+		resolve.run,
+		/source=babysteps-performance-control-bootstrap-v1/,
+	);
+	assert.match(resolve.run, /generation=1/);
+	assert.match(resolve.run, /test "\$stack_presence" = 3/);
+
+	const residue = stepByName(steps, "Verify zero project residue");
+	assert.match(residue.if, /action == 'bootstrap'/);
+	const callback = stepByName(
+		steps,
+		"Publish initial verified stopped bootstrap callback",
+	);
+	assert.match(callback.if, /action == 'bootstrap'/);
+	assert.match(callback.if, /zero-residue\.outcome == 'success'/);
+	assert.match(
+		callback.run,
+		/docs\/evidence\/deployment\/2026-08-29-performance-aws-final\.json/,
+	);
+	assert.match(callback.run, /performance-control-bootstrap\.mjs/);
+	assert.match(callback.run, /performance_post_callback/);
+	assert.doesNotMatch(callback.run, /status cleanup_required|status running/);
+
+	for (const name of [
+		"Mark persistent cleanup state running",
+		"Deploy existing single performance stack",
+		"Initialize exact project database schema",
+		"Delete exact stable project stack",
+	]) {
+		assert.doesNotMatch(stepByName(steps, name).if, /bootstrap/);
+	}
 });
 
 test("preflight is read-only and reuses the exact zero-residue gate", async () => {
@@ -113,7 +174,10 @@ test("parsed workflow fixes region, stack, TTL and cost outside caller inputs", 
 	]);
 	assert.doesNotMatch(source, /inputs\.(?:region|stack|ttl|duration|callback)/);
 	assert.match(source, /scripts\/validate-performance-budget\.mjs/);
-	assert.match(source, /sam validate --lint --region us-east-1 --template-file aws\/performance-template\.yaml/);
+	assert.match(
+		source,
+		/sam validate --lint --region us-east-1 --template-file aws\/performance-template\.yaml/,
+	);
 });
 
 test("parsed start stop and safety-expiry cleanup topology are explicit", async () => {
@@ -152,7 +216,10 @@ test("parsed start stop and safety-expiry cleanup topology are explicit", async 
 		"Deploy existing single performance stack",
 		"Initialize exact project database schema",
 	]) {
-		assert.equal(stepByName(steps, name).if, "steps.resolve.outputs.action == 'start'");
+		assert.equal(
+			stepByName(steps, name).if,
+			"steps.resolve.outputs.action == 'start'",
+		);
 	}
 
 	const aggregate = stepByName(steps, "Run final-aggregate");
@@ -172,7 +239,10 @@ test("parsed start stop and safety-expiry cleanup topology are explicit", async 
 	assert.match(steps[deleteIndex].if, /^always\(\)/);
 	assert.match(steps[deleteIndex].if, /schema-cleanup\.outcome == 'success'/);
 	assert.match(steps[residueIndex].if, /^always\(\)/);
-	assert.match(steps[stoppedIndex].if, /steps\.zero-residue\.outcome == 'success'/);
+	assert.match(
+		steps[stoppedIndex].if,
+		/steps\.zero-residue\.outcome == 'success'/,
+	);
 });
 
 test("Showcase owns canonical start expiry within the fixed TTL window", async () => {
@@ -196,7 +266,10 @@ test("failure callbacks are always evaluated and report honest states", async ()
 		"Publish cleanup_required without claiming cleanup success",
 	);
 	assert.match(cleanupRequired.if, /^always\(\)/);
-	assert.match(cleanupRequired.if, /steps\.stopped-callback\.outcome != 'success'/);
+	assert.match(
+		cleanupRequired.if,
+		/steps\.stopped-callback\.outcome != 'success'/,
+	);
 	assert.match(cleanupRequired.run, /--arg status cleanup_required/);
 });
 
@@ -207,11 +280,16 @@ test("callbacks use v1 headers and HMAC timestamp dot exact raw body", async () 
 		"https://baby2b.online/api/performance/control/callback",
 	);
 	assert.doesNotMatch(source, /evidence\.baby2b\.online/);
-	for (const step of steps.filter((candidate) => /callback/i.test(candidate.name ?? ""))) {
+	for (const step of steps.filter((candidate) =>
+		/callback/i.test(candidate.name ?? ""),
+	)) {
 		if (!step.run) continue;
 		assert.match(step.run, /performance_post_callback/);
 	}
-	const helper = await readFile("scripts/aws-performance-control-state.sh", "utf8");
+	const helper = await readFile(
+		"scripts/aws-performance-control-state.sh",
+		"utf8",
+	);
 	assert.match(helper, /printf '%s' "\$timestamp\.\$body"/);
 	assert.match(helper, /signature="sha256=\$digest"/);
 	assert.match(helper, /x-performance-timestamp: \$timestamp/);
@@ -235,7 +313,10 @@ test("consumer fixture locks HMAC, envelope, delivery binding, and terminal safe
 		"estimated_cost_usd",
 	]);
 	assert.deepEqual(Object.keys(fixture.dispatch), fixture.dispatchInputKeys);
-	assert.deepEqual(Object.keys(fixture.stopDispatch), fixture.dispatchInputKeys);
+	assert.deepEqual(
+		Object.keys(fixture.stopDispatch),
+		fixture.dispatchInputKeys,
+	);
 	assert.equal(fixture.dispatch.estimated_cost_usd, "0.20");
 	assert.equal(fixture.stopDispatch.estimated_cost_usd, "0.20");
 	assert.equal(fixture.stopDispatch.generation, fixture.dispatch.generation);
@@ -277,9 +358,20 @@ test("consumer fixture locks HMAC, envelope, delivery binding, and terminal safe
 		assert.ok(Number.isInteger(envelope.generation) && envelope.generation > 0);
 		assert.match(envelope.workflowRunId, /\S/);
 		assert.ok(
-			["starting", "running", "stopping", "stopped", "degraded", "cleanup_required", "failed"].includes(envelope.status),
+			[
+				"starting",
+				"running",
+				"stopping",
+				"stopped",
+				"degraded",
+				"cleanup_required",
+				"failed",
+			].includes(envelope.status),
 		);
-		assert.equal(new Date(envelope.occurredAt).toISOString(), envelope.occurredAt);
+		assert.equal(
+			new Date(envelope.occurredAt).toISOString(),
+			envelope.occurredAt,
+		);
 		assert.equal(typeof envelope.cleanupVerified, "boolean");
 		assert.equal(typeof envelope.zeroResidualVerified, "boolean");
 		if (envelope.status === "stopped") {
@@ -362,7 +454,10 @@ test("origin token crosses workflows only through the exact stack secret output"
 
 test("workflow records exact origin-secret IAM readback without claiming local verification", async () => {
 	const { steps } = await loadWorkflow();
-	const permission = stepByName(steps, "Verify exact origin secret read permissions");
+	const permission = stepByName(
+		steps,
+		"Verify exact origin secret read permissions",
+	);
 	assert.match(permission.run, /secretsmanager describe-secret/);
 	assert.match(permission.run, /secretsmanager get-secret-value/);
 	assert.match(permission.run, /GetSecretValue/);
@@ -404,11 +499,17 @@ test("final aggregation is best effort while schema cleanup preserves the exact 
 	const { steps } = await loadWorkflow();
 	const aggregate = stepByName(steps, "Run final-aggregate");
 	assert.equal(aggregate["continue-on-error"], true);
-	assert.match(aggregate.run, /stats\?window=1h&metric=all&environment=production/);
+	assert.match(
+		aggregate.run,
+		/stats\?window=1h&metric=all&environment=production/,
+	);
 	assert.match(aggregate.run, /build-performance-snapshot\.mjs/);
 	assert.match(aggregate.run, /schemaVersion!==2/);
 
-	const schema = stepByName(steps, "DROP SCHEMA using exact schema-cleanup task");
+	const schema = stepByName(
+		steps,
+		"DROP SCHEMA using exact schema-cleanup task",
+	);
 	assert.match(schema.if, /^always\(\)/);
 	assert.doesNotMatch(schema.if, /steps\.aggregate\.outcome == 'success'/);
 	assert.match(schema.run, /for attempt in 1 2 3/);
@@ -483,7 +584,10 @@ test("final cleaner evidence comes from the exact ECS task stream and validates 
 	assert.match(aggregate.run, /logs get-log-events/);
 	assert.match(aggregate.run, /evidence\/cleaner-summary\.json/);
 	assert.match(aggregate.run, /retryableFailures/);
-	assert.match(aggregate.run, /processed.*inserted.*deduplicated.*discarded.*retryableFailures/s);
+	assert.match(
+		aggregate.run,
+		/processed.*inserted.*deduplicated.*discarded.*retryableFailures/s,
+	);
 });
 
 test("AWS absence checks use the classified helper and never negate describe commands", async () => {
@@ -520,17 +624,26 @@ test("persistent cleanup marker gates lifecycle and idempotent stopped callbacks
 	assert.match(verified.if, /zero-residue\.outcome == 'success'/);
 	assert.match(verified.run, /cleanup_verified/);
 
-	const marker = stepByName(steps, "Read persistent cleanup marker for idempotent stop");
+	const marker = stepByName(
+		steps,
+		"Read persistent cleanup marker for idempotent stop",
+	);
 	assert.match(marker.if, /idempotent-stop/);
 	assert.match(marker.run, /ssm get-parameter/);
 	const stopped = stepByName(steps, "Publish idempotent stopped callback");
-	assert.match(stopped.if, /steps\.cleanup-marker\.outputs\.state == 'cleanup_verified'/);
+	assert.match(
+		stopped.if,
+		/steps\.cleanup-marker\.outputs\.state == 'cleanup_verified'/,
+	);
 	const cleanup = stepByName(
 		steps,
 		"Publish cleanup_required without claiming cleanup success",
 	);
 	assert.match(cleanup.if, /idempotent-stop/);
-	assert.match(cleanup.if, /cleanup-marker\.outputs\.state != 'cleanup_verified'/);
+	assert.match(
+		cleanup.if,
+		/cleanup-marker\.outputs\.state != 'cleanup_verified'/,
+	);
 });
 
 test("zero residue checks orphaned API Gateway resources by fixed tags and fails closed", async () => {

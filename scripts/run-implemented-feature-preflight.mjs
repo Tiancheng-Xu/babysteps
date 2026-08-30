@@ -20,6 +20,15 @@ const booleanChecks = [
 	["awsRuntime.budgetGuardPassed", "AWS_BUDGET_GUARD_NOT_PASSED"],
 ];
 
+const sourceChecks = {
+	sepolia: "public-rpc-readonly",
+	product: "production-ui-readonly",
+	aws: "oidc-readonly-inventory",
+};
+
+const MAX_SNAPSHOT_AGE_MS = 5 * 60 * 1000;
+const MAX_FUTURE_SKEW_MS = 30 * 1000;
+
 const forbiddenKey =
 	/(?:private.?key|mnemonic|secret|password|cookie|token|email|address|signature)/iu;
 const forbiddenValue = /(?:0x[0-9a-fA-F]{40}|\/Users\/|\/home\/)/u;
@@ -47,9 +56,28 @@ function assertSafeSnapshot(value, path = "snapshot") {
 	}
 }
 
-export function evaluateImplementedFeaturePreflight(snapshot) {
+export function evaluateImplementedFeaturePreflight(
+	snapshot,
+	{ now = Date.now(), maxAgeMs = MAX_SNAPSHOT_AGE_MS } = {},
+) {
 	assertSafeSnapshot(snapshot);
 	const blockers = [];
+	if (
+		snapshot?.provenance !== "live-readonly" ||
+		Object.entries(sourceChecks).some(
+			([name, expected]) => snapshot?.sources?.[name] !== expected,
+		)
+	) {
+		blockers.push("PREFLIGHT_PROVENANCE_INVALID");
+	}
+	const collectedAt = Date.parse(snapshot?.collectedAt ?? "");
+	if (
+		!Number.isFinite(collectedAt) ||
+		now - collectedAt > maxAgeMs ||
+		collectedAt - now > MAX_FUTURE_SKEW_MS
+	) {
+		blockers.push("PREFLIGHT_SNAPSHOT_STALE");
+	}
 	if (snapshot?.chainId !== 11155111) blockers.push("CHAIN_ID_NOT_SEPOLIA");
 	for (const [path, code] of booleanChecks) {
 		if (valueAt(snapshot, path) !== true) blockers.push(code);
@@ -66,8 +94,11 @@ export function evaluateImplementedFeaturePreflight(snapshot) {
 	if (!(snapshot?.keepsakes?.recoverableRequestCount >= 1)) {
 		blockers.push("RECOVERABLE_REQUEST_UNAVAILABLE");
 	}
-	if (snapshot?.awsRuntime?.state !== "ready") {
-		blockers.push("AWS_RUNTIME_NOT_READY");
+	if (snapshot?.awsRuntime?.zeroResidueVerified !== true) {
+		blockers.push("AWS_ZERO_RESIDUE_UNVERIFIED");
+	}
+	if (snapshot?.awsRuntime?.state !== "stopped") {
+		blockers.push("AWS_RUNTIME_NOT_STOPPED");
 	}
 
 	return {
@@ -78,6 +109,10 @@ export function evaluateImplementedFeaturePreflight(snapshot) {
 			roleChecks.map(([alias]) => [alias, snapshot?.roles?.[alias] === true]),
 		),
 		checks: {
+			freshness:
+				Number.isFinite(collectedAt) &&
+				now - collectedAt <= maxAgeMs &&
+				collectedAt - now <= MAX_FUTURE_SKEW_MS,
 			contracts: snapshot?.contractsConfigured === true,
 			balances:
 				snapshot?.balances?.gasReady === true &&
@@ -94,8 +129,9 @@ export function evaluateImplementedFeaturePreflight(snapshot) {
 				snapshot?.identity?.privyReady === true &&
 				snapshot?.identity?.workerOriginReady === true,
 			awsRuntime:
-				snapshot?.awsRuntime?.state === "ready" &&
-				snapshot?.awsRuntime?.budgetGuardPassed === true,
+				snapshot?.awsRuntime?.state === "stopped" &&
+				snapshot?.awsRuntime?.budgetGuardPassed === true &&
+				snapshot?.awsRuntime?.zeroResidueVerified === true,
 		},
 		blockers,
 	};
@@ -114,6 +150,9 @@ async function main() {
 		);
 		return;
 	}
+	if (mode !== "sepolia-readonly") {
+		throw new Error("PREFLIGHT_MODE_INVALID");
+	}
 	const snapshotPath = option("--snapshot");
 	const outputPath = option("--output");
 	if (!snapshotPath) throw new Error("PREFLIGHT_SNAPSHOT_REQUIRED");
@@ -124,7 +163,7 @@ async function main() {
 			mode: 0o600,
 		});
 	}
-	process.stdout.write(`${JSON.stringify(result)}\n`);
+	process.stdout.write(`${JSON.stringify({ ...result, mode })}\n`);
 	if (!result.ready) process.exitCode = 1;
 }
 
