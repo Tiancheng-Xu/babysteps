@@ -25,6 +25,8 @@
 
 为避免先创建 AWS 资源、后发现浏览器合同不完整，`aws-performance.yml` 现在把同一份生产 Edge SSR 产物和同一份 Journey Manifest 放进独立的 `local-coverage` 前置 Job。该 Job 不申请 GitHub OIDC、没有 AWS 环境变量，只有 9 路由、代表性交互、资源探针、渲染指标和覆盖语义全部通过后，后续临时 AWS Job 才能开始。
 
+合并后的首次派发 Run [`33298723546`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33298723546) 在该前置 Job 的本地 Worker 就绪检查中于 30 秒后以 `curl` exit 7 停止；`prove-and-clean` 被跳过，因而没有创建 AWS Runtime。修复不是绕过 Gate，而是把启动等待扩为有界 90 秒，并同时监测 Worker PID：进程提前退出或超时都会输出最后 80 行本地启动日志并继续 fail-closed，避免“无诊断地重跑”。
+
 首次云端尝试中，9 条路由全部通过，但最终 Coverage Gate 拒绝了缺少 XHR 与 stylesheet 的不完整样本。根因不是 AWS 接收失败，而是模块加载与 RPC 诊断先占满 SDK 每分钟额度，导致后到的资源类别和 SPA 路由耗时被饥饿。修复后，队列明确分为业务错误与 Web Vitals、合同必需覆盖、普通诊断三层；生产每分钟额度的一半保留给合同必需指标，同一高频指标另有有界上限。总体事件上限不变，不增加 Worker 或 AWS 配额。Coverage Gate 同时只输出白名单内缺失指标的脱敏 token，后续失败不再只有笼统错误。
 
 SSR 场景还发现一项独立缺陷：客户端静态路由树包含 `Suspense`，服务端静态树缺少对应流式边界标记，导致所有路由触发 React hydration recoverable error。修复后服务端保留不含 Privy 的专用静态树，但与客户端使用相同的 Error Boundary 与 Suspense 外壳；钱包、查询和身份 Provider 仍只在 hydration 完成后挂载。逐路由复核为 9/9 无 recoverable error、无 CSR fallback、无 `pageerror`。
