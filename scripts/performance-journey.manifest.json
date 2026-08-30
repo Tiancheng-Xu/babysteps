@@ -5,6 +5,7 @@
   "vitalsReadyMark": "babysteps.web-vitals.ready",
   "vitalsReadyTimeoutMs": 10000,
   "representativeInteractionCpuSlowdownRate": 6,
+  "representativeInteractionSettleFrames": 2,
   "maxRoutesPerQuotaWindow": 3,
   "quotaWindowPauseMs": 61000,
   "telemetryAttemptTimeoutMs": 3000,

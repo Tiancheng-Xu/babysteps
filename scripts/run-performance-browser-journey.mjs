@@ -168,6 +168,22 @@ export function assertJourneyComplete(summary) {
 	}
 }
 
+async function waitForPaintSettlement(page) {
+	await page.evaluate(
+		(frameCount) =>
+			new Promise((resolve) => {
+				let observedFrames = 0;
+				const observeFrame = () => {
+					observedFrames += 1;
+					if (observedFrames >= frameCount) resolve();
+					else requestAnimationFrame(observeFrame);
+				};
+				requestAnimationFrame(observeFrame);
+			}),
+		journeyManifest.representativeInteractionSettleFrames,
+	);
+}
+
 async function performRepresentativeInteraction(page, route) {
 	const interaction = journeyManifest.representativeInteraction;
 	if (route !== interaction.route) return;
@@ -189,9 +205,7 @@ async function performRepresentativeInteraction(page, route) {
 			if (step.action === "fill") await locator.fill(step.value);
 			else if (step.action === "click") await locator.click();
 			else throw new Error("INVALID_INTERACTION_ACTION");
-			await page.evaluate(
-				() => new Promise((resolve) => requestAnimationFrame(() => resolve())),
-			);
+			await waitForPaintSettlement(page);
 		}
 		const actual = new URL(page.url()).searchParams.get(
 			interaction.assertion.urlSearchParam,
@@ -385,6 +399,8 @@ export function sanitizeJourneySummary(input) {
 			source: "controlled-browser",
 			cpuSlowdownRate:
 				journeyManifest.representativeInteractionCpuSlowdownRate,
+			paintSettleFrames:
+				journeyManifest.representativeInteractionSettleFrames,
 			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions,
