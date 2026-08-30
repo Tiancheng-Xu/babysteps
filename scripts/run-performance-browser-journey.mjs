@@ -258,11 +258,28 @@ async function performSafeResourceProbes(page, route) {
 			};
 			document.head.append(link);
 		});
+		const fontPath = `/__performance_probe__/font.woff2?probe=${crypto.randomUUID()}`;
+		const fontResourceUrl = new URL(fontPath, location.href).href;
 		const fontStyle = document.createElement("style");
-		fontStyle.textContent =
-			'@font-face{font-family:"BabyStepsProbe";src:url("/__performance_probe__/font.woff2") format("woff2");font-display:block}';
+		fontStyle.textContent = `@font-face{font-family:"BabyStepsProbe";src:url("${fontPath}") format("woff2");font-display:block}`;
 		document.head.append(fontStyle);
-		await document.fonts.load('12px "BabyStepsProbe"');
+		const fontProbe = document.createElement("span");
+		fontProbe.textContent = "BabySteps";
+		fontProbe.style.cssText =
+			'position:fixed;inset:auto auto 0 0;visibility:hidden;font:12px "BabyStepsProbe"';
+		document.body.append(fontProbe);
+		await document.fonts.load('12px "BabyStepsProbe"', "BabySteps");
+		const fontEntryDeadline = performance.now() + 5_000;
+		while (performance.getEntriesByName(fontResourceUrl).length === 0) {
+			if (performance.now() >= fontEntryDeadline) {
+				throw new Error("RESOURCE_PROBE_FONT_TIMING_MISSING");
+			}
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		}
+		await new Promise((resolve) =>
+			requestAnimationFrame(() => requestAnimationFrame(resolve)),
+		);
+		fontProbe.remove();
 		fontStyle.remove();
 		const sent = navigator.sendBeacon(
 			"/__performance_probe__/beacon",
