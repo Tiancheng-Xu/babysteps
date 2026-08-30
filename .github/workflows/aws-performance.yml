@@ -118,6 +118,7 @@ jobs:
           token="$(openssl rand -hex 32)"
           echo "::add-mask::$token"
           echo "ORIGIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "RUN_STARTED_AT_MS=$(node -e 'process.stdout.write(String(Date.now()))')" >> "$GITHUB_ENV"
           test -n "$APPROVAL_REFERENCE"
           node -e 'const c=require("crypto");process.stdout.write(`APPROVAL_REFERENCE_HASH=${c.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")}\n`)' >> "$GITHUB_ENV"
           echo "EXPIRES_AT=$(date -u -v+4H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+4 hours' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
@@ -294,7 +295,13 @@ jobs:
       - name: Query and verify real browser aggregates
         run: |
           curl --fail-with-body -sS "http://127.0.0.1:8788/api/performance/stats?window=1h&environment=production&version=${GITHUB_SHA:0:12}" > evidence/performance-stats.json
-          node scripts/validate-performance-readback.mjs --stats evidence/performance-stats.json
+          node scripts/validate-performance-readback.mjs \
+            --stats evidence/performance-stats.json \
+            --expected-version "${GITHUB_SHA:0:12}" \
+            --expected-environment production \
+            --expected-window 1h \
+            --min-latest-sample-at "$RUN_STARTED_AT_MS" \
+            --required-routes-json "$(jq -c '[.routes[].path]' scripts/performance-journey.manifest.json)"
           queue_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-events-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
           dlq_url="$(aws sqs get-queue-url --queue-name "babysteps-performance-dlq-$ENVIRONMENT_NAME" --query QueueUrl --output text)"
           queue_visible=-1

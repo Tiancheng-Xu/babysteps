@@ -141,6 +141,11 @@ export function createPerformanceQueryHandler(dependencies: {
 			}
 			return response(200, {
 				window: parsed.data.window,
+				filters: Object.fromEntries(
+					Object.entries(parsed.data).filter(
+						([key, value]) => key !== "metric" && value !== undefined,
+					),
+				),
 				...computePerformanceDashboard(
 					events,
 					parsed.data.metric,

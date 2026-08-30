@@ -27,9 +27,12 @@
     "expectedMetric": "INP",
     "steps": [
       { "action": "fill", "role": "textbox", "name": "页面路径", "value": "/performance" },
-      { "action": "click", "role": "button", "name": "应用筛选" }
+      { "action": "click", "role": "button", "name": "应用筛选" },
+      { "action": "click", "role": "button", "name": "历史快照" }
     ],
-    "assertion": { "urlSearchParam": "route", "equals": "/performance" }
+    "assertions": [
+      { "urlSearchParam": "mode", "equals": "history" }
+    ]
   },
   "spaNavigation": {
     "route": "/",
@@ -49,8 +52,19 @@
       "settledRole": "status",
       "settledNotText": "正在",
       "expectedMetric": "web3.uniswap.quote",
+	  "expectedMetrics": ["contract.read", "web3.uniswap.quote"],
       "safety": "read-only-sepolia",
       "acceptedOutcomes": ["success", "failure"]
+    }
+  ],
+  "safeReadOnlySettles": [
+    {
+      "id": "sepolia-marketplace-read",
+      "route": "/tasks",
+      "settledRole": "status",
+      "settledNotText": "正在读取",
+      "expectedMetrics": ["rpc.read", "web3.rpc.read"],
+      "safety": "read-only-sepolia"
     }
   ],
   "safeResourceProbeRoute": "/performance",
@@ -69,10 +83,20 @@
     "resource.stylesheet.duration",
     "resource.image.duration",
     "resource.font.duration",
+    "resource.script.duration",
     "resource.duration",
     "spa.route.duration",
     "ssr.shell.duration",
     "hydration.duration",
+    "contract.read",
+    "rpc.read",
+    "web3.rpc.read",
+    "web3.uniswap.quote"
+  ],
+  "requiredWeb3Metrics": [
+    "contract.read",
+    "rpc.read",
+    "web3.rpc.read",
     "web3.uniswap.quote"
   ],
   "zeroOrObservedMetrics": ["longtask.duration"],

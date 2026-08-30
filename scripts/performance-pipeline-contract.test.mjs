@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
@@ -37,7 +38,10 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(localCoverageScript, /seq 1 90/);
 	assert.match(localCoverageScript, /kill -0 "\$web_pid"/);
 	assert.match(localCoverageScript, /tail -n 80 "\$web_log"/);
-	assert.doesNotMatch(JSON.stringify(localCoverage), /aws-performance|id-token/);
+	assert.doesNotMatch(
+		JSON.stringify(localCoverage),
+		/aws-performance|id-token/,
+	);
 	for (const job of Object.values(workflow.jobs)) {
 		for (const step of job.steps ?? []) {
 			assert.doesNotMatch(
@@ -76,6 +80,12 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /Start temporary Worker proxy/);
 	assert.match(source, /wrangler dev --local/);
 	assert.match(source, /run-performance-browser-journey\.mjs/);
+	assert.match(source, /RUN_STARTED_AT_MS=/);
+	assert.match(source, /--expected-version "\$\{GITHUB_SHA:0:12\}"/);
+	assert.match(source, /--expected-environment production/);
+	assert.match(source, /--expected-window 1h/);
+	assert.match(source, /--min-latest-sample-at "\$RUN_STARTED_AT_MS"/);
+	assert.match(source, /--required-routes-json/);
 	assert.match(source, /playwright install --with-deps chromium/);
 	assert.match(source, /APP_URI=http:\/\/127\.0\.0\.1:/);
 	assert.match(source, /Browser journey/);
@@ -145,10 +155,12 @@ test("the AWS workspace owns the cleaner bundler required by a clean CI install"
 test("the Chromium journey emits only a bounded sanitized summary", async () => {
 	const {
 		assertJourneyComplete,
+		coverageMetricForObservedEvent,
 		createTelemetryDeliveryTracker,
 		evaluateJourneyCoverage,
 		journeyManifest,
 		journeyRoutes,
+		requiredMetricForObservedEvent,
 		sanitizeJourneyFailure,
 		sanitizeJourneySummary,
 	} = await import("./run-performance-browser-journey.mjs");
@@ -166,6 +178,9 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
+			requiredWeb3Metrics: journeyManifest.requiredWeb3Metrics,
+			representativeInteraction: journeyManifest.representativeInteraction,
+			safeReadOnlySettles: journeyManifest.safeReadOnlySettles,
 			zeroOrObservedMetrics: journeyManifest.zeroOrObservedMetrics,
 			healthyZeroMetrics: journeyManifest.healthyZeroMetrics,
 			conditionalMetrics: journeyManifest.conditionalMetrics,
@@ -196,11 +211,46 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 				"resource.stylesheet.duration",
 				"resource.image.duration",
 				"resource.font.duration",
+				"resource.script.duration",
 				"resource.duration",
 				"spa.route.duration",
 				"ssr.shell.duration",
 				"hydration.duration",
+				"contract.read",
+				"rpc.read",
+				"web3.rpc.read",
 				"web3.uniswap.quote",
+			],
+			requiredWeb3Metrics: [
+				"contract.read",
+				"rpc.read",
+				"web3.rpc.read",
+				"web3.uniswap.quote",
+			],
+			representativeInteraction: {
+				route: "/performance",
+				expectedMetric: "INP",
+				steps: [
+					{
+						action: "fill",
+						role: "textbox",
+						name: "页面路径",
+						value: "/performance",
+					},
+					{ action: "click", role: "button", name: "应用筛选" },
+					{ action: "click", role: "button", name: "历史快照" },
+				],
+				assertions: [{ urlSearchParam: "mode", equals: "history" }],
+			},
+			safeReadOnlySettles: [
+				{
+					id: "sepolia-marketplace-read",
+					route: "/tasks",
+					settledRole: "status",
+					settledNotText: "正在读取",
+					expectedMetrics: ["rpc.read", "web3.rpc.read"],
+					safety: "read-only-sepolia",
+				},
 			],
 			zeroOrObservedMetrics: ["longtask.duration"],
 			healthyZeroMetrics: [
@@ -241,6 +291,97 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			],
 		},
 	);
+	assert.equal(
+		requiredMetricForObservedEvent({
+			type: "web3",
+			name: "web3.uniswap.quote.error",
+			route: "/exchange",
+		}),
+		"web3.uniswap.quote",
+	);
+	assert.equal(
+		requiredMetricForObservedEvent({
+			type: "web3",
+			name: "rpc.read",
+			route: "/tasks",
+		}),
+		"rpc.read",
+	);
+	assert.equal(
+		requiredMetricForObservedEvent({
+			type: "web3",
+			name: "contract.read",
+			route: "/exchange",
+		}),
+		"contract.read",
+	);
+	assert.equal(
+		coverageMetricForObservedEvent({
+			type: "web3",
+			name: "rpc.read",
+			route: "/exchange",
+		}),
+		undefined,
+		"an exact business metric from the wrong route must fail closed",
+	);
+	assert.equal(
+		coverageMetricForObservedEvent({
+			type: "web3",
+			name: "web3.uniswap.quote.error",
+			route: "/tasks",
+		}),
+		undefined,
+		"a failed business metric from the wrong route must fail closed",
+	);
+	assert.equal(
+		coverageMetricForObservedEvent({
+			type: "web-vital",
+			name: "LCP",
+			route: "/",
+		}),
+		"LCP",
+	);
+	for (const contradictory of [
+		{
+			type: "web3",
+			name: "web3.uniswap.quote",
+			route: "/exchange",
+			outcome: "failure",
+		},
+		{
+			type: "web3",
+			name: "web3.uniswap.quote.error",
+			route: "/exchange",
+			outcome: "success",
+		},
+	]) {
+		assert.equal(
+			coverageMetricForObservedEvent(contradictory),
+			undefined,
+			"a contradictory Web3 name/outcome pair must fail closed",
+		);
+	}
+	for (const event of [
+		{ type: "web-vital", name: "LCP.error", route: "/" },
+		{
+			type: "resource",
+			name: "resource.fetch.duration.error",
+			route: "/performance",
+		},
+		{
+			type: "web3",
+			name: "web3.uniswap.quote.error",
+			route: "/tasks",
+		},
+		{ type: "web3", name: "rpc.read", route: "/exchange" },
+		{ type: "web3", name: "contract.read", route: "/tasks" },
+	]) {
+		assert.equal(
+			requiredMetricForObservedEvent(event),
+			undefined,
+			`${event.name} must not satisfy coverage outside its declared contract`,
+		);
+	}
 	assert.equal(typeof evaluateJourneyCoverage, "function");
 	assert.equal(typeof createTelemetryDeliveryTracker, "function");
 	assert.ok(
@@ -263,10 +404,14 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		"resource.stylesheet.duration",
 		"resource.image.duration",
 		"resource.font.duration",
+		"resource.script.duration",
 		"resource.duration",
 		"spa.route.duration",
 		"ssr.shell.duration",
 		"hydration.duration",
+		"contract.read",
+		"rpc.read",
+		"web3.rpc.read",
 		"web3.uniswap.quote",
 	];
 	assert.deepEqual(evaluateJourneyCoverage({ observed: required, required }), {
@@ -351,15 +496,20 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 	assert.doesNotMatch(journeySource, /backstop_data/);
 	const probeFont = Buffer.from(
-		(await readFile(
-			"scripts/fixtures/performance-probe-font.base64",
-			"utf8",
-		)).trim(),
+		(
+			await readFile("scripts/fixtures/performance-probe-font.base64", "utf8")
+		).trim(),
 		"base64",
 	);
 	assert.equal(probeFont.subarray(0, 4).toString("ascii"), "wOF2");
 	assert.match(journeySource, /__performance_probe__\/beacon/);
 	assert.match(journeySource, /performSafeBusinessInteractions/);
+	assert.match(journeySource, /performSafeReadOnlySettles/);
+	assert.match(
+		journeySource,
+		/for \(const assertion of interaction\.assertions\)/,
+	);
+	assert.match(journeySource, /requiredMetricForObservedEvent/);
 	assert.match(
 		journeySource,
 		/performSpaNavigation[\s\S]*waitForURL[\s\S]*waitForTimeout\(500\)/,
@@ -538,8 +688,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 				},
 			}),
 		{
-			message:
-				"UNHEALTHY_CONTROLLED_JOURNEY_HYDRATION_RECOVERABLE_ERROR",
+			message: "UNHEALTHY_CONTROLLED_JOURNEY_HYDRATION_RECOVERABLE_ERROR",
 		},
 	);
 	assert.throws(
@@ -577,6 +726,87 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		),
 		/secret|private\.example|token/i,
 	);
+});
+
+test("the PRD walkthrough records every product route without wallet or chain writes", async () => {
+	const source = await readFile(
+		"scripts/run-prd-walkthrough-recording.mjs",
+		"utf8",
+	);
+	for (const route of [
+		"/",
+		"/tasks",
+		"/parent",
+		"/keepsakes",
+		"/provider",
+		"/exchange",
+		"/profile",
+		"/performance?mode=history",
+		"/evidence",
+	]) {
+		assert.match(source, new RegExp(`"${route.replace("?", "\\?")}"`));
+	}
+	for (const label of [
+		"钱包与网络状态",
+		"双账本、阶段、活动与冷却",
+		"赠送成长星",
+		"公开链上便签",
+		"抽卡、融合与恢复",
+		"Provider、Owner 与完成证书",
+		"Uniswap 只读报价",
+		"性能与可靠性",
+		"要求到证据的可追溯闭环",
+	]) {
+		assert.match(source, new RegExp(label));
+	}
+	assert.match(source, /PRD_RECORDING_REQUIRES_LOCAL_ORIGIN/);
+	assert.match(source, /COPYFILE_EXCL/);
+	assert.match(source, /walletWrites:\s*0/);
+	assert.match(source, /chainTransactions:\s*0/);
+	assert.match(source, /filter\(\{ hasNotText: "正在" \}\)/);
+	assert.match(source, /settledOutcomes/);
+	assert.match(source, /routeFilter\.isEnabled\(\)/);
+	assert.match(source, /performance\.filter/);
+	assert.match(source, /outcome: "unavailable"/);
+	assert.doesNotMatch(
+		source,
+		/JSON\.stringify\(\{ output: resolve\(output\)/,
+		"recording stdout must not expose the local absolute output path",
+	);
+	assert.doesNotMatch(source, /连接 MetaMask.*click/su);
+	assert.doesNotMatch(source, /确认赠送成长星.*click/su);
+	assert.doesNotMatch(source, /swapExact|writeContract/);
+	const videoPath =
+		"docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
+	const [video, manifestRaw] = await Promise.all([
+		readFile(videoPath),
+		readFile(`${videoPath}.json`, "utf8"),
+	]);
+	const manifest = JSON.parse(manifestRaw);
+	assert.equal(
+		createHash("sha256").update(video).digest("hex"),
+		manifest.media.sha256,
+	);
+	assert.equal(video.byteLength, manifest.media.bytes);
+	assert.equal(manifest.media.audio, false);
+	assert.equal(manifest.media.contactSheetReviewed, true);
+	assert.equal(
+		manifest.provenance,
+		"controlled-browser-local-production-build",
+	);
+	assert.equal(manifest.pageErrors, 0);
+	assert.equal(manifest.walletWrites, 0);
+	assert.equal(manifest.chainTransactions, 0);
+	assert.equal(manifest.coverage.length, 16);
+	assert.deepEqual(manifest.settledOutcomes, [
+		{ operation: "web3.uniswap.quote", outcome: "failure" },
+		{ operation: "performance.filter", outcome: "unavailable" },
+	]);
+	const evidencePage = await readFile("web/src/pages/EvidencePage.tsx", "utf8");
+	assert.match(evidencePage, /prdFullWalkthroughVideo/);
+	assert.match(evidencePage, /PRD 全功能可见走读/);
+	assert.match(evidencePage, /钱包写入 0、链上交易/);
+	assert.match(evidencePage, /性能筛选保持禁用并记录为/);
 });
 
 test("the Chromium journey reconciles a transient transport failure by event id", async () => {
@@ -631,7 +861,11 @@ test("the real browser run boots production config and preserves visual Evidence
 		"Pages dev must use the workspace package that pins Wrangler",
 	);
 	assert.equal(
-		(source.match(/pnpm --filter @babysteps\/worker exec wrangler pages dev "\$GITHUB_WORKSPACE\/web\/dist"/gu) ?? []).length,
+		(
+			source.match(
+				/pnpm --filter @babysteps\/worker exec wrangler pages dev "\$GITHUB_WORKSPACE\/web\/dist"/gu,
+			) ?? []
+		).length,
 		2,
 		"both pre-AWS coverage and cloud Evidence capture must use the pinned Wrangler binary",
 	);
@@ -655,7 +889,7 @@ test("the real browser run boots production config and preserves visual Evidence
 	);
 	assert.match(
 		byName("Query and verify real browser aggregates").run,
-		/validate-performance-readback\.mjs --stats evidence\/performance-stats\.json/,
+		/validate-performance-readback\.mjs\s+\\\s+--stats evidence\/performance-stats\.json/,
 	);
 	assert.match(
 		byName("Query and verify real browser aggregates").run,
@@ -748,7 +982,55 @@ test("performance readback rejects partial metric coverage", async () => {
 	const { validatePerformanceReadback } = await import(
 		"./validate-performance-readback.mjs"
 	);
+	const manifest = JSON.parse(
+		await readFile("scripts/performance-journey.manifest.json", "utf8"),
+	);
+	const conditionalMetrics = Object.values(manifest.conditionalMetrics).flat();
+	const renderingHealthyZeroMetrics = new Set([
+		"csr.fallback",
+		"hydration.recoverable_error",
+	]);
+	const errorMetrics = manifest.healthyZeroMetrics.filter(
+		(name) => !renderingHealthyZeroMetrics.has(name),
+	);
+	const minLatestSampleAt = 1_900;
+	const expectedVersion = "abcdef123456";
+	const expectations = {
+		expectedVersion,
+		expectedEnvironment: "production",
+		expectedWindow: "1h",
+		minLatestSampleAt,
+		requiredRoutes: manifest.routes.map(({ path }) => path),
+		maxObservedAt: 2_100,
+	};
 	const stats = {
+		window: "1h",
+		filters: {
+			window: "1h",
+			environment: "production",
+			version: expectedVersion,
+		},
+		freshness: {
+			observedAt: 2_000,
+			latestSampleAt: 1_950,
+			mode: "live",
+			source: "live-api",
+			runId: null,
+			commit: null,
+		},
+		versions: [
+			{
+				version: expectedVersion,
+				sampleCount: 1,
+				p75: 1,
+				p95: 1,
+			},
+		],
+		observedRoutes: manifest.routes.map(({ path }) => ({
+			route: path,
+			sampleCount: 1,
+			latestSampleAt: 1_950,
+		})),
 		vitals: ["LCP", "CLS", "INP", "FCP", "TTFB"].map((name) => ({
 			name,
 			unit: name === "CLS" ? "score" : "ms",
@@ -759,25 +1041,37 @@ test("performance readback rejects partial metric coverage", async () => {
 			coverage: "observed",
 		})),
 		navigation: [
-			"navigation.request_wait",
-			"navigation.download",
-			"navigation.dom_ready",
-			"navigation.window_load",
-		].map((name) => ({
-			name,
-			unit: "ms",
-			sampleCount: 1,
-			p50: 1,
-			p75: 1,
-			p95: 1,
-			coverage: "observed",
-		})),
+			...[
+				"navigation.request_wait",
+				"navigation.download",
+				"navigation.dom_ready",
+				"navigation.window_load",
+			].map((name) => ({
+				name,
+				unit: "ms",
+				sampleCount: 1,
+				p50: 1,
+				p75: 1,
+				p95: 1,
+				coverage: "observed",
+			})),
+			...manifest.unavailableMetrics.map((name) => ({
+				name,
+				unit: "ms",
+				sampleCount: 0,
+				p50: null,
+				p75: null,
+				p95: null,
+				coverage: "unavailable",
+			})),
+		],
 		resources: [
 			"resource.fetch.duration",
 			"resource.xhr.duration",
 			"resource.stylesheet.duration",
 			"resource.image.duration",
 			"resource.font.duration",
+			"resource.script.duration",
 			"resource.duration",
 		].map((name) => ({
 			name,
@@ -816,36 +1110,94 @@ test("performance readback rejects partial metric coverage", async () => {
 			},
 			coverage: "observed",
 		},
-		web3: [
-			{
-				name: "web3.uniswap.quote",
+		web3: manifest.requiredWeb3Metrics.map((name, index) => {
+			const successCount = index % 2 === 0 ? 1 : 0;
+			const failureCount = successCount === 1 ? 0 : 1;
+			return {
+				name,
 				unit: "ms",
 				sampleCount: 1,
-				successCount: 1,
-				failureCount: 0,
-				successRate: 1,
+				successCount,
+				failureCount,
+				successRate: successCount,
 				p50: 1,
 				p75: 1,
 				p95: 1,
 				coverage: "observed",
-			},
-		],
+			};
+		}),
+		errors: errorMetrics.map((name) => ({
+			name,
+			sampleCount: 0,
+			rate: 0,
+			coverage: "observed-zero",
+		})),
 		coverage: [
-			"spa.route.duration",
-			"ssr.shell.duration",
-			"hydration.duration",
-		].map((name) => ({ name, status: "observed" })),
+			...["spa.route.duration", "ssr.shell.duration", "hydration.duration"].map(
+				(name) => ({ name, status: "observed" }),
+			),
+			...manifest.requiredWeb3Metrics.map((name) => ({
+				name,
+				status: "observed",
+			})),
+			...manifest.healthyZeroMetrics.map((name) => ({
+				name,
+				status: "observed-zero",
+			})),
+			...conditionalMetrics.map((name) => ({
+				name,
+				status: "not-exercised",
+			})),
+			...manifest.unavailableMetrics.map((name) => ({
+				name,
+				status: "unavailable",
+			})),
+		],
 	};
-	assert.deepEqual(validatePerformanceReadback(stats), {
+	assert.deepEqual(validatePerformanceReadback(stats, expectations), {
+		observedRouteCount: 9,
 		navigationSampleCount: 4,
 		vitalSampleCount: 5,
-		resourceSampleCount: 6,
+		resourceSampleCount: 7,
 		longTaskSampleCount: 1,
-		web3SampleCount: 1,
-		web3SuccessCount: 1,
-		web3FailureCount: 0,
+		web3SampleCount: 4,
+		web3SuccessCount: 2,
+		web3FailureCount: 2,
 		renderingSampleCount: 3,
+		healthyZeroCount: 12,
+		conditionalNotExercisedCount: 11,
+		unavailableCount: 3,
 	});
+	for (const [patch, error] of [
+		[
+			{ filters: { ...stats.filters, version: "wrong-version" } },
+			/READBACK_VERSION_FILTER_MISMATCH/,
+		],
+		[
+			{ filters: { ...stats.filters, environment: "staging" } },
+			/READBACK_ENVIRONMENT_MISMATCH/,
+		],
+		[{ window: "24h" }, /READBACK_WINDOW_MISMATCH/],
+		[
+			{
+				freshness: { ...stats.freshness, latestSampleAt: 1_899 },
+			},
+			/READBACK_FRESHNESS_MISMATCH/,
+		],
+		[
+			{
+				observedRoutes: stats.observedRoutes.filter(
+					({ route }) => route !== "/exchange",
+				),
+			},
+			/READBACK_ROUTE_MISSING_\/exchange/,
+		],
+	]) {
+		assert.throws(
+			() => validatePerformanceReadback({ ...stats, ...patch }, expectations),
+			error,
+		);
+	}
 	for (const [section, missing] of [
 		["vitals", "CLS"],
 		["vitals", "INP"],
@@ -853,7 +1205,11 @@ test("performance readback rejects partial metric coverage", async () => {
 		["navigation", "navigation.window_load"],
 		["resources", "resource.fetch.duration"],
 		["resources", "resource.image.duration"],
+		["resources", "resource.script.duration"],
 		["rendering", "hydration.duration"],
+		["web3", "contract.read"],
+		["web3", "rpc.read"],
+		["web3", "web3.rpc.read"],
 		["web3", "web3.uniswap.quote"],
 	]) {
 		assert.throws(
@@ -897,22 +1253,26 @@ test("performance readback rejects partial metric coverage", async () => {
 		{
 			navigationSampleCount: 4,
 			vitalSampleCount: 5,
-			resourceSampleCount: 6,
+			resourceSampleCount: 7,
 			longTaskSampleCount: 0,
-			web3SampleCount: 1,
-			web3SuccessCount: 1,
-			web3FailureCount: 0,
+			web3SampleCount: 4,
+			web3SuccessCount: 2,
+			web3FailureCount: 2,
 			renderingSampleCount: 3,
+			healthyZeroCount: 12,
+			conditionalNotExercisedCount: 11,
+			unavailableCount: 3,
 		},
 	);
 	assert.throws(
 		() =>
 			validatePerformanceReadback({
 				...stats,
-				web3: stats.web3.map((metric) => ({
-					...metric,
-					failureCount: 1,
-				})),
+				web3: stats.web3.map((metric) =>
+					metric.name === "web3.uniswap.quote"
+						? { ...metric, successCount: 1 }
+						: metric,
+				),
 			}),
 		/INVALID_REQUIRED_OUTCOME_COUNTS_web3_uniswap_quote/,
 	);
@@ -937,6 +1297,22 @@ test("performance readback rejects partial metric coverage", async () => {
 					...stats,
 					vitals: stats.vitals.map((metric) =>
 						metric.name === "LCP" ? { ...metric, ...patch } : metric,
+					),
+				}),
+			error,
+		);
+	}
+	for (const [name, status, error] of [
+		["javascript.error", "instrumented-no-sample", /INVALID_HEALTHY_ZERO/],
+		["wallet.connect", "observed", /INVALID_CONDITIONAL_COVERAGE/],
+		["navigation.dns", "observed", /INVALID_UNAVAILABLE_COVERAGE/],
+	]) {
+		assert.throws(
+			() =>
+				validatePerformanceReadback({
+					...stats,
+					coverage: stats.coverage.map((item) =>
+						item.name === name ? { ...item, status } : item,
 					),
 				}),
 			error,

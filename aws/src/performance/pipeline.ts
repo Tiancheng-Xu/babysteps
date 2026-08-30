@@ -137,6 +137,17 @@ const eventSchema = z
 				message: "metric name is not allowed",
 			});
 		}
+		if (event.type === "web3" && event.outcome !== undefined) {
+			const expectedOutcome = event.name.endsWith(".error")
+				? "failure"
+				: "success";
+			if (event.outcome !== expectedOutcome) {
+				context.addIssue({
+					code: "custom",
+					message: "Web3 metric name and outcome mismatch",
+				});
+			}
+		}
 		if (
 			event.type === "resource" &&
 			event.name !== "resource.duration" &&
@@ -355,6 +366,11 @@ export type PerformanceDashboardResponse = {
 		sampleCount: number;
 		p75: number;
 		p95: number;
+	}>;
+	observedRoutes: Array<{
+		route: string;
+		sampleCount: number;
+		latestSampleAt: number;
 	}>;
 	coverage: Array<{ name: string; status: PerformanceCoverageStatus }>;
 	pipeline: { status: "unavailable"; source: "database-only" };
@@ -698,6 +714,13 @@ export function computePerformanceDashboard(
 	});
 	const routeSummaries = summarizeDimension(diagnosticEvents, "route");
 	const versionSummaries = summarizeDimension(diagnosticEvents, "version");
+	const observedRouteGroups = new Map<string, StoredPerformanceEvent[]>();
+	for (const event of events) {
+		if (!event.route) continue;
+		const group = observedRouteGroups.get(event.route) ?? [];
+		group.push(event);
+		observedRouteGroups.set(event.route, group);
+	}
 	const trendGroups = new Map<number, number[]>();
 	for (const event of diagnosticEvents) {
 		const bucketStart = Math.floor(event.timestamp / 3_600_000) * 3_600_000;
@@ -761,9 +784,12 @@ export function computePerformanceDashboard(
 				: summary;
 		}),
 		...rendering,
-		...renderingControlCatalog.map((name) =>
-			summarizeMetric(events, name, "count"),
-		),
+		...renderingControlCatalog.map((name) => {
+			const summary = summarizeMetric(events, name, "count");
+			return summary.sampleCount === 0 && pageObservationCount > 0
+				? { ...summary, coverage: "observed-zero" as const }
+				: summary;
+		}),
 		...errors.map(({ name, coverage: status }) => ({
 			name,
 			coverage: status,
@@ -822,6 +848,15 @@ export function computePerformanceDashboard(
 			version: key,
 			...summary,
 		})),
+		observedRoutes: [...observedRouteGroups]
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([route, routeEvents]) => ({
+				route,
+				sampleCount: routeEvents.length,
+				latestSampleAt: Math.max(
+					...routeEvents.map(({ timestamp }) => timestamp),
+				),
+			})),
 		coverage,
 		pipeline: { status: "unavailable", source: "database-only" },
 	};

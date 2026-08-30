@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "media": {
+    "sha256": "61c0188e2eb8ce489ca8b24670b426d6c2b6f479c319fafa1ce26259e3dc7f87",
+    "bytes": 3766892,
+    "durationSeconds": 34.4,
+    "codec": "vp8",
+    "framesPerSecond": 25,
+    "audio": false,
+    "contactSheetReviewed": true
+  },
+  "provenance": "controlled-browser-local-production-build",
+  "version": "55fac7c9ab84097ba55ac4547dc218a521ee0efb",
+  "origin": "http://127.0.0.1:4178",
+  "video": "babysteps-prd-full-walkthrough.webm",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "pageErrors": 0,
+  "walletWrites": 0,
+  "chainTransactions": 0,
+  "settledOutcomes": [
+    {
+      "operation": "web3.uniswap.quote",
+      "outcome": "failure"
+    },
+    {
+      "operation": "performance.filter",
+      "outcome": "unavailable"
+    }
+  ],
+  "coverage": [
+    {
+      "route": "/",
+      "title": "PRD 1/11 · Sepolia 与隐私边界",
+      "boundary": "真实本地生产构建；不读取私钥、助记词、Cookie 或儿童资料。"
+    },
+    {
+      "route": "/",
+      "title": "PRD 2/11 · 钱包与网络状态",
+      "boundary": "画面展示当前未安装/未连接状态；连接中、错网、拒签与读取失败由确定性组件测试验证。"
+    },
+    {
+      "route": "/",
+      "title": "PRD 3/11 · 双账本、阶段、活动与冷却",
+      "boundary": "三项奖励、UTC+8 上限、冷却和 receipt 后刷新由合约与前端测试验证；本录屏不发交易填数。"
+    },
+    {
+      "route": "/",
+      "title": "PRD 4/11 · 赠送成长星",
+      "boundary": "地址、零地址、自己地址、整数与余额校验均已测试；本录屏不签名、不转移测试资产。"
+    },
+    {
+      "route": "/",
+      "title": "PRD 5/11 · 公开链上便签",
+      "boundary": "读取、覆盖、280 字节、清空确认与 receipt 后刷新由测试验证；历史不可删除边界保持可见。"
+    },
+    {
+      "route": "/tasks",
+      "title": "PRD 6/11 · 成长任务市集",
+      "boundary": "只读 Sepolia 任务与 RPC 状态；购买、完成和证书不在匿名录屏中自动执行。"
+    },
+    {
+      "route": "/parent",
+      "title": "PRD 7/11 · 家长总览",
+      "boundary": "同一组件树汇总 BabyCoin、累计成长、活动与公开便签。"
+    },
+    {
+      "route": "/keepsakes",
+      "title": "PRD 8/11 · 抽卡、融合与恢复",
+      "boundary": "固定 12 星、VRF、三卡融合与 24 小时恢复已有合约测试和 Sepolia Evidence；录屏不重复消费。"
+    },
+    {
+      "route": "/provider",
+      "title": "PRD 9/11 · Provider、Owner 与完成证书",
+      "boundary": "角色门禁、审核、随机价格、购买、完成和锁定 SBT 均有测试/链上 Evidence；无授权钱包时诚实阻断。"
+    },
+    {
+      "route": "/exchange",
+      "title": "PRD 10/11 · Uniswap 只读报价",
+      "boundary": "只执行 Sepolia Quoter 读取；不 approve、不 swap、不支付 Gas。"
+    },
+    {
+      "route": "/profile",
+      "title": "身份与钱包能力",
+      "boundary": "Google、邮箱、外部钱包与 Smart Wallet 边界可见；本录屏不进入第三方认证。"
+    },
+    {
+      "route": "/performance?mode=history",
+      "title": "PRD 11/11 · 性能与可靠性",
+      "boundary": "历史快照与 Live API 明确分层；样本、分位数、来源、新鲜度和不可用状态均不伪造。"
+    },
+    {
+      "route": "/evidence",
+      "title": "Evidence · 要求到证据的可追溯闭环",
+      "boundary": "架构、时序、测试、链上交易、云端 Run 与限制分开记录。"
+    },
+    {
+      "route": "/evidence",
+      "title": "完成标准与状态矩阵",
+      "boundary": "功能成功、空、错误、降级和待外部授权状态均由对应测试或真实 Evidence 支撑。"
+    },
+    {
+      "route": "/",
+      "title": "移动端 390 px",
+      "boundary": "同一组件树、同一阅读顺序、无根级横向溢出。"
+    },
+    {
+      "route": "/performance?mode=history",
+      "title": "移动端性能观测",
+      "boundary": "指标表可横向查看，但页面根节点保持无横向溢出。"
+    }
+  ]
+}

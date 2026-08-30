@@ -60,6 +60,7 @@ describe("performance Lambda adapters", () => {
 		).toMatchObject({ sampleCount: 1, p75: 100 });
 		expect(result).toMatchObject({
 			window: "24h",
+			filters: { window: "24h" },
 			pipeline: { status: "unavailable", source: "database-only" },
 			freshness: {
 				observedAt: 1_786_600_001_000,
@@ -68,6 +69,13 @@ describe("performance Lambda adapters", () => {
 				mode: "live",
 			},
 		});
+		expect(result.observedRoutes).toEqual([
+			{
+				route: "/",
+				sampleCount: 1,
+				latestSampleAt: 1_786_600_000_000,
+			},
+		]);
 	});
 
 	it("returns a versioned all-metric overview for snapshot generation", async () => {

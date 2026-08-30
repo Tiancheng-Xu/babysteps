@@ -1,10 +1,8 @@
-# Performance MFA Control Tasks
+# Performance sampling coverage semantics
 
-- [ ] T-001 + T-002 (atomic red/green review unit): lifecycle contract tests and the fixed start/stop/scheduled-expiry implementation must be reviewed together; neither is independently complete or a test-only diff.
-- [ ] T-003: Add sanitized architecture, sequence, cost, recovery, IAM pending-cloud-readback status, and production Evidence plus deterministic repository gates.
-## Repair round 4
+- [x] T-001: Make the browser coverage gate self-contained and execute it before every AWS provisioning or database-schema action; classify Long Task as healthy zero or observed.
+- [x] T-002: Make the safe quote journey prove an exact settled outcome and make transaction failures propagate to performance outcome instrumentation.
+- [x] T-003: Validate complete readback contracts for required, healthy-zero, conditional, unavailable, resource, rendering, stability, and Web3 metric groups.
+- [x] T-004: Run full route, responsive, visual, accessibility, type, build, policy, secret/public-content, and Evidence QA; prepare but do not automatically perform production release.
 
-- [x] RED: add contract coverage for service-specific absence classification, AccessDenied retry/fail-closed behavior, persistent cleanup marker gating, schema-unknown idempotent stop, and orphan API Gateway detection.
-- [x] GREEN: implement the classified AWS read helper, fixed SSM Standard cleanup marker, marker-gated callbacks, and fixed-tag API readback.
-- [x] T-001/T-002 review note: tests and minimal implementation remain one red/green repair unit; this is not represented as a test-only diff.
-- [ ] `pending-cloud-readback`: confirm the GitHub AWS role has fixed-scope `ssm:GetParameter`, `ssm:PutParameter`, `tag:GetResources`, and the existing resource describe permissions.
+Local delivery is verified. Git push, Cloudflare publication, and a new AWS performance run are intentionally deferred by user direction.

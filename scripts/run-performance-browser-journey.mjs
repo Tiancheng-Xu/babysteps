@@ -118,6 +118,67 @@ export function evaluateJourneyCoverage({ observed = [], required = [] }) {
 	return { complete: missing.length === 0, missing };
 }
 
+const requiredBusinessMetricRoutes = new Map([
+	...journeyManifest.safeReadOnlySettles.flatMap((scenario) =>
+		scenario.expectedMetrics.map((name) => [name, scenario.route]),
+	),
+	...journeyManifest.safeBusinessInteractions.flatMap((scenario) =>
+		(scenario.expectedMetrics ?? [scenario.expectedMetric]).map((name) => [
+			name,
+			scenario.route,
+		]),
+	),
+]);
+
+function normalizedEventRoute(event) {
+	return typeof event?.route === "string" ? event.route.split(/[?#]/u)[0] : "";
+}
+
+export function requiredMetricForObservedEvent(event) {
+	const name = typeof event?.name === "string" ? event.name : "";
+	const eventRoute = normalizedEventRoute(event);
+	if (journeyManifest.requiredMetrics.includes(name)) {
+		const requiredRoute = requiredBusinessMetricRoutes.get(name);
+		if (requiredRoute) {
+			if (event.type !== "web3" || eventRoute !== requiredRoute) {
+				return undefined;
+			}
+			if (event.outcome === "failure" || event.outcome === "unavailable") {
+				return undefined;
+			}
+		}
+		return name;
+	}
+	if (event.type === "web3" && name.endsWith(".error")) {
+		const baseName = name.slice(0, -".error".length);
+		const requiredRoute = requiredBusinessMetricRoutes.get(baseName);
+		if (
+			journeyManifest.requiredWeb3Metrics.includes(baseName) &&
+			requiredRoute === eventRoute &&
+			event.outcome !== "success" &&
+			event.outcome !== "unavailable"
+		) {
+			return baseName;
+		}
+	}
+	return undefined;
+}
+
+export function coverageMetricForObservedEvent(event) {
+	const name = typeof event?.name === "string" ? event.name : "";
+	if (!name) return undefined;
+	const baseName = name.endsWith(".error")
+		? name.slice(0, -".error".length)
+		: name;
+	if (
+		requiredBusinessMetricRoutes.has(name) ||
+		requiredBusinessMetricRoutes.has(baseName)
+	) {
+		return requiredMetricForObservedEvent(event);
+	}
+	return name;
+}
+
 export function assertJourneyComplete(summary) {
 	if (summary.routes.length !== expectedRoutes.length) {
 		throw new Error("INCOMPLETE_BROWSER_ROUTES");
@@ -207,17 +268,31 @@ async function performRepresentativeInteraction(page, route) {
 			else throw new Error("INVALID_INTERACTION_ACTION");
 			await waitForPaintSettlement(page);
 		}
-		const actual = new URL(page.url()).searchParams.get(
-			interaction.assertion.urlSearchParam,
-		);
-		if (actual !== interaction.assertion.equals) {
-			throw new Error("INTERACTION_ASSERTION_FAILED");
+		for (const assertion of interaction.assertions) {
+			const actual = new URL(page.url()).searchParams.get(
+				assertion.urlSearchParam,
+			);
+			if (actual !== assertion.equals) {
+				throw new Error("INTERACTION_ASSERTION_FAILED");
+			}
 		}
 	} finally {
 		await session
 			.send("Emulation.setCPUThrottlingRate", { rate: 1 })
 			.catch(() => undefined);
 		await session.detach().catch(() => undefined);
+	}
+}
+
+async function performSafeReadOnlySettles(page, route) {
+	const settles = journeyManifest.safeReadOnlySettles.filter(
+		(settle) => settle.route === route,
+	);
+	for (const settle of settles) {
+		await page
+			.getByRole(settle.settledRole)
+			.filter({ hasNotText: settle.settledNotText })
+			.waitFor({ state: "visible" });
 	}
 }
 
@@ -397,10 +472,8 @@ export function sanitizeJourneySummary(input) {
 			metric: journeyManifest.representativeInteraction.expectedMetric,
 			observed: input.representativeMetricObserved === true,
 			source: "controlled-browser",
-			cpuSlowdownRate:
-				journeyManifest.representativeInteractionCpuSlowdownRate,
-			paintSettleFrames:
-				journeyManifest.representativeInteractionSettleFrames,
+			cpuSlowdownRate: journeyManifest.representativeInteractionCpuSlowdownRate,
+			paintSettleFrames: journeyManifest.representativeInteractionSettleFrames,
 			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions,
@@ -571,24 +644,24 @@ async function runJourney() {
 				if (!Array.isArray(batch?.events)) return;
 				for (const event of batch.events) {
 					if (typeof event?.name !== "string") continue;
+					const eventRoute = normalizedEventRoute(event);
 					for (const interaction of journeyManifest.safeBusinessInteractions) {
 						const outcome = safeBusinessOutcomes[interaction.id];
-						if (event.name === interaction.expectedMetric) {
+						const requiredMetric = requiredMetricForObservedEvent(event);
+						if (
+							requiredMetric === interaction.expectedMetric &&
+							event.name === interaction.expectedMetric
+						) {
 							outcome.successObserved = true;
-						} else if (event.name === `${interaction.expectedMetric}.error`) {
+						} else if (
+							requiredMetric === interaction.expectedMetric &&
+							event.name === `${interaction.expectedMetric}.error`
+						) {
 							outcome.failureObserved = true;
 						}
 					}
-					const failedBusinessMetric =
-						journeyManifest.safeBusinessInteractions.find(
-							(interaction) =>
-								event.name === `${interaction.expectedMetric}.error`,
-						)?.expectedMetric;
-					coverage.add(failedBusinessMetric ?? event.name);
-					const eventRoute =
-						typeof event.route === "string"
-							? event.route.split(/[?#]/u)[0]
-							: "";
+					const coverageMetric = coverageMetricForObservedEvent(event);
+					if (coverageMetric) coverage.add(coverageMetric);
 					if (
 						event.name ===
 							journeyManifest.representativeInteraction.expectedMetric &&
@@ -654,7 +727,10 @@ async function runJourney() {
 				throw new Error(sanitizeJourneyFailure(error, "/performance"));
 			}
 		} else {
-			for (const [routeIndex, { path: route, heading }] of journeyRoutes.entries()) {
+			for (const [
+				routeIndex,
+				{ path: route, heading },
+			] of journeyRoutes.entries()) {
 				process.stdout.write(`BROWSER_ROUTE_START ${routeTokens.get(route)}\n`);
 				try {
 					const response = await page.goto(
@@ -666,6 +742,7 @@ async function runJourney() {
 						.getByRole("heading", { name: heading, exact: true })
 						.waitFor({ state: "visible" });
 					observedRoutes.add(route);
+					await performSafeReadOnlySettles(page, route);
 					await performSafeResourceProbes(page, route);
 					await performRepresentativeInteraction(page, route);
 					await performSafeBusinessInteractions(page, route);
