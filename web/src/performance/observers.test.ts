@@ -152,6 +152,25 @@ describe("performance observers", () => {
 		});
 	});
 
+	it.each(["", "other"])(
+		"recognizes a %s-initiated font by its sanitized extension",
+		(initiatorType) => {
+			expect(
+				classifyResource(
+					{
+						initiatorType,
+						duration: 18,
+						name: "https://app.example/__performance_probe__/font.woff2?probe=bounded",
+					} as PerformanceResourceTiming,
+					"https://app.example",
+				),
+			).toMatchObject({
+				name: "resource.font.duration",
+				category: "font",
+			});
+		},
+	);
+
 	it("emits long-task count, total, max, and duration", () => {
 		const records: unknown[] = [];
 		const Observer = class {

@@ -25,7 +25,7 @@ export function classifyResource(
 		return undefined;
 	const initiatorType = entry.initiatorType.toLowerCase();
 	let category = resourceCategories[initiatorType];
-	if (initiatorType === "css") {
+	if (!category || initiatorType === "css") {
 		const pathname = new URL(entry.name, origin).pathname.toLowerCase();
 		if (/\.(?:woff2?|ttf|otf|eot)$/u.test(pathname)) category = "font";
 		else if (/\.(?:avif|gif|jpe?g|png|svg|webp)$/u.test(pathname)) {
