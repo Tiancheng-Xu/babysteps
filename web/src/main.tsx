@@ -20,6 +20,8 @@ const performanceClient = createPerformanceClient({
 	maxEventsPerMinute: Number(
 		import.meta.env.VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE ?? "120",
 	),
+	reportAllWebVitalChanges:
+		import.meta.env.VITE_PERFORMANCE_REPORT_ALL_CHANGES === "true",
 	route: () => globalThis.location?.pathname ?? "/",
 });
 setPerformanceClient(performanceClient);

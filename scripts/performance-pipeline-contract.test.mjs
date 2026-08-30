@@ -873,8 +873,16 @@ test("the real browser run boots production config and preserves visual Evidence
 		byName("Start local Web at the exact Worker APP_URI origin").run,
 		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40/,
 	);
+	assert.equal(
+		(
+			source.match(/VITE_PERFORMANCE_REPORT_ALL_CHANGES=true/gu) ?? []
+		).length,
+		2,
+		"both controlled-browser builds must report each real INP change without changing production RUM defaults",
+	);
 	const mainSource = await readFile("web/src/main.tsx", "utf8");
 	assert.match(mainSource, /VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE/);
+	assert.match(mainSource, /VITE_PERFORMANCE_REPORT_ALL_CHANGES/);
 	assert.match(
 		byName("Browser journey through real Chromium").run,
 		/--artifacts-dir evidence\/browser/,

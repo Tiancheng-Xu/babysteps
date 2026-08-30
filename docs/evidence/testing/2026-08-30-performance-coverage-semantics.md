@@ -33,6 +33,8 @@ SSR 场景还发现一项独立缺陷：客户端静态路由树包含 `Suspense
 
 Run `33304145710` 的精确根因不是 INP SDK 未安装：同一页面逐步诊断证明 `onINP(..., { durationThreshold: 0 })` 能产生真实 Event Timing 样本，但原“填写页面路径并应用筛选”交互在 CI 中偶尔低于浏览器可报告阈值。候选修复在 6 倍 CPU 降速下继续使用真实 UI，追加“历史快照”模式切换并等待两个绘制帧；不插入忙循环，也不伪造 INP。另一个缺口来自 `/tasks`：Sepolia 市集读取通常在路由标题出现后才完成，旧 Journey 过早离开页面。现在 Manifest 明确等待只读状态结束，再验收 `rpc.read` 与 `web3.rpc.read`；整个过程不连接钱包、不签名、不发交易。
 
+Run [`33309628686`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33309628686) 在合并后的精确 main 提交上再次于 `local-coverage` fail-closed：9/9 路由均完成，但新增的精确路由 Gate 发现 INP 最终生命周期回调没有绑定到 `/performance`，因此 `prove-and-clean` 被跳过，AWS Runtime 仍未创建。根因是 `web-vitals` 默认只在页面生命周期结算最终 INP；CI 的快速页面切换会把回调延后到另一条路由。修复仅在受控浏览器构建中启用 `reportAllChanges`，让同一个真实 Event Timing 交互在当前路由立即上报；生产 RUM 默认值不变，仍保持每个页面生命周期的最终 INP 口径。本地复核为 9/9 路由、`215` 个事件、`40/40` 批次接受、`representativeInteraction.route=/performance`、`metric=INP`、`observed=true`。
+
 读回 Gate 同步升级为全合同校验：每个必需样本都校验单位、样本数、p50/p75/p95 顺序与 `observed` 状态；DNS/TCP/TLS 必须是空分位数的 `unavailable`；JS/Promise 错误、CSR fallback 与 hydration recoverable error 必须是 `observed-zero`；钱包、身份和写交易能力在这条匿名只读 Journey 中必须是 `not-exercised`。失败的只读报价或合约读取以 `.error` 原始事件进入聚合，并折叠为对应操作的失败样本，绝不冒充成功。
 
 业务指标覆盖进一步绑定到 **事件类型 + 指标名 + 精确路由 + outcome**：`contract.read` 与报价只能来自 `/exchange`，`rpc.read` 与 `web3.rpc.read` 只能来自 `/tasks`；错误路由的同名事件不能再通过 raw-name fallback 补齐覆盖。Web3 基础名只允许成功 outcome，`.error` 名只允许失败 outcome；名称与 outcome 矛盾的事件在 AWS Schema 和本地 Journey 都 fail-closed。云端读回还必须同时匹配候选 commit、`production` 环境、`1h` 窗口、Run 起始时间之后的新鲜度，以及 9 条路由各自的真实样本，旧 Run 或其他版本不能补齐本轮合同。
@@ -49,11 +51,11 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 
 ## 验证
 
-- 全量测试：validators `98/98`、AWS `90/90`、contracts `108/108`、Web `293/293`、Worker `62/62`、Subgraph `4/4` 全通过。
+- 全量测试：validators `99/99`、AWS `90/90`、contracts `108/108`、Web `293/293`、Worker `62/62`、Subgraph `4/4` 全通过。
 - `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:delivery-evidence`、`pnpm validate:public-copy` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
 - BackstopJS：375/390/430/1440 共 `4/4` 通过，性能模块布局 Gate `2/2` 通过；候选与已审阅基线无像素差异，没有用 mask 隐藏产品内容。
-- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`39/39` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整性能 Journey 视频与逐路由截图保存在本地临时 Gate 产物中。
+- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`40/40` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为 `/performance` 的真实代表性交互样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整性能 Journey 视频与逐路由截图保存在本地临时 Gate 产物中。
 - 推送前 PRD 全功能录屏已完成：`34.4s`、`1440×900`、`25fps`、16 段、9 条路由，并切换到 `390×844` 移动视口；`pageerror=0`、钱包写入 `0`、链上交易 `0`。只读报价 outcome 为 `failure`，AWS Runtime 关闭时性能筛选 outcome 为 `unavailable`，均未冒充成功。视频 SHA-256 为 `61c0188e2eb8ce489ca8b24670b426d6c2b6f479c319fafa1ce26259e3dc7f87`，伴随 JSON 固定 provenance、commit、视口、outcome 与边界；视频抽帧拼图已人工复核。
 - 工作树检查：`git diff --check` 通过；生成代码与用户文件未被带入修改清单。
 
