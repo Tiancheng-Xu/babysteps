@@ -3,8 +3,9 @@ title: BabySteps 已实现功能真实全旅程与性能证据设计
 contentType: Conceptual
 audience: BabySteps 项目开发者、作业验收人与 Evidence 审核人
 goal: 只对当前已实现功能执行真实 UI、Sepolia、Worker/D1 与 AWS 性能闭环，并生成可复核证据
-status: Review
+status: Approved
 approvedScopeAt: 2026-08-30
+approvedByUserAt: 2026-08-30
 openQuestions: []
 ---
 
