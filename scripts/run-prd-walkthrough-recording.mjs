@@ -243,6 +243,7 @@ await writeFile(
 		{
 			schemaVersion: 1,
 			provenance: "controlled-browser-local-production-build",
+			fullJourneyProof: false,
 			version,
 			origin: parsedOrigin.origin,
 			video: resolve(output).split("/").pop(),

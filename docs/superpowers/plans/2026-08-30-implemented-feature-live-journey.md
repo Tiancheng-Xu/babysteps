@@ -263,7 +263,7 @@ await runStep({
 
 Run: `node --test --test-name-pattern='implemented feature journey' scripts/performance-pipeline-contract.test.mjs && node scripts/run-implemented-feature-preflight.mjs --mode local-contract`
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add scripts/implemented-feature-journey.schema.json scripts/run-implemented-feature-journey.mjs scripts/run-implemented-feature-preflight.mjs scripts/performance-journey.manifest.json scripts/performance-pipeline-contract.test.mjs scripts/validate-performance-pipeline.mjs
@@ -283,11 +283,11 @@ git commit -m "feat: add visible implemented-feature journey"
 - Consumes: Task 4 的步骤 JSON 和连续原始视频。
 - Produces: 多段 Journey 视频、章节清单、总览视频元数据、375/390/430/1440 截图和页面错误/overflow 报告。
 
-- [ ] **Step 1: 将旧“仅走页”测试改成真实证据合同**
+- [x] **Step 1: 将旧“仅走页”测试改成真实证据合同**
 
 断言不能再出现 `walletWrites: 0` / `chainTransactions: 0` 作为全功能证明；每个已实现 Journey 必须关联视频章节与真实结果。
 
-- [ ] **Step 2: 实现录屏隐私过滤和章节清单**
+- [x] **Step 2: 实现录屏隐私过滤和章节清单**
 
 ```json
 {
@@ -301,7 +301,7 @@ git commit -m "feat: add visible implemented-feature journey"
 
 公开视频显示短 hash；完整 hash 只放允许公开的交易链接，不显示地址或账户身份。
 
-- [ ] **Step 3: 运行视觉与浏览器语义 Gate**
+- [x] **Step 3: 运行视觉与浏览器语义 Gate**
 
 Run: `pnpm build && pnpm visual:test && node scripts/performance-layout.browser.mjs`
 
@@ -311,7 +311,7 @@ Expected: 375/390/430/1440 无根级溢出、pageerror=0，Backstop candidate �
 
 Run: `node scripts/validate-implemented-feature-recording.mjs && pnpm validate:public-copy && pnpm validate:delivery-evidence`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add scripts/run-prd-walkthrough-recording.mjs scripts/validate-implemented-feature-recording.mjs scripts/performance-layout.browser.mjs scripts/run-visual-gate.mjs scripts/performance-pipeline-contract.test.mjs docs/evidence/recordings docs/evidence/screenshots

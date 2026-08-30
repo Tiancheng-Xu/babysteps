@@ -9,6 +9,20 @@ const dashboardUrl =
 	process.env.PERFORMANCE_DASHBOARD_URL ??
 	"http://127.0.0.1:4176/performance?mode=history";
 
+const routeHeadings = [
+	["/", "BabySteps · 成长星球"],
+	["/tasks", "成长任务市集"],
+	["/parent", "家长成长中心"],
+	["/keepsakes", "星宝纪念馆"],
+	["/provider", "机构与育婴师控制台"],
+	["/exchange", "BabyCoin 兑换"],
+	["/profile", "个人中心"],
+	["/performance?mode=history", "BabySteps 性能观测站"],
+	["/evidence", "链上工作证据"],
+];
+
+const testOrigin = new URL(dashboardUrl).origin;
+
 async function sectionBox(page, heading) {
 	return page
 		.getByRole("heading", { name: heading, exact: true })
@@ -123,6 +137,50 @@ test("performance modules stack without root overflow on supported mobile widths
 				[],
 				`${width}px route must not emit page errors`,
 			);
+			await page.close();
+		}
+	} finally {
+		await browser.close();
+	}
+});
+
+test("all implemented product routes preserve HTTP semantics, headings, and root containment", async () => {
+	const browser = await chromium.launch({ headless: true });
+	try {
+		for (const width of [375, 390, 430, 1440]) {
+			const page = await browser.newPage({
+				viewport: { width, height: width === 1440 ? 1000 : 900 },
+			});
+			const pageErrors = [];
+			page.on("pageerror", (error) => pageErrors.push(error.message));
+			for (const [route, heading] of routeHeadings) {
+				const errorsBefore = pageErrors.length;
+				const response = await page.goto(
+					new URL(route, testOrigin).toString(),
+					{
+						waitUntil: "domcontentloaded",
+					},
+				);
+				assert.ok(
+					response?.ok(),
+					`${width}px ${route} must return HTTP success`,
+				);
+				await page
+					.getByRole("heading", { name: heading, exact: true })
+					.waitFor();
+				const overflow = await page.evaluate(
+					() => document.documentElement.scrollWidth - window.innerWidth,
+				);
+				assert.ok(
+					overflow <= 1,
+					`${width}px ${route} must not overflow the root`,
+				);
+				assert.equal(
+					pageErrors.length,
+					errorsBefore,
+					`${width}px ${route} must not emit a pageerror`,
+				);
+			}
 			await page.close();
 		}
 	} finally {

@@ -1,7 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { constants, readFileSync } from "node:fs";
+import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const implementedFeatureManifest = JSON.parse(
@@ -80,7 +81,10 @@ function assertCredentialBoundary(value) {
 	const forbidden =
 		/(?:private.?key|mnemonic|secret|password|cookie|token|signature)/iu;
 	const visit = (entry) => {
-		if (Array.isArray(entry)) return entry.forEach(visit);
+		if (Array.isArray(entry)) {
+			entry.forEach(visit);
+			return;
+		}
 		if (!entry || typeof entry !== "object") return;
 		for (const [key, nested] of Object.entries(entry)) {
 			if (forbidden.test(key)) throw new Error("PRIVATE_INPUT_FIELD_FORBIDDEN");
@@ -88,6 +92,67 @@ function assertCredentialBoundary(value) {
 		}
 	};
 	visit(value);
+}
+
+async function showJourneyCaption(page, journey) {
+	await page.evaluate(
+		({ journeyId, operation, roleAlias }) => {
+			let caption = document.querySelector("#implemented-journey-caption");
+			if (!caption) {
+				caption = document.createElement("aside");
+				caption.id = "implemented-journey-caption";
+				caption.setAttribute("aria-label", "真实功能旅程录屏章节");
+				document.body.append(caption);
+			}
+			caption.textContent = `${journeyId} · ${operation} · ${roleAlias} · 可见 UI / 手动钱包确认`;
+			Object.assign(caption.style, {
+				position: "fixed",
+				zIndex: "2147483647",
+				left: "20px",
+				bottom: "20px",
+				maxWidth: "calc(100vw - 40px)",
+				padding: "10px 14px",
+				border: "2px solid #173f4f",
+				borderRadius: "14px",
+				background: "rgba(255, 250, 239, 0.96)",
+				color: "#173f4f",
+				font: "700 14px/1.45 system-ui, sans-serif",
+			});
+		},
+		{
+			journeyId: journey.journeyId,
+			operation: journey.operation,
+			roleAlias: journey.roleAlias,
+		},
+	);
+}
+
+async function runResponsiveChecks(page, origin, pageErrors) {
+	const checks = [];
+	let rootOverflow = 0;
+	for (const width of [375, 390, 430, 1440]) {
+		await page.setViewportSize({ width, height: width === 1440 ? 1000 : 900 });
+		for (const [route, heading] of routeHeadings) {
+			const errorsBefore = pageErrors.length;
+			const response = await page.goto(new URL(route, origin).toString(), {
+				waitUntil: "domcontentloaded",
+			});
+			if (!response?.ok()) throw new Error("RESPONSIVE_ROUTE_HTTP_FAILED");
+			await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+			const overflow = await page.evaluate(() =>
+				Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+			);
+			rootOverflow = Math.max(rootOverflow, Math.ceil(overflow));
+			checks.push({
+				width,
+				route,
+				status: response.status(),
+				rootOverflow: Math.ceil(overflow),
+				pageErrors: pageErrors.length - errorsBefore,
+			});
+		}
+	}
+	return { checks, rootOverflow };
 }
 
 export function validateImplementedFeatureResult(result) {
@@ -459,6 +524,9 @@ async function run() {
 	const outputPath = option("--output");
 	const cdpUrl = option("--cdp-url");
 	const userDataDir = option("--user-data-dir");
+	const recordingOutput = option("--recording-output");
+	const sessionDir = option("--session-dir");
+	const version = option("--version");
 	if (process.argv.includes("--dry-run")) {
 		process.stdout.write(
 			`${JSON.stringify({ schemaVersion: 1, journeys: implementedFeatureManifest.map(({ journeyId, route, roleAlias }) => ({ journeyId, route, roleAlias })) })}\n`,
@@ -467,6 +535,17 @@ async function run() {
 	}
 	if (!origin || !inputPath || !preflightPath || !outputPath) {
 		throw new Error("IMPLEMENTED_FEATURE_OPTIONS_REQUIRED");
+	}
+	if (recordingOutput) {
+		if (cdpUrl) throw new Error("RECORDING_REQUIRES_OWNED_CONTEXT");
+		if (
+			!sessionDir ||
+			resolve(sessionDir) !== dirname(resolve(recordingOutput)) ||
+			!/^[0-9a-f]{40}$/u.test(version ?? "")
+		) {
+			throw new Error("RECORDING_OPTIONS_INVALID");
+		}
+		await mkdir(resolve(sessionDir), { recursive: true });
 	}
 	const preflight = JSON.parse(await readFile(preflightPath, "utf8"));
 	if (preflight.ready !== true) throw new Error("PREFLIGHT_NOT_READY");
@@ -482,11 +561,24 @@ async function run() {
 					channel: "chrome",
 					headless: false,
 					viewport: { width: 1440, height: 900 },
+					...(recordingOutput
+						? {
+								recordVideo: {
+									dir: resolve(sessionDir),
+									size: { width: 1440, height: 900 },
+								},
+							}
+						: {}),
 				},
 			);
 	const page = context.pages()[0] ?? (await context.newPage());
+	const recordingVideo = recordingOutput ? page.video() : undefined;
+	const pageErrors = [];
+	page.on("pageerror", (error) => pageErrors.push(error.message));
 	const accepted = await installTelemetryObserver(page);
 	const results = [];
+	let responsiveChecks = [];
+	let rootOverflow = 0;
 	let currentRole;
 	try {
 		for (const journey of implementedFeatureManifest) {
@@ -507,6 +599,7 @@ async function run() {
 					.getByRole("heading", { name: heading, exact: true })
 					.waitFor();
 			}
+			await showJourneyCaption(page, journey);
 			await performOperation(page, journey, inputs, origin);
 			if (journey.manualSignature && journey.operation !== "identity-login") {
 				process.stdout.write(
@@ -548,6 +641,13 @@ async function run() {
 				`JOURNEY_OK_${journey.journeyId.replaceAll("-", "_")}\n`,
 			);
 		}
+		if (recordingOutput) {
+			const responsive = await runResponsiveChecks(page, origin, pageErrors);
+			responsiveChecks = responsive.checks;
+			rootOverflow = responsive.rootOverflow;
+			if (pageErrors.length > 0) throw new Error("RECORDING_PAGEERROR");
+			if (rootOverflow > 0) throw new Error("RECORDING_ROOT_OVERFLOW");
+		}
 	} finally {
 		if (!browser) await context.close().catch(() => undefined);
 	}
@@ -557,6 +657,68 @@ async function run() {
 		`${JSON.stringify({ schemaVersion: 1, provenance: "visible-ui-controlled-browser", closure: validateImplementedFeatureClosure(results), results }, null, 2)}\n`,
 		{ mode: 0o600 },
 	);
+	if (recordingOutput) {
+		const sourceVideo = await recordingVideo.path();
+		await copyFile(
+			sourceVideo,
+			resolve(recordingOutput),
+			constants.COPYFILE_EXCL,
+		);
+		const recordingBytes = await readFile(resolve(recordingOutput));
+		const recordingStat = await stat(resolve(recordingOutput));
+		const durationSeconds = Number(
+			execFileSync(
+				"ffprobe",
+				[
+					"-v",
+					"error",
+					"-show_entries",
+					"format=duration",
+					"-of",
+					"default=noprint_wrappers=1:nokey=1",
+					resolve(recordingOutput),
+				],
+				{ encoding: "utf8" },
+			).trim(),
+		);
+		await writeFile(
+			`${resolve(recordingOutput)}.json`,
+			`${JSON.stringify(
+				{
+					schemaVersion: 1,
+					provenance: "visible-ui-controlled-browser",
+					version,
+					media: {
+						file: basename(resolve(recordingOutput)),
+						sha256: createHash("sha256").update(recordingBytes).digest("hex"),
+						bytes: recordingStat.size,
+						durationSeconds,
+						audio: false,
+						contactSheetReviewed: false,
+					},
+					viewports: [375, 390, 430, 1440],
+					pageErrors: pageErrors.length,
+					rootOverflow,
+					responsiveChecks,
+					chapters: results.map(
+						({ journeyId, route, outcome, startedAt, finishedAt }) => ({
+							journeyId,
+							route,
+							outcome,
+							startedAt,
+							finishedAt,
+						}),
+					),
+				},
+				null,
+				2,
+			)}\n`,
+			{ flag: "wx", mode: 0o600 },
+		);
+		process.stdout.write(
+			`${JSON.stringify({ recording: basename(resolve(recordingOutput)), chapters: results.length })}\n`,
+		);
+	}
 	const closure = validateImplementedFeatureClosure(results);
 	if (!closure.valid) {
 		process.stderr.write("IMPLEMENTED_FEATURE_COMPENSATION_PENDING\n");

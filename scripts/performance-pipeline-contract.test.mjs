@@ -955,7 +955,7 @@ test("the Chromium journey cannot claim unavailable navigation coverage without 
 	});
 });
 
-test("the PRD walkthrough records every product route without wallet or chain writes", async () => {
+test("the legacy PRD walkthrough stays UI-only and cannot satisfy implemented-feature recording closure", async () => {
 	const source = await readFile(
 		"scripts/run-prd-walkthrough-recording.mjs",
 		"utf8",
@@ -1024,6 +1024,7 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.equal(manifest.pageErrors, 0);
 	assert.equal(manifest.walletWrites, 0);
 	assert.equal(manifest.chainTransactions, 0);
+	assert.equal(manifest.fullJourneyProof, false);
 	assert.equal(manifest.coverage.length, 16);
 	assert.deepEqual(manifest.settledOutcomes, [
 		{ operation: "web3.uniswap.quote", outcome: "failure" },
@@ -1034,6 +1035,94 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.match(evidencePage, /PRD 全功能可见走读/);
 	assert.match(evidencePage, /钱包写入 0、链上交易/);
 	assert.match(evidencePage, /性能筛选保持禁用并记录为/);
+});
+
+test("implemented-feature recording requires all 31 real chapters and reviewed media", async () => {
+	const { validateImplementedFeatureRecording } = await import(
+		"./validate-implemented-feature-recording.mjs"
+	);
+	const results = expectedImplementedJourneyIds.map((journeyId, index) => ({
+		journeyId,
+		route: index === 0 ? "*" : "/",
+		outcome: "success",
+		uiFinalState: true,
+		productReadback: true,
+		telemetryAccepted: true,
+		acceptedEventIds: [`event-${index}`],
+		compensation: { kind: "none", status: "not-required" },
+	}));
+	const recording = {
+		schemaVersion: 1,
+		provenance: "visible-ui-controlled-browser",
+		version: "a".repeat(40),
+		media: {
+			file: "implemented-feature.webm",
+			sha256: "b".repeat(64),
+			bytes: 1024,
+			durationSeconds: 120,
+			audio: false,
+			contactSheetReviewed: true,
+		},
+		viewports: [375, 390, 430, 1440],
+		pageErrors: 0,
+		rootOverflow: 0,
+		chapters: results.map(({ journeyId, route }) => ({
+			journeyId,
+			route,
+			outcome: "success",
+			startedAt: "2026-08-30T00:00:00.000Z",
+			finishedAt: "2026-08-30T00:00:01.000Z",
+		})),
+	};
+
+	assert.deepEqual(
+		validateImplementedFeatureRecording(recording, { results }),
+		{ valid: true, errors: [] },
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{ ...recording, chapters: recording.chapters.slice(1) },
+			{ results },
+		).errors.join(" "),
+		/RECORDING_CHAPTERS_NOT_EXACT/,
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{
+				...recording,
+				media: { ...recording.media, contactSheetReviewed: false },
+			},
+			{ results },
+		).errors.join(" "),
+		/CONTACT_SHEET_NOT_REVIEWED/,
+	);
+	const runnerSource = await readFile(
+		"scripts/run-implemented-feature-journey.mjs",
+		"utf8",
+	);
+	assert.match(runnerSource, /recordVideo/);
+	assert.match(runnerSource, /RECORDING_REQUIRES_OWNED_CONTEXT/);
+	assert.match(runnerSource, /COPYFILE_EXCL/);
+	assert.match(runnerSource, /contactSheetReviewed:\s*false/);
+	assert.match(runnerSource, /responsiveChecks/);
+	const backstopSource = await readFile("backstop.config.cjs", "utf8");
+	assert.match(
+		backstopSource,
+		/engineOptions:\s*\{\s*gotoParameters:\s*\{\s*waitUntil:\s*"domcontentloaded"/u,
+		"BackstopJS must pass navigation readiness through scenario.engineOptions",
+	);
+	const visualGateSource = await readFile(
+		"scripts/run-visual-gate.mjs",
+		"utf8",
+	);
+	assert.match(visualGateSource, /deterministicVisualEnvironment/);
+	assert.match(visualGateSource, /VITE_PRIVY_APP_ID:\s*""/);
+	assert.match(visualGateSource, /VITE_TASK_MARKETPLACE_V2_ADDRESS:\s*""/);
+	assert.doesNotMatch(
+		runnerSource,
+		/JSON\.stringify\(\{[^}]*recordingOutput:\s*resolve/u,
+		"recording stdout must not expose an absolute output path",
+	);
 });
 
 test("the Chromium journey reconciles a transient transport failure by event id", async () => {

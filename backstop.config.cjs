@@ -2,6 +2,36 @@ const testUrl =
 	process.env.BACKSTOP_TEST_URL ??
 	"http://127.0.0.1:4176/performance?mode=history";
 const referenceUrl = process.env.BACKSTOP_REFERENCE_URL ?? testUrl;
+const testOrigin = new URL(testUrl).origin;
+const referenceOrigin = new URL(referenceUrl).origin;
+
+const productRoutes = [
+	["home", "/"],
+	["tasks", "/tasks"],
+	["parent", "/parent"],
+	["keepsakes", "/keepsakes"],
+	["provider", "/provider"],
+	["exchange", "/exchange"],
+	["profile", "/profile"],
+	["evidence", "/evidence"],
+];
+
+const routeScenarios = productRoutes.map(([label, route]) => ({
+	label: `product-route-${label}`,
+	url: new URL(route, testOrigin).toString(),
+	referenceUrl: new URL(route, referenceOrigin).toString(),
+	readySelector: "main.page-shell",
+	readyTimeout: 15_000,
+	delay: 800,
+	onReadyScript: "playwright/onReady.cjs",
+	selectors: ["viewport"],
+	selectorExpansion: false,
+	misMatchThreshold: 0.1,
+	requireSameDimensions: true,
+	engineOptions: {
+		gotoParameters: { waitUntil: "domcontentloaded" },
+	},
+}));
 
 module.exports = {
 	id: "babysteps_performance_dashboard",
@@ -24,10 +54,13 @@ module.exports = {
 			selectorExpansion: false,
 			misMatchThreshold: 0.1,
 			requireSameDimensions: true,
-			gotoParameters: {
-				waitUntil: "domcontentloaded",
+			engineOptions: {
+				gotoParameters: {
+					waitUntil: "domcontentloaded",
+				},
 			},
 		},
+		...routeScenarios,
 	],
 	paths: {
 		bitmaps_reference: "backstop_data/bitmaps_reference",
