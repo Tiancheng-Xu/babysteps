@@ -589,7 +589,17 @@ test("the real browser run boots production config and preserves visual Evidence
 	);
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
-		/wrangler pages dev web\/dist/,
+		/pnpm --filter @babysteps\/worker exec wrangler pages dev "\$GITHUB_WORKSPACE\/web\/dist"/,
+	);
+	assert.doesNotMatch(
+		source,
+		/pnpm exec wrangler pages dev/,
+		"Pages dev must use the workspace package that pins Wrangler",
+	);
+	assert.equal(
+		(source.match(/pnpm --filter @babysteps\/worker exec wrangler pages dev "\$GITHUB_WORKSPACE\/web\/dist"/gu) ?? []).length,
+		2,
+		"both pre-AWS coverage and cloud Evidence capture must use the pinned Wrangler binary",
 	);
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
