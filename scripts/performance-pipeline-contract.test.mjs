@@ -764,6 +764,9 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.match(source, /chainTransactions:\s*0/);
 	assert.match(source, /filter\(\{ hasNotText: "正在" \}\)/);
 	assert.match(source, /settledOutcomes/);
+	assert.match(source, /routeFilter\.isEnabled\(\)/);
+	assert.match(source, /performance\.filter/);
+	assert.match(source, /outcome: "unavailable"/);
 	assert.doesNotMatch(
 		source,
 		/JSON\.stringify\(\{ output: resolve\(output\)/,

@@ -176,12 +176,28 @@ try {
 		"PRD 11/11 · 性能与可靠性",
 		"历史快照与 Live API 明确分层；样本、分位数、来源、新鲜度和不可用状态均不伪造。",
 	);
-	await page.getByRole("textbox", { name: "页面路径" }).fill("/performance");
-	await page.getByRole("button", { name: "应用筛选" }).click();
-	await caption(
-		"性能筛选已执行",
-		"筛选状态写入 History URL；本地录屏不冒充 AWS Live 管线。",
-	);
+	const routeFilter = page.getByRole("textbox", { name: "页面路径" });
+	if (await routeFilter.isEnabled()) {
+		await routeFilter.fill("/performance");
+		await page.getByRole("button", { name: "应用筛选" }).click();
+		settledOutcomes.push({
+			operation: "performance.filter",
+			outcome: "success",
+		});
+		await caption(
+			"性能筛选已执行",
+			"筛选状态写入 History URL；本地录屏不冒充 AWS Live 管线。",
+		);
+	} else {
+		settledOutcomes.push({
+			operation: "performance.filter",
+			outcome: "unavailable",
+		});
+		await caption(
+			"性能筛选 · Runtime 关闭态",
+			"筛选控件随 Live API 不可用而禁用；历史快照仍可读，云端筛选由独立 Run Evidence 证明。",
+		);
+	}
 
 	await visit(
 		"/evidence",
