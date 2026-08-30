@@ -159,6 +159,8 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			perRouteEventBudget: journeyManifest.perRouteEventBudget,
 			vitalsReadyMark: journeyManifest.vitalsReadyMark,
 			vitalsReadyTimeoutMs: journeyManifest.vitalsReadyTimeoutMs,
+			representativeInteractionCpuSlowdownRate:
+				journeyManifest.representativeInteractionCpuSlowdownRate,
 			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
@@ -173,6 +175,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			perRouteEventBudget: 40,
 			vitalsReadyMark: "babysteps.web-vitals.ready",
 			vitalsReadyTimeoutMs: 10_000,
+			representativeInteractionCpuSlowdownRate: 6,
 			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
@@ -436,6 +439,9 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			route: "/performance",
 			metric: "INP",
 			observed: true,
+			source: "controlled-browser",
+			cpuSlowdownRate: 6,
+			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions: [
 			{

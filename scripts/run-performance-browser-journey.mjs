@@ -176,23 +176,34 @@ async function performRepresentativeInteraction(page, route) {
 		journeyManifest.vitalsReadyMark,
 		{ timeout: journeyManifest.vitalsReadyTimeoutMs },
 	);
-	for (const step of interaction.steps) {
-		const locator = page.getByRole(step.role, {
-			name: step.name,
-			exact: true,
+	const session = await page.context().newCDPSession(page);
+	try {
+		await session.send("Emulation.setCPUThrottlingRate", {
+			rate: journeyManifest.representativeInteractionCpuSlowdownRate,
 		});
-		if (step.action === "fill") await locator.fill(step.value);
-		else if (step.action === "click") await locator.click();
-		else throw new Error("INVALID_INTERACTION_ACTION");
-		await page.evaluate(
-			() => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+		for (const step of interaction.steps) {
+			const locator = page.getByRole(step.role, {
+				name: step.name,
+				exact: true,
+			});
+			if (step.action === "fill") await locator.fill(step.value);
+			else if (step.action === "click") await locator.click();
+			else throw new Error("INVALID_INTERACTION_ACTION");
+			await page.evaluate(
+				() => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+			);
+		}
+		const actual = new URL(page.url()).searchParams.get(
+			interaction.assertion.urlSearchParam,
 		);
-	}
-	const actual = new URL(page.url()).searchParams.get(
-		interaction.assertion.urlSearchParam,
-	);
-	if (actual !== interaction.assertion.equals) {
-		throw new Error("INTERACTION_ASSERTION_FAILED");
+		if (actual !== interaction.assertion.equals) {
+			throw new Error("INTERACTION_ASSERTION_FAILED");
+		}
+	} finally {
+		await session
+			.send("Emulation.setCPUThrottlingRate", { rate: 1 })
+			.catch(() => undefined);
+		await session.detach().catch(() => undefined);
 	}
 }
 
@@ -371,6 +382,10 @@ export function sanitizeJourneySummary(input) {
 			route: journeyManifest.representativeInteraction.route,
 			metric: journeyManifest.representativeInteraction.expectedMetric,
 			observed: input.representativeMetricObserved === true,
+			source: "controlled-browser",
+			cpuSlowdownRate:
+				journeyManifest.representativeInteractionCpuSlowdownRate,
+			viewport: { width: 1440, height: 900 },
 		},
 		safeBusinessInteractions,
 		zeroOrObserved: journeyManifest.zeroOrObservedMetrics.map((name) => ({
