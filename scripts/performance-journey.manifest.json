@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "appId": "babysteps",
-  "perRouteEventBudget": 30,
-  "maxRoutesPerQuotaWindow": 4,
+  "perRouteEventBudget": 40,
+  "maxRoutesPerQuotaWindow": 3,
   "quotaWindowPauseMs": 61000,
   "telemetryAttemptTimeoutMs": 3000,
   "telemetryResponseTimeoutMs": 15000,

@@ -168,7 +168,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		{
 			schemaVersion: 2,
 			appId: "babysteps",
-			perRouteEventBudget: 30,
+			perRouteEventBudget: 40,
 			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
@@ -618,7 +618,7 @@ test("the real browser run boots production config and preserves visual Evidence
 	);
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
-		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=30/,
+		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40/,
 	);
 	const mainSource = await readFile("web/src/main.tsx", "utf8");
 	assert.match(mainSource, /VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE/);
