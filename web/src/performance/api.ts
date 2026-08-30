@@ -8,6 +8,8 @@ export type PerformanceFilters = {
 
 export type PerformanceCoverageStatus =
 	| "observed"
+	| "observed-zero"
+	| "not-exercised"
 	| "instrumented-no-sample"
 	| "unavailable";
 
@@ -175,6 +177,8 @@ function isNonnegativeInteger(value: unknown): value is number {
 function isCoverage(value: unknown): value is PerformanceCoverageStatus {
 	return (
 		value === "observed" ||
+		value === "observed-zero" ||
+		value === "not-exercised" ||
 		value === "instrumented-no-sample" ||
 		value === "unavailable"
 	);

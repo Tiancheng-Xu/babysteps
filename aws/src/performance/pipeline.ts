@@ -285,6 +285,8 @@ export type PerformanceOverview = {
 
 export type PerformanceCoverageStatus =
 	| "observed"
+	| "observed-zero"
+	| "not-exercised"
 	| "instrumented-no-sample"
 	| "unavailable";
 
@@ -685,7 +687,10 @@ export function computePerformanceDashboard(
 			p50: nullablePercentile(values, 0.5),
 			p75: nullablePercentile(values, 0.75),
 			p95: nullablePercentile(values, 0.95),
-			coverage: coverageFor(operationEvents),
+			coverage:
+				operationEvents.length === 0 && pageObservationCount > 0
+					? ("not-exercised" as const)
+					: coverageFor(operationEvents),
 		};
 	});
 	const routeSummaries = summarizeDimension(diagnosticEvents, "route");
@@ -723,7 +728,10 @@ export function computePerformanceDashboard(
 					pageObservationCount === 0
 						? null
 						: matching.length / pageObservationCount,
-				coverage: coverageFor(matching),
+				coverage:
+					matching.length === 0 && pageObservationCount > 0
+						? ("observed-zero" as const)
+						: coverageFor(matching),
 			};
 		})
 		.sort(
@@ -736,9 +744,16 @@ export function computePerformanceDashboard(
 		...vitals,
 		...navigation,
 		...resources,
-		...longTaskCatalog.map((name) =>
-			summarizeMetric(events, name, name.endsWith(".count") ? "count" : "ms"),
-		),
+		...longTaskCatalog.map((name) => {
+			const summary = summarizeMetric(
+				events,
+				name,
+				name.endsWith(".count") ? "count" : "ms",
+			);
+			return summary.sampleCount === 0 && pageObservationCount > 0
+				? { ...summary, coverage: "observed-zero" as const }
+				: summary;
+		}),
 		...renderingCatalog.map((name) =>
 			summarizeMetric(
 				events,
@@ -775,8 +790,14 @@ export function computePerformanceDashboard(
 			),
 			maxDurationMs:
 				durationValues.length === 0 ? null : Math.max(...durationValues),
-			duration,
-			coverage: coverageFor(longTaskEvents),
+			duration:
+				duration.sampleCount === 0 && pageObservationCount > 0
+					? { ...duration, coverage: "observed-zero" }
+					: duration,
+			coverage:
+				longTaskEvents.length === 0 && pageObservationCount > 0
+					? "observed-zero"
+					: coverageFor(longTaskEvents),
 		},
 		errors,
 		web3,

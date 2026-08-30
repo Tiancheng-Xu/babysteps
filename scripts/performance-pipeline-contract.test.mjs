@@ -146,7 +146,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		},
 		{
 			appId: "babysteps",
-			perRouteEventBudget: 20,
+			perRouteEventBudget: 30,
 			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
@@ -159,8 +159,16 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 				"navigation.download",
 				"navigation.dom_ready",
 				"navigation.window_load",
+				"resource.fetch.duration",
+				"resource.xhr.duration",
+				"resource.stylesheet.duration",
+				"resource.image.duration",
 			],
-			unavailableMetrics: ["navigation.dns", "navigation.tls"],
+			unavailableMetrics: [
+				"navigation.dns",
+				"navigation.tcp",
+				"navigation.tls",
+			],
 		},
 	);
 	assert.equal(typeof evaluateJourneyCoverage, "function");
@@ -180,6 +188,10 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		"navigation.download",
 		"navigation.dom_ready",
 		"navigation.window_load",
+		"resource.fetch.duration",
+		"resource.xhr.duration",
+		"resource.stylesheet.duration",
+		"resource.image.duration",
 	];
 	assert.deepEqual(evaluateJourneyCoverage({ observed: required, required }), {
 		complete: true,
@@ -206,14 +218,25 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		[
 			["/", "BabySteps · 成长星球"],
 			["/tasks", "成长任务市集"],
+			["/parent", "家长成长中心"],
+			["/keepsakes", "星宝纪念馆"],
+			["/provider", "机构与育婴师控制台"],
+			["/exchange", "BabyCoin 兑换"],
 			["/profile", "个人中心"],
 			["/performance", "BabySteps 性能观测站"],
 			["/evidence", "链上工作证据"],
 		],
 	);
+	assert.ok(journeyManifest.maxRoutesPerQuotaWindow > 0);
 	assert.ok(
-		journeyRoutes.length * journeyManifest.perRouteEventBudget <= 120,
-		"the controlled multi-route journey must stay inside the Worker minute quota",
+		journeyManifest.maxRoutesPerQuotaWindow *
+			journeyManifest.perRouteEventBudget <=
+			120,
+		"each controlled journey window must stay inside the Worker minute quota",
+	);
+	assert.ok(
+		journeyManifest.quotaWindowPauseMs >= 60_000,
+		"controlled journey quota windows must be separated by at least one minute",
 	);
 	const journeySource = await readFile(
 		"scripts/run-performance-browser-journey.mjs",
@@ -226,6 +249,10 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 	assert.match(journeySource, /getByRole\("heading"/);
 	assert.match(journeySource, /TELEMETRY_BATCH_REJECTED_/);
+	assert.match(journeySource, /performSafeResourceProbes/);
+	assert.match(journeySource, /__performance_probe__\/fetch/);
+	assert.match(journeySource, /quotaWindowPauseMs/);
+	assert.doesNotMatch(journeySource, /while\s*\([^)]*performance\.now/su);
 	assert.match(
 		journeySource,
 		/journeyManifest\.telemetryResponseTimeoutMs \/ telemetryPollIntervalMs/,
@@ -245,8 +272,23 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		/dashboardUrl\.searchParams\.set\("environment", "development"\)/,
 	);
 	const summary = sanitizeJourneySummary({
-		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
-		coverage: [...required, "navigation.dns", "navigation.tls"],
+		routes: [
+			"/",
+			"/tasks",
+			"/parent",
+			"/keepsakes",
+			"/provider",
+			"/exchange",
+			"/profile",
+			"/performance",
+			"/evidence",
+		],
+		coverage: [
+			...required,
+			"navigation.dns",
+			"navigation.tcp",
+			"navigation.tls",
+		],
 		batchCount: 2,
 		acceptedBatchCount: 2,
 		rejectedBatchCount: 0,
@@ -259,10 +301,20 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		body: { authorization: "redacted-fixture" },
 	});
 	assert.deepEqual(summary, {
-		routes: ["/", "/tasks", "/profile", "/performance", "/evidence"],
+		routes: [
+			"/",
+			"/tasks",
+			"/parent",
+			"/keepsakes",
+			"/provider",
+			"/exchange",
+			"/profile",
+			"/performance",
+			"/evidence",
+		],
 		coverage: {
 			observed: [...required].sort(),
-			unavailable: ["navigation.dns", "navigation.tls"],
+			unavailable: ["navigation.dns", "navigation.tcp", "navigation.tls"],
 			missingRequired: [],
 		},
 		batchCount: 2,
@@ -377,7 +429,7 @@ test("the real browser run boots production config and preserves visual Evidence
 	);
 	assert.match(
 		byName("Start local Web at the exact Worker APP_URI origin").run,
-		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=20/,
+		/VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=30/,
 	);
 	const mainSource = await readFile("web/src/main.tsx", "utf8");
 	assert.match(mainSource, /VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE/);
@@ -478,16 +530,33 @@ test("performance readback rejects partial metric coverage", async () => {
 			p95: 1,
 			coverage: "observed",
 		})),
+		resources: [
+			"resource.fetch.duration",
+			"resource.xhr.duration",
+			"resource.stylesheet.duration",
+			"resource.image.duration",
+		].map((name) => ({
+			name,
+			unit: "ms",
+			sampleCount: 1,
+			p50: 1,
+			p75: 1,
+			p95: 1,
+			coverage: "observed",
+		})),
 	};
 	assert.deepEqual(validatePerformanceReadback(stats), {
 		navigationSampleCount: 4,
 		vitalSampleCount: 5,
+		resourceSampleCount: 4,
 	});
 	for (const [section, missing] of [
 		["vitals", "CLS"],
 		["vitals", "INP"],
 		["navigation", "navigation.request_wait"],
 		["navigation", "navigation.window_load"],
+		["resources", "resource.fetch.duration"],
+		["resources", "resource.image.duration"],
 	]) {
 		assert.throws(
 			() =>

@@ -70,14 +70,17 @@ const web3Names = [
 	"transaction.submit",
 	"transaction.receipt",
 ] as const;
-const coverageNames = [
-	...vitalNames,
-	...navigationNames,
-	...resourceNames,
+const longTaskNames = [
 	"longtask.duration",
 	"longtask.count",
 	"longtask.total",
 	"longtask.max",
+] as const;
+const coverageNames = [
+	...vitalNames,
+	...navigationNames,
+	...resourceNames,
+	...longTaskNames,
 	"spa.route.duration",
 	"ssr.shell.duration",
 	"hydration.duration",
@@ -113,6 +116,18 @@ const dashboardVitals: Partial<
 const dashboardNavigation = observation.dashboard.navigation;
 
 function coverageFor(name: string): PerformanceCoverageStatus {
+	if (["navigation.dns", "navigation.tcp", "navigation.tls"].includes(name)) {
+		return "unavailable";
+	}
+	if (longTaskNames.includes(name as (typeof longTaskNames)[number])) {
+		return "observed-zero";
+	}
+	if (errorNames.includes(name as (typeof errorNames)[number])) {
+		return "observed-zero";
+	}
+	if (web3Names.includes(name as (typeof web3Names)[number])) {
+		return "not-exercised";
+	}
 	if (
 		name in dashboardVitals ||
 		name in dashboardNavigation ||
@@ -141,15 +156,19 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 			? { name, unit: "ms", ...metric, coverage: "observed" }
 			: noSample(name, name === "CLS" ? "score" : "ms");
 	}),
-	navigation: navigationNames.map((name) => ({
-		name,
-		unit: "ms" as const,
-		sampleCount: dashboardNavigation[name].sampleCount,
-		p50: dashboardNavigation[name].p50,
-		p75: dashboardNavigation[name].p75,
-		p95: dashboardNavigation[name].p95,
-		coverage: "observed" as const,
-	})),
+	navigation: navigationNames.map((name) =>
+		["navigation.dns", "navigation.tcp", "navigation.tls"].includes(name)
+			? noSample(name, "ms", "unavailable")
+			: {
+					name,
+					unit: "ms" as const,
+					sampleCount: dashboardNavigation[name].sampleCount,
+					p50: dashboardNavigation[name].p50,
+					p75: dashboardNavigation[name].p75,
+					p95: dashboardNavigation[name].p95,
+					coverage: "observed" as const,
+				},
+	),
 	resources: resourceNames.map((name) =>
 		name === "resource.script.duration"
 			? {
@@ -161,20 +180,20 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 					p95: observation.dashboard.scriptResource.p95,
 					coverage: "observed",
 				}
-			: noSample(name),
+			: noSample(name, "ms", "not-exercised"),
 	),
 	longTasks: {
 		count: 0,
 		totalDurationMs: 0,
 		maxDurationMs: null,
-		duration: noSample("longtask.duration"),
-		coverage: "instrumented-no-sample",
+		duration: noSample("longtask.duration", "ms", "observed-zero"),
+		coverage: "observed-zero",
 	},
 	errors: errorNames.map((name) => ({
 		name,
 		sampleCount: 0,
-		rate: null,
-		coverage: "instrumented-no-sample" as const,
+		rate: 0,
+		coverage: "observed-zero" as const,
 	})),
 	web3: web3Names.map((name) => ({
 		name,
@@ -186,7 +205,7 @@ export const VERIFIED_PERFORMANCE_DASHBOARD: PerformanceDashboardResponse = {
 		p50: null,
 		p75: null,
 		p95: null,
-		coverage: "instrumented-no-sample" as const,
+		coverage: "not-exercised" as const,
 	})),
 	routes: observation.dashboard.routes,
 	trend: [

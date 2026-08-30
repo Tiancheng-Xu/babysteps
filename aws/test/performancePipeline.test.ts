@@ -294,6 +294,36 @@ describe("real-sample statistics", () => {
 		});
 	});
 
+	it("distinguishes healthy zero observations from operations the journey did not execute", () => {
+		const dashboard = computePerformanceDashboard([
+			event({ type: "custom", name: "navigation.window_load", unit: "ms" }),
+			event({ type: "custom", name: "navigation.window_load", unit: "ms" }),
+		]);
+
+		expect(dashboard.longTasks).toMatchObject({
+			count: 0,
+			totalDurationMs: 0,
+			maxDurationMs: null,
+			coverage: "observed-zero",
+		});
+		expect(dashboard.errors).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					name: "javascript.error",
+					sampleCount: 0,
+					rate: 0,
+					coverage: "observed-zero",
+				}),
+			]),
+		);
+		expect(
+			dashboard.web3.find(({ name }) => name === "contract.write"),
+		).toMatchObject({
+			sampleCount: 0,
+			coverage: "not-exercised",
+		});
+	});
+
 	it.each([
 		{ durations: [50, 70], cumulativeCounts: [1, 2], expectedCount: 2 },
 		{

@@ -1,13 +1,19 @@
 {
   "schemaVersion": 1,
   "appId": "babysteps",
-  "perRouteEventBudget": 20,
+  "perRouteEventBudget": 30,
+  "maxRoutesPerQuotaWindow": 4,
+  "quotaWindowPauseMs": 61000,
   "telemetryAttemptTimeoutMs": 3000,
   "telemetryResponseTimeoutMs": 15000,
   "allowedLocalOrigins": ["http://127.0.0.1", "http://localhost"],
   "routes": [
     { "path": "/", "heading": "BabySteps · 成长星球" },
     { "path": "/tasks", "heading": "成长任务市集" },
+    { "path": "/parent", "heading": "家长成长中心" },
+    { "path": "/keepsakes", "heading": "星宝纪念馆" },
+    { "path": "/provider", "heading": "机构与育婴师控制台" },
+    { "path": "/exchange", "heading": "BabyCoin 兑换" },
     { "path": "/profile", "heading": "个人中心" },
     { "path": "/performance", "heading": "BabySteps 性能观测站" },
     { "path": "/evidence", "heading": "链上工作证据" }
@@ -21,6 +27,7 @@
     ],
     "assertion": { "urlSearchParam": "route", "equals": "/performance" }
   },
+  "safeResourceProbeRoute": "/performance",
   "requiredMetrics": [
     "LCP",
     "CLS",
@@ -30,7 +37,11 @@
     "navigation.request_wait",
     "navigation.download",
     "navigation.dom_ready",
-    "navigation.window_load"
+    "navigation.window_load",
+    "resource.fetch.duration",
+    "resource.xhr.duration",
+    "resource.stylesheet.duration",
+    "resource.image.duration"
   ],
-  "unavailableMetrics": ["navigation.dns", "navigation.tls"]
+  "unavailableMetrics": ["navigation.dns", "navigation.tcp", "navigation.tls"]
 }

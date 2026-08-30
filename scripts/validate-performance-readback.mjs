@@ -34,10 +34,13 @@ function requiredSample(section, name, expectedUnit) {
 
 export function validatePerformanceReadback(stats) {
 	const vitals = manifest.requiredMetrics.filter(
-		(name) => !name.startsWith("navigation."),
+		(name) => !name.includes("."),
 	);
 	const navigation = manifest.requiredMetrics.filter((name) =>
 		name.startsWith("navigation."),
+	);
+	const resources = manifest.requiredMetrics.filter((name) =>
+		name.startsWith("resource."),
 	);
 	return {
 		navigationSampleCount: navigation.reduce(
@@ -48,6 +51,10 @@ export function validatePerformanceReadback(stats) {
 			(total, name) =>
 				total +
 				requiredSample(stats?.vitals, name, name === "CLS" ? "score" : "ms"),
+			0,
+		),
+		resourceSampleCount: resources.reduce(
+			(total, name) => total + requiredSample(stats?.resources, name, "ms"),
 			0,
 		),
 	};

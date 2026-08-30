@@ -1316,6 +1316,16 @@ textarea[aria-invalid="true"] {
 	color: var(--performance-empty-text);
 }
 
+.performance-coverage--observed-zero {
+	background: #e7f3e4;
+	color: #315e38;
+}
+
+.performance-coverage--not-exercised {
+	background: #f6edda;
+	color: #6b4c17;
+}
+
 .performance-coverage--unavailable {
 	background: #eee8f8;
 	color: #5b4a7b;
