@@ -4,6 +4,7 @@
   "perRouteEventBudget": 40,
   "vitalsReadyMark": "babysteps.web-vitals.ready",
   "vitalsReadyTimeoutMs": 10000,
+  "representativeInteractionCpuSlowdownRate": 6,
   "maxRoutesPerQuotaWindow": 3,
   "quotaWindowPauseMs": 61000,
   "telemetryAttemptTimeoutMs": 3000,
