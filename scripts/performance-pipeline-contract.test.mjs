@@ -762,6 +762,13 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.match(source, /COPYFILE_EXCL/);
 	assert.match(source, /walletWrites:\s*0/);
 	assert.match(source, /chainTransactions:\s*0/);
+	assert.match(source, /filter\(\{ hasNotText: "正在" \}\)/);
+	assert.match(source, /settledOutcomes/);
+	assert.doesNotMatch(
+		source,
+		/JSON\.stringify\(\{ output: resolve\(output\)/,
+		"recording stdout must not expose the local absolute output path",
+	);
 	assert.doesNotMatch(source, /连接 MetaMask.*click/su);
 	assert.doesNotMatch(source, /确认赠送成长星.*click/su);
 	assert.doesNotMatch(source, /swapExact|writeContract/);

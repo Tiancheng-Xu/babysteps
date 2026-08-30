@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { chromium } from "playwright";
 
 function argument(name) {
@@ -23,6 +23,7 @@ if (!new Set(["127.0.0.1", "localhost"]).has(parsedOrigin.hostname)) {
 }
 
 const coverage = [];
+const settledOutcomes = [];
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({
 	viewport: { width: 1440, height: 900 },
@@ -148,9 +149,18 @@ try {
 	const amount = page.getByRole("textbox", { name: "输入数量" });
 	await amount.fill("1");
 	await page.getByRole("button", { name: "读取链上报价" }).click();
-	await page.getByRole("status").waitFor();
+	const settledQuote = page.getByRole("status").filter({ hasNotText: "正在" });
+	await settledQuote.waitFor({ timeout: 15_000 });
+	const settledQuoteText = (await settledQuote.textContent()) ?? "";
+	const quoteOutcome = settledQuoteText.includes("报价已读取")
+		? "success"
+		: "failure";
+	settledOutcomes.push({
+		operation: "web3.uniswap.quote",
+		outcome: quoteOutcome,
+	});
 	await caption(
-		"只读报价已结算",
+		`只读报价已结算 · ${quoteOutcome}`,
 		"成功或脱敏失败都保留真实 outcome；失败不能冒充成功样本。",
 	);
 
@@ -227,6 +237,7 @@ await writeFile(
 			pageErrors: 0,
 			walletWrites: 0,
 			chainTransactions: 0,
+			settledOutcomes,
 			coverage,
 		},
 		null,
@@ -235,5 +246,5 @@ await writeFile(
 	{ flag: "wx" },
 );
 process.stdout.write(
-	`${JSON.stringify({ output: resolve(output), segments: coverage.length })}\n`,
+	`${JSON.stringify({ output: basename(resolve(output)), segments: coverage.length })}\n`,
 );
