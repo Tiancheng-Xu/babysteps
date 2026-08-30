@@ -1,5 +1,5 @@
 import { simulateContract } from "@wagmi/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Address, type Hash, keccak256, stringToBytes } from "viem";
 import {
 	useAccount,
@@ -14,6 +14,7 @@ import {
 	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 
 const COMPLETION_RELAYER_ROLE = keccak256(
 	stringToBytes("COMPLETION_RELAYER_ROLE"),
@@ -43,6 +44,7 @@ export function useOwnerCompletionConfirmation(
 	const [message, setMessage] = useState<string>();
 	const pendingRef = useRef(false);
 	const confirmedRef = useRef<Hash | undefined>(undefined);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const roleRead = useReadContract({
 		address: marketplaceAddress,
@@ -84,9 +86,10 @@ export function useOwnerCompletionConfirmation(
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setPhase("error");
 		setMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -98,15 +101,17 @@ export function useOwnerCompletionConfirmation(
 		}
 		confirmedRef.current = transactionHash;
 		pendingRef.current = false;
+		businessLifecycle.succeed();
 		setPhase("success");
 		setMessage("任务完成确认已上链，成长证书已按 purchaseId 幂等铸造。");
-	}, [receipt.isSuccess, transactionHash]);
+	}, [businessLifecycle, receipt.isSuccess, transactionHash]);
 
 	const confirm = useCallback(async () => {
 		if (!canConfirm || !address || !marketplaceAddress || pendingRef.current) {
 			return;
 		}
 		pendingRef.current = true;
+		businessLifecycle.start("business.owner.completion_confirm");
 		confirmedRef.current = undefined;
 		setPhase("awaiting-signature");
 		setMessage("请在授权钱包确认任务完成交易。");
@@ -129,10 +134,18 @@ export function useOwnerCompletionConfirmation(
 			setMessage("交易已广播，正在等待 Sepolia 确认。");
 		} catch (error) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setPhase("error");
 			setMessage(toWalletMessage(error));
 		}
-	}, [address, canConfirm, input, marketplaceAddress, writeContractAsync]);
+	}, [
+		address,
+		businessLifecycle,
+		canConfirm,
+		input,
+		marketplaceAddress,
+		writeContractAsync,
+	]);
 
 	return {
 		hasCompletionRole,

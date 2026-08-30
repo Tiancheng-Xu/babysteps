@@ -1,5 +1,5 @@
 import { simulateContract } from "@wagmi/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Address, Hash } from "viem";
 import {
 	useAccount,
@@ -18,6 +18,7 @@ import {
 	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import type { MarketplaceTask } from "./marketplaceModel";
 
@@ -61,6 +62,7 @@ export function useTaskPurchase(
 	const pendingRef = useRef(false);
 	const confirmedApprovalRef = useRef<Hash | undefined>(undefined);
 	const confirmedPurchaseRef = useRef<Hash | undefined>(undefined);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -115,9 +117,15 @@ export function useTaskPurchase(
 	useEffect(() => {
 		if (!approvalReceipt.isError || !approvalHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setMessage(toWalletMessage(approvalReceipt.error));
-	}, [approvalHash, approvalReceipt.error, approvalReceipt.isError]);
+	}, [
+		approvalHash,
+		approvalReceipt.error,
+		approvalReceipt.isError,
+		businessLifecycle,
+	]);
 
 	useEffect(() => {
 		if (
@@ -132,22 +140,35 @@ export function useTaskPurchase(
 			.refetch()
 			.then(() => {
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setTransactionPhase("ready-to-buy");
 				setMessage("授权已确认，现在可以购买。");
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setMessage("授权已确认，但刷新额度失败，请重试读取。");
 			});
-	}, [allowanceRead, approvalHash, approvalReceipt.isSuccess]);
+	}, [
+		allowanceRead,
+		approvalHash,
+		approvalReceipt.isSuccess,
+		businessLifecycle,
+	]);
 
 	useEffect(() => {
 		if (!purchaseReceipt.isError || !purchaseHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setMessage(toWalletMessage(purchaseReceipt.error));
-	}, [purchaseHash, purchaseReceipt.error, purchaseReceipt.isError]);
+	}, [
+		businessLifecycle,
+		purchaseHash,
+		purchaseReceipt.error,
+		purchaseReceipt.isError,
+	]);
 
 	useEffect(() => {
 		if (
@@ -165,17 +186,20 @@ export function useTaskPurchase(
 		])
 			.then(() => {
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setTransactionPhase("success");
 				setMessage("购买已确认，等待完成记录与成长证书。");
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setMessage("购买已确认，但刷新链上记录失败，请重试读取。");
 			});
 	}, [
 		allowanceRead,
 		balanceRead,
+		businessLifecycle,
 		purchaseHash,
 		purchaseReceipt.isSuccess,
 		purchasedRead,
@@ -215,6 +239,7 @@ export function useTaskPurchase(
 		}
 
 		pendingRef.current = true;
+		businessLifecycle.start("business.marketplace.approve");
 		confirmedApprovalRef.current = undefined;
 		setApprovalHash(undefined);
 		setTransactionPhase("awaiting-approval-signature");
@@ -234,12 +259,14 @@ export function useTaskPurchase(
 			setMessage("授权交易已广播，正在等待链上确认。");
 		} catch (error) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setTransactionPhase("write-error");
 			setMessage(toWalletMessage(error));
 		}
 	}, [
 		address,
 		babyCoinContractAddress,
+		businessLifecycle,
 		marketplaceContractAddress,
 		phase,
 		task.price,
@@ -257,6 +284,7 @@ export function useTaskPurchase(
 		}
 
 		pendingRef.current = true;
+		businessLifecycle.start("business.marketplace.buy");
 		confirmedPurchaseRef.current = undefined;
 		setPurchaseHash(undefined);
 		setTransactionPhase("awaiting-purchase-signature");
@@ -276,10 +304,18 @@ export function useTaskPurchase(
 			setMessage("购买交易已广播，正在等待链上确认。");
 		} catch (error) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setTransactionPhase("write-error");
 			setMessage(toWalletMessage(error));
 		}
-	}, [address, marketplaceContractAddress, phase, task.id, writeContractAsync]);
+	}, [
+		address,
+		businessLifecycle,
+		marketplaceContractAddress,
+		phase,
+		task.id,
+		writeContractAsync,
+	]);
 
 	const switchToSepolia = useCallback(async () => {
 		try {

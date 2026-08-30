@@ -18,6 +18,7 @@ import {
 } from "../../contracts/onchainNotebook";
 import { isNoteWithinLimit } from "../../lib/noteBytes";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import {
 	deriveWalletState,
 	hasMetaMaskProvider,
@@ -53,6 +54,7 @@ export function useNotebook() {
 	const draftDirtyRef = useRef(false);
 	const confirmedHashRef = useRef<Hash | undefined>(undefined);
 	const operationRef = useRef<"save" | "clear">("save");
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -124,9 +126,10 @@ export function useNotebook() {
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setTransactionMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -144,6 +147,7 @@ export function useNotebook() {
 			.then(() => {
 				draftDirtyRef.current = false;
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setTransactionPhase("success");
 				setTransactionMessage(
 					operationRef.current === "clear"
@@ -153,10 +157,17 @@ export function useNotebook() {
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setTransactionMessage("交易已确认，但刷新链上笔记失败，请重试读取。");
 			});
-	}, [queryClient, readQueryKey, receipt.isSuccess, transactionHash]);
+	}, [
+		businessLifecycle,
+		queryClient,
+		readQueryKey,
+		receipt.isSuccess,
+		transactionHash,
+	]);
 
 	const setDraft = useCallback((nextDraft: string) => {
 		draftDirtyRef.current = true;
@@ -184,6 +195,7 @@ export function useNotebook() {
 			}
 
 			pendingRef.current = true;
+			businessLifecycle.start("business.notebook.write");
 			operationRef.current = operation;
 			confirmedHashRef.current = undefined;
 			setTransactionHash(undefined);
@@ -197,11 +209,12 @@ export function useNotebook() {
 				setTransactionMessage("交易已广播，正在等待链上确认。");
 			} catch (error) {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setTransactionMessage(toWalletMessage(error));
 			}
 		},
-		[chainId, walletState, writeContractAsync],
+		[businessLifecycle, chainId, walletState, writeContractAsync],
 	);
 
 	const save = useCallback(() => {

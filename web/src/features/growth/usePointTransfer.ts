@@ -18,6 +18,7 @@ import {
 	onchainNotebookAbi,
 } from "../../contracts/onchainNotebook";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import { validatePointTransfer } from "./pointTransferModel";
 
@@ -67,6 +68,7 @@ export function usePointTransfer() {
 	const pendingRef = useRef(false);
 	const confirmedHashRef = useRef<Hash | undefined>(undefined);
 	const submittedRef = useRef<SubmittedTransfer | undefined>(undefined);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -103,9 +105,10 @@ export function usePointTransfer() {
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setTransactionMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -117,9 +120,15 @@ export function usePointTransfer() {
 		}
 		confirmedHashRef.current = transactionHash;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setTransactionMessage("交易已上链但执行失败，成长星没有转移。");
-	}, [receipt.data?.status, receipt.isSuccess, transactionHash]);
+	}, [
+		businessLifecycle,
+		receipt.data?.status,
+		receipt.isSuccess,
+		transactionHash,
+	]);
 
 	useEffect(() => {
 		const submitted = submittedRef.current;
@@ -147,6 +156,7 @@ export function usePointTransfer() {
 		)
 			.then(() => {
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setAmount("");
 				setTransactionPhase("success");
 				setTransactionMessage(
@@ -155,10 +165,17 @@ export function usePointTransfer() {
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setTransactionMessage("交易已确认，但刷新可赠送余额失败，请重试读取。");
 			});
-	}, [queryClient, receipt.data?.status, receipt.isSuccess, transactionHash]);
+	}, [
+		businessLifecycle,
+		queryClient,
+		receipt.data?.status,
+		receipt.isSuccess,
+		transactionHash,
+	]);
 
 	const transfer = useCallback(async () => {
 		if (pendingRef.current || walletState !== "ready" || !address) return;
@@ -169,6 +186,7 @@ export function usePointTransfer() {
 		}
 
 		pendingRef.current = true;
+		businessLifecycle.start("business.growth.transfer");
 		confirmedHashRef.current = undefined;
 		submittedRef.current = {
 			sender: address,
@@ -194,6 +212,7 @@ export function usePointTransfer() {
 			setTransactionMessage("交易已广播，正在等待 Sepolia 确认。");
 		} catch (error) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setTransactionPhase("write-error");
 			setTransactionMessage(
 				isUserRejected(error)
@@ -201,7 +220,7 @@ export function usePointTransfer() {
 					: toWalletMessage(error),
 			);
 		}
-	}, [address, validation, walletState, writeContractAsync]);
+	}, [address, businessLifecycle, validation, walletState, writeContractAsync]);
 
 	const retryRead = useCallback(
 		() => balanceRead.refetch().then(() => undefined),

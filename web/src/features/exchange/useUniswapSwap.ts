@@ -18,7 +18,10 @@ import {
 	weth9Abi,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
-import { measurePerformance } from "../../performance/runtime";
+import {
+	measureBusinessPerformance,
+	measurePerformance,
+} from "../../performance/runtime";
 import { formatBabyCoinAmount } from "../babycoin/formatBabyCoinAmount";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import { buildExactInputSingle, finiteApprovalAmount } from "./uniswapModel";
@@ -69,15 +72,15 @@ export function useUniswapSwap() {
 	const configured = Boolean(babyCoinAddress);
 	const formattedQuote = formatBabyCoinAmount(quotedAmountOut);
 
-	const quote = useCallback(
-		() =>
+	const quote = useCallback(() => {
+		const targetToken = babyCoinAddress;
+		if (!targetToken || !amountIn || amountIn <= 0n) {
+			setPhase("error");
+			setMessage("请输入有效数量，并先配置 BABY 合约地址。");
+			return Promise.resolve();
+		}
+		return measureBusinessPerformance("business.exchange.quote", () =>
 			measurePerformance("web3.uniswap.quote", async () => {
-				const targetToken = babyCoinAddress;
-				if (!targetToken || !amountIn || amountIn <= 0n) {
-					setPhase("error");
-					setMessage("请输入有效数量，并先配置 BABY 合约地址。");
-					return;
-				}
 				setPhase("quoting");
 				setMessage("正在从 Sepolia Uniswap v3 QuoterV2 读取报价…");
 				try {
@@ -113,23 +116,24 @@ export function useUniswapSwap() {
 					throw error;
 				}
 			}),
-		[amountIn, selected.address],
-	);
+		);
+	}, [amountIn, selected.address]);
 
-	const execute = useCallback(
-		() =>
+	const execute = useCallback(() => {
+		const targetToken = babyCoinAddress;
+		if (
+			pendingRef.current ||
+			!address ||
+			!targetToken ||
+			!amountIn ||
+			amountIn !== quotedInput ||
+			!quotedAmountOut ||
+			walletState !== "ready"
+		) {
+			return Promise.resolve();
+		}
+		return measureBusinessPerformance("business.exchange.swap", () =>
 			measurePerformance("web3.uniswap.swap", async () => {
-				if (
-					pendingRef.current ||
-					!address ||
-					!babyCoinAddress ||
-					!amountIn ||
-					amountIn !== quotedInput ||
-					!quotedAmountOut ||
-					walletState !== "ready"
-				) {
-					return;
-				}
 				pendingRef.current = true;
 				setTransactionHash(undefined);
 				try {
@@ -196,7 +200,7 @@ export function useUniswapSwap() {
 					setMessage("请确认 Uniswap v3 SwapRouter02 交易。");
 					const params = buildExactInputSingle({
 						tokenIn: getAddress(selected.address),
-						tokenOut: babyCoinAddress,
+						tokenOut: targetToken,
 						fee: uniswapV3Sepolia.fee,
 						recipient: address,
 						amountIn,
@@ -232,18 +236,18 @@ export function useUniswapSwap() {
 				} finally {
 					pendingRef.current = false;
 				}
-			}).catch(() => undefined),
-		[
-			address,
-			amountIn,
-			asset,
-			quotedAmountOut,
-			quotedInput,
-			selected.address,
-			walletState,
-			writeContractAsync,
-		],
-	);
+			}),
+		).catch(() => undefined);
+	}, [
+		address,
+		amountIn,
+		asset,
+		quotedAmountOut,
+		quotedInput,
+		selected.address,
+		walletState,
+		writeContractAsync,
+	]);
 
 	return {
 		asset,

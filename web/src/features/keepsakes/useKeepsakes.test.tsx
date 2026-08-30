@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Address, Hash } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,14 @@ const mocks = vi.hoisted(() => ({
 	useWaitForTransactionReceipt: vi.fn(),
 	useWriteContract: vi.fn(),
 	writeContractAsync: vi.fn(),
+	businessStart: vi.fn(),
+	businessSucceed: vi.fn(),
+	businessFail: vi.fn(),
+	createBusinessOperationLifecycle: vi.fn(),
+}));
+
+vi.mock("../../performance/runtime", () => ({
+	createBusinessOperationLifecycle: mocks.createBusinessOperationLifecycle,
 }));
 
 vi.mock("@wagmi/core", () => ({ simulateContract: mocks.simulateContract }));
@@ -48,6 +56,7 @@ import { useKeepsakes } from "./useKeepsakes";
 const account = "0x1111111111111111111111111111111111111111" as Address;
 const transactionHash = `0x${"e".repeat(64)}` as Hash;
 let latestRequestId = 0n;
+let requestStatus = 1;
 
 function installMetaMask() {
 	Object.defineProperty(window, "ethereum", {
@@ -61,6 +70,14 @@ describe("useKeepsakes", () => {
 		vi.clearAllMocks();
 		installMetaMask();
 		latestRequestId = 0n;
+		requestStatus = 1;
+		mocks.createBusinessOperationLifecycle.mockReturnValue({
+			start: mocks.businessStart,
+			succeed: mocks.businessSucceed,
+			fail: mocks.businessFail,
+			isPending: () => false,
+		});
+		mocks.businessStart.mockReturnValue(true);
 		mocks.useAccount.mockReturnValue({
 			address: account,
 			chainId: 11155111,
@@ -75,7 +92,7 @@ describe("useKeepsakes", () => {
 					getRequest: {
 						owner: account,
 						kind: 1,
-						status: 1,
+						status: requestStatus,
 						requestedAt: 1_786_000_000n,
 						tokenIds: [0n, 0n, 0n],
 						resultTokenId: 0n,
@@ -147,6 +164,20 @@ describe("useKeepsakes", () => {
 		);
 		expect(result.current.transactionHash).toBe(transactionHash);
 		expect(result.current.phase).toBe("confirming");
+		expect(mocks.businessStart).toHaveBeenCalledWith("business.keepsake.draw");
+		expect(mocks.businessSucceed).not.toHaveBeenCalled();
+	});
+
+	it("settles the draw metric only after the VRF result and readback", async () => {
+		const { result, rerender } = renderHook(() => useKeepsakes());
+		await act(async () => result.current.draw());
+
+		latestRequestId = 9n;
+		requestStatus = 2;
+		rerender();
+
+		await waitFor(() => expect(mocks.businessSucceed).toHaveBeenCalledOnce());
+		expect(mocks.refetch).toHaveBeenCalled();
 	});
 
 	it("restores a pending VRF request after returning to the page", () => {

@@ -23,6 +23,7 @@ import {
 	starBuddyKeepsakesAddress,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import type { KeepsakeCard } from "./keepsakeModel";
 
@@ -91,6 +92,7 @@ export function useKeepsakes() {
 	const [localMessage, setLocalMessage] = useState<string>();
 	const pendingRef = useRef(false);
 	const settledRequestRef = useRef<bigint | undefined>(undefined);
+	const businessOperation = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -195,9 +197,10 @@ export function useKeepsakes() {
 	useEffect(() => {
 		if (!receipt.isError) return;
 		pendingRef.current = false;
+		businessOperation.fail();
 		setLocalPhase("error");
 		setLocalMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError]);
+	}, [businessOperation, receipt.error, receipt.isError]);
 
 	useEffect(() => {
 		if (!receipt.isSuccess) return;
@@ -224,8 +227,20 @@ export function useKeepsakes() {
 			balanceRead.refetch(),
 			tokenIdsRead.refetch(),
 			detailReads.refetch(),
-		]);
-	}, [balanceRead.refetch, detailReads.refetch, request, tokenIdsRead.refetch]);
+		]).then(
+			() => {
+				if (request.status === 3) businessOperation.fail();
+				else businessOperation.succeed();
+			},
+			() => businessOperation.fail(),
+		);
+	}, [
+		balanceRead.refetch,
+		businessOperation,
+		detailReads.refetch,
+		request,
+		tokenIdsRead.refetch,
+	]);
 
 	const submit = useCallback(
 		async (
@@ -238,12 +253,19 @@ export function useKeepsakes() {
 		) => {
 			if (
 				pendingRef.current ||
+				businessOperation.isPending() ||
 				!address ||
 				!starBuddyKeepsakesAddress ||
 				walletState !== "ready"
 			) {
 				return;
 			}
+			const metricName = {
+				requestDraw: "business.keepsake.draw",
+				requestFusion: "business.keepsake.fuse",
+				recover: "business.keepsake.recover",
+			} as const;
+			if (!businessOperation.start(metricName[functionName])) return;
 			pendingRef.current = true;
 			setTransactionHash(undefined);
 			setLocalPhase("awaiting-signature");
@@ -263,11 +285,12 @@ export function useKeepsakes() {
 				setLocalMessage("交易已广播，正在等待 Sepolia 确认。");
 			} catch (error) {
 				pendingRef.current = false;
+				businessOperation.fail();
 				setLocalPhase("error");
 				setLocalMessage(toWalletMessage(error));
 			}
 		},
-		[address, walletState, writeContractAsync],
+		[address, businessOperation, walletState, writeContractAsync],
 	);
 
 	const draw = useCallback(

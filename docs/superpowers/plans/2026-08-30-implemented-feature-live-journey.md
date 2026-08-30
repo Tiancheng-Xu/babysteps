@@ -183,7 +183,7 @@ git commit -m "feat: add bounded business operation metrics"
 - Consumes: `measureBusinessPerformance()` from Task 2。
 - Produces: 每个规格 Journey 的一次成功或精确失败事件；既有 UI 状态、receipt 等待和回读顺序不变。
 
-- [ ] **Step 1: 为每组 Hook 写“恰好一次、覆盖完整异步周期、不泄露结果”的测试**
+- [x] **Step 1: 为每组 Hook 写“恰好一次、覆盖完整异步周期、不泄露结果”的测试**
 
 ```ts
 expect(mocks.measureBusinessPerformance).toHaveBeenCalledWith(
@@ -193,11 +193,11 @@ expect(mocks.measureBusinessPerformance).toHaveBeenCalledWith(
 await expect(mocks.measureBusinessPerformance.mock.calls[0][1]()).resolves.toBeUndefined();
 ```
 
-- [ ] **Step 2: 运行目标测试验证 RED**
+- [x] **Step 2: 运行目标测试验证 RED**
 
 Run: `pnpm --filter @babysteps/web test -- src/features/growth src/features/babycoin src/features/marketplace src/features/provider src/features/keepsakes src/features/exchange src/features/identity`
 
-- [ ] **Step 3: 用统一包装器覆盖“请求签名到产品回读”**
+- [x] **Step 3: 用统一包装器覆盖“请求签名到产品回读”**
 
 ```ts
 return measureBusinessPerformance("business.notebook.write", async () => {
@@ -208,11 +208,11 @@ return measureBusinessPerformance("business.notebook.write", async () => {
 
 不得只包 `writeContractAsync`；必须包含 receipt 和最终 UI/链上/Worker 回读。已有 `contract.write`、`approve.*`、`transaction.*` 继续保留。
 
-- [ ] **Step 4: 运行全量 Web 测试与类型检查**
+- [x] **Step 4: 运行全量 Web 测试与类型检查**
 
 Run: `pnpm --filter @babysteps/web test && pnpm --filter @babysteps/web typecheck && pnpm --filter @babysteps/web check`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add web/src/features

@@ -1,10 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+	measureBusinessPerformance: vi.fn(),
+}));
+
+vi.mock("../../performance/runtime", () => ({
+	measureBusinessPerformance: mocks.measureBusinessPerformance,
+}));
+
 import { createCompletionApi } from "./completionApi";
 
 const taskKey =
 	"11155111:0x1234567890abcdef1234567890abcdef12345678:42" as const;
 
 describe("completionApi", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.measureBusinessPerformance.mockImplementation(
+			(_name: string, operation: () => Promise<unknown>) => operation(),
+		);
+	});
+
 	it("uses credentialed purchased-content and completion requests", async () => {
 		const fetcher = vi
 			.fn()
@@ -42,6 +58,16 @@ describe("completionApi", () => {
 			2,
 			`https://api.example/api/tasks/${encodeURIComponent(taskKey)}/completions`,
 			expect.objectContaining({ method: "POST", credentials: "include" }),
+		);
+		expect(mocks.measureBusinessPerformance).toHaveBeenNthCalledWith(
+			1,
+			"business.marketplace.content_unlock",
+			expect.any(Function),
+		);
+		expect(mocks.measureBusinessPerformance).toHaveBeenNthCalledWith(
+			2,
+			"business.marketplace.completion_submit",
+			expect.any(Function),
 		);
 	});
 
