@@ -12,7 +12,7 @@
   },
   "featureQa": "pass",
   "repositoryPolicy": "ci-pass",
-  "headBeforeProcessRecords": "ac8931d25406dc11645a306f182c281de4407cb0",
+  "headBeforeProcessRecords": "55fac7c9ab84097ba55ac4547dc218a521ee0efb",
   "blockers": [],
-  "release": "prd-recording-pending-before-push"
+  "release": "branch-push-authorized"
 }

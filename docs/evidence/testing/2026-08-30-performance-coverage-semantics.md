@@ -53,7 +53,8 @@ Run `33292966972` 的 Cleaner、聚合查询与 Dashboard 截图因浏览器 Gat
 - `pnpm typecheck`、`pnpm check`、`pnpm build`、`pnpm validate:delivery-evidence`、`pnpm validate:public-copy` 通过；CSS 仅保留 8 条既有 warning，无 error。
 - 全路由浏览器矩阵：9 路由 × 375/390/430/1440，共 36 项；HTTP 200、正确主标题、根级横向溢出 0、`pageerror` 0，性能历史页可见含混文案计数 0。
 - BackstopJS：375/390/430/1440 共 `4/4` 通过，性能模块布局 Gate `2/2` 通过；候选与已审阅基线无像素差异，没有用 mask 隐藏产品内容。
-- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`39/39` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整性能 Journey 视频与逐路由截图保存在本地临时 Gate 产物中；PRD 全功能录屏会在推送前以本地生产构建另行生成，并明确标注其只证明 UI 与安全只读交互。
+- 修复后本地 Edge SSR + hydration Journey：9/9 路由、`215` 个事件、`39/39` 批次接受、拒绝与传输失败均为 `0`；23 项强制观测全部覆盖，`missingRequired=[]`；INP 为真实代表性交互样本，12 项健康零错误/降级的 `unexpectedObserved=[]`。Sepolia 报价调用已执行并明确记录为失败，不冒充成功；`contract.read`、`rpc.read`、`web3.rpc.read` 均有真实只读样本，也没有发起授权、Swap 或链上写入。完整性能 Journey 视频与逐路由截图保存在本地临时 Gate 产物中。
+- 推送前 PRD 全功能录屏已完成：`34.4s`、`1440×900`、`25fps`、16 段、9 条路由，并切换到 `390×844` 移动视口；`pageerror=0`、钱包写入 `0`、链上交易 `0`。只读报价 outcome 为 `failure`，AWS Runtime 关闭时性能筛选 outcome 为 `unavailable`，均未冒充成功。视频 SHA-256 为 `61c0188e2eb8ce489ca8b24670b426d6c2b6f479c319fafa1ce26259e3dc7f87`，伴随 JSON 固定 provenance、commit、视口、outcome 与边界；视频抽帧拼图已人工复核。
 - 工作树检查：`git diff --check` 通过；生成代码与用户文件未被带入修改清单。
 
 ## 边界

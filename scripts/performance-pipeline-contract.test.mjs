@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
@@ -775,6 +776,37 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.doesNotMatch(source, /连接 MetaMask.*click/su);
 	assert.doesNotMatch(source, /确认赠送成长星.*click/su);
 	assert.doesNotMatch(source, /swapExact|writeContract/);
+	const videoPath =
+		"docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
+	const [video, manifestRaw] = await Promise.all([
+		readFile(videoPath),
+		readFile(`${videoPath}.json`, "utf8"),
+	]);
+	const manifest = JSON.parse(manifestRaw);
+	assert.equal(
+		createHash("sha256").update(video).digest("hex"),
+		manifest.media.sha256,
+	);
+	assert.equal(video.byteLength, manifest.media.bytes);
+	assert.equal(manifest.media.audio, false);
+	assert.equal(manifest.media.contactSheetReviewed, true);
+	assert.equal(
+		manifest.provenance,
+		"controlled-browser-local-production-build",
+	);
+	assert.equal(manifest.pageErrors, 0);
+	assert.equal(manifest.walletWrites, 0);
+	assert.equal(manifest.chainTransactions, 0);
+	assert.equal(manifest.coverage.length, 16);
+	assert.deepEqual(manifest.settledOutcomes, [
+		{ operation: "web3.uniswap.quote", outcome: "failure" },
+		{ operation: "performance.filter", outcome: "unavailable" },
+	]);
+	const evidencePage = await readFile("web/src/pages/EvidencePage.tsx", "utf8");
+	assert.match(evidencePage, /prdFullWalkthroughVideo/);
+	assert.match(evidencePage, /PRD 全功能可见走读/);
+	assert.match(evidencePage, /钱包写入 0、链上交易/);
+	assert.match(evidencePage, /性能筛选保持禁用并记录为/);
 });
 
 test("the Chromium journey reconciles a transient transport failure by event id", async () => {

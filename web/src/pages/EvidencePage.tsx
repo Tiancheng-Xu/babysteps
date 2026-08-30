@@ -6,6 +6,7 @@ import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-bus
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
 import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
+import prdFullWalkthroughVideo from "../../../docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
@@ -46,6 +47,51 @@ export function EvidencePage() {
 				</div>
 				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
+
+			<section
+				className="evidence-recorded-proof"
+				aria-labelledby="prd-full-walkthrough-title"
+			>
+				<header className="evidence-recorded-proof__header">
+					<div>
+						<p className="section-kicker">
+							PRD FULL WALKTHROUGH · PRE-PUSH GATE
+						</p>
+						<h2 id="prd-full-walkthrough-title">PRD 全功能可见走读</h2>
+					</div>
+					<span className="evidence-diagram-card__status">
+						本地生产构建 · 16 段 · pageerror 0
+					</span>
+				</header>
+				<p>
+					34.4 秒无声受控浏览器录屏，覆盖 9 条产品路由、1440px 桌面端与 390px
+					移动端：首页钱包与网络、双账本成长、赠送、链上便签、任务、家长中心、
+					纪念卡、Provider、兑换、身份、性能观测与 Evidence 映射。
+				</p>
+				<p>
+					录屏只证明本地生产构建 UI 与安全只读交互：钱包写入 0、链上交易
+					0。Sepolia 报价真实结算为脱敏失败；AWS Runtime
+					关闭时性能筛选保持禁用并记录为 unavailable。链上写入、第三方登录与临时
+					AWS 闭环继续以各自独立 Evidence 为准。
+				</p>
+				<figure className="evidence-video-proof">
+					<video
+						aria-label="BabySteps PRD 全功能本地生产构建走读录屏"
+						controls
+						muted
+						playsInline
+						preload="metadata"
+						poster={productClosureDesktopImage}
+					>
+						<source src={prdFullWalkthroughVideo} type="video/webm" />
+						当前浏览器不支持 WebM 视频播放。
+					</video>
+					<figcaption>
+						来源：controlled-browser local production build · commit
+						55fac7c9ab84 · SHA-256 61c0188e…e3dc7f87。
+					</figcaption>
+				</figure>
+			</section>
 
 			<section
 				className="evidence-feature-proof"
