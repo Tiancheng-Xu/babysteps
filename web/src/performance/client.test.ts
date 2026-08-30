@@ -259,6 +259,91 @@ describe("performance client", () => {
 		});
 	});
 
+	it("does not let repeated script timings starve distinct resource coverage", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 50,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		for (let index = 0; index < 100; index += 1) {
+			client.record({
+				type: "resource",
+				name: "resource.script.duration",
+				value: index,
+				unit: "ms",
+				category: "script",
+			});
+		}
+		for (const category of ["fetch", "xhr", "stylesheet", "image"] as const) {
+			client.record({
+				type: "resource",
+				name: `resource.${category}.duration`,
+				value: 1,
+				unit: "ms",
+				category,
+			});
+		}
+
+		await client.flush();
+
+		const names = JSON.parse(sent[0] ?? "").events.map(
+			(event: { name: string }) => event.name,
+		);
+		expect(names).toEqual(
+			expect.arrayContaining([
+				"resource.fetch.duration",
+				"resource.xhr.duration",
+				"resource.stylesheet.duration",
+				"resource.image.duration",
+			]),
+		);
+		expect(
+			names.filter((name: string) => name === "resource.script.duration"),
+		).toHaveLength(1);
+	});
+
+	it("preserves repeated non-script diagnostics inside the low-priority budget", async () => {
+		const sent: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			maxEventsPerMinute: 30,
+			batchSize: 20,
+			beacon: (_url, body) => {
+				sent.push(String(body));
+				return true;
+			},
+			random: () => 0,
+		});
+		client.record({
+			type: "custom",
+			name: "longtask.duration",
+			value: 51,
+			unit: "ms",
+		});
+		client.record({
+			type: "custom",
+			name: "longtask.duration",
+			value: 72,
+			unit: "ms",
+		});
+
+		await client.flush();
+
+		expect(
+			JSON.parse(sent[0] ?? "").events.filter(
+				(event: { name: string }) => event.name === "longtask.duration",
+			),
+		).toHaveLength(2);
+	});
+
 	it("reserves one third of the minute budget for vitals, errors, and Web3", async () => {
 		const sent: string[] = [];
 		const client = createPerformanceClient({

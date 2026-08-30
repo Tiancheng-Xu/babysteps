@@ -34,6 +34,9 @@ type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
 const workerMinuteQuota = 120;
+const lowPriorityNameLimits = new Map<string, number>([
+	["resource.script.duration", 1],
+]);
 
 export function normalizeMaxEventsPerMinute(value: number): number {
 	if (!Number.isSafeInteger(value)) return workerMinuteQuota;
@@ -63,6 +66,7 @@ export function createPerformanceClient(
 	let minuteStartedAt = Date.now();
 	let minuteCount = 0;
 	let lowPriorityMinuteCount = 0;
+	const lowPriorityNameCounts = new Map<string, number>();
 	let timer: ReturnType<typeof setInterval> | undefined;
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let observers: Array<Pick<PerformanceObserver, "disconnect">> = [];
@@ -106,21 +110,34 @@ export function createPerformanceClient(
 				minuteStartedAt = current;
 				minuteCount = 0;
 				lowPriorityMinuteCount = 0;
+				lowPriorityNameCounts.clear();
 			}
 			const highPriority = isHighPriority(input);
 			const lowPriorityLimit = Math.floor((maxEventsPerMinute * 2) / 3);
+			const safeName = safeMetricName(input.name);
+			const lowPriorityNameLimit = lowPriorityNameLimits.get(safeName);
 			if (
 				random() >= sampleRate ||
 				minuteCount >= maxEventsPerMinute ||
-				(!highPriority && lowPriorityMinuteCount >= lowPriorityLimit)
+				(!highPriority &&
+					(lowPriorityMinuteCount >= lowPriorityLimit ||
+						(lowPriorityNameLimit !== undefined &&
+							(lowPriorityNameCounts.get(safeName) ?? 0) >=
+								lowPriorityNameLimit)))
 			)
 				return;
 			if (!Number.isFinite(input.value)) return;
 			minuteCount += 1;
-			if (!highPriority) lowPriorityMinuteCount += 1;
+			if (!highPriority) {
+				lowPriorityMinuteCount += 1;
+				lowPriorityNameCounts.set(
+					safeName,
+					(lowPriorityNameCounts.get(safeName) ?? 0) + 1,
+				);
+			}
 			enqueue({
 				...input,
-				name: safeMetricName(input.name),
+				name: safeName,
 				eventId: crypto.randomUUID(),
 				timestamp: current,
 				route: normalizeRoute(route()),

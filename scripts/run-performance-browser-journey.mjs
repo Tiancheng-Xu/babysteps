@@ -130,7 +130,15 @@ export function assertJourneyComplete(summary) {
 		throw new Error("UNACCEPTED_TELEMETRY_EVENTS");
 	}
 	if (summary.coverage.missingRequired.length > 0) {
-		throw new Error("INCOMPLETE_METRIC_COVERAGE");
+		const missing = [...new Set(summary.coverage.missingRequired)]
+			.filter((name) => journeyManifest.requiredMetrics.includes(name))
+			.sort()
+			.map((name) => name.toUpperCase().replace(/[^A-Z0-9]+/gu, "_"));
+		throw new Error(
+			missing.length > 0
+				? `INCOMPLETE_METRIC_COVERAGE_${missing.join("_")}`
+				: "INCOMPLETE_METRIC_COVERAGE",
+		);
 	}
 	if (!summary.representativeInteraction.observed) {
 		throw new Error("MISSING_REPRESENTATIVE_INTERACTION_METRIC");

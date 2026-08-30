@@ -359,6 +359,23 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			new RegExp(code),
 		);
 	}
+	assert.throws(
+		() =>
+			assertJourneyComplete({
+				...summary,
+				coverage: {
+					...summary.coverage,
+					missingRequired: [
+						"resource.xhr.duration",
+						"resource.stylesheet.duration",
+					],
+				},
+			}),
+		{
+			message:
+				"INCOMPLETE_METRIC_COVERAGE_RESOURCE_STYLESHEET_DURATION_RESOURCE_XHR_DURATION",
+		},
+	);
 	assert.doesNotMatch(
 		JSON.stringify(summary),
 		/secret|private\.example|cookie|authorization/i,
