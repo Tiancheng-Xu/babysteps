@@ -19,6 +19,7 @@ type ClientOptions = {
 	version: string;
 	sampleRate?: number;
 	maxEventsPerMinute?: number;
+	reportAllWebVitalChanges?: boolean;
 	batchSize?: number;
 	flushIntervalMs?: number;
 	route?: () => string;
@@ -362,6 +363,7 @@ export function createPerformanceClient(
 				onCLS(report("CLS", "score"));
 				onINP(report("INP", "ms"), {
 					durationThreshold: 0,
+					reportAllChanges: options.reportAllWebVitalChanges === true,
 				});
 				onFCP(report("FCP", "ms"));
 				onTTFB(report("TTFB", "ms"));

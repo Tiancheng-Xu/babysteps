@@ -50,7 +50,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Build the exact Edge SSR artifact without AWS
         run: |
-          VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40 \
+          VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40 VITE_PERFORMANCE_REPORT_ALL_CHANGES=true \
             pnpm --filter @babysteps/web build
       - name: Prove routes, interactions and metric coverage before AWS
         run: |
@@ -207,7 +207,7 @@ jobs:
         id: local-web
         run: |
           test "$WEB_ORIGIN" = "http://127.0.0.1:4173"
-          RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40 \
+          RUNNER_TRACKING_ID='' VITE_BABYSTEPS_API_URL=http://127.0.0.1:8788 VITE_APP_VERSION="${GITHUB_SHA:0:12}" VITE_PERFORMANCE_MAX_EVENTS_PER_MINUTE=40 VITE_PERFORMANCE_REPORT_ALL_CHANGES=true \
             pnpm --filter @babysteps/web build
           RUNNER_TRACKING_ID='' nohup pnpm --filter @babysteps/worker exec wrangler pages dev "$GITHUB_WORKSPACE/web/dist" --ip 127.0.0.1 --port 4173 --compatibility-date 2026-07-29 \
             > "$RUNNER_TEMP/local-web.log" 2>&1 &

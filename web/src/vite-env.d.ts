@@ -11,6 +11,7 @@ interface ImportMetaEnv {
 	readonly VITE_PRIVY_APP_ID?: string;
 	readonly VITE_BABYSTEPS_API_URL?: string;
 	readonly VITE_PERFORMANCE_EVIDENCE_FIXTURE?: string;
+	readonly VITE_PERFORMANCE_REPORT_ALL_CHANGES?: string;
 }
 
 interface ImportMeta {

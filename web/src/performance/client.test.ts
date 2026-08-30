@@ -20,6 +20,7 @@ describe("performance client", () => {
 		const client = createPerformanceClient({
 			environment: "test",
 			version: "v1",
+			reportAllWebVitalChanges: true,
 			loadWebVitals: async () =>
 				({
 					onCLS: vi.fn(),
@@ -35,6 +36,7 @@ describe("performance client", () => {
 
 		expect(onINP.mock.calls[0]?.[1]).toEqual({
 			durationThreshold: 0,
+			reportAllChanges: true,
 		});
 		expect(mark).toHaveBeenCalledWith("babysteps.web-vitals.ready");
 		client.stop();
