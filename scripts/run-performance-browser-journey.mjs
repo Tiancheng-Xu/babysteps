@@ -171,6 +171,11 @@ export function assertJourneyComplete(summary) {
 async function performRepresentativeInteraction(page, route) {
 	const interaction = journeyManifest.representativeInteraction;
 	if (route !== interaction.route) return;
+	await page.waitForFunction(
+		(mark) => performance.getEntriesByName(mark, "mark").length > 0,
+		journeyManifest.vitalsReadyMark,
+		{ timeout: journeyManifest.vitalsReadyTimeoutMs },
+	);
 	for (const step of interaction.steps) {
 		const locator = page.getByRole(step.role, {
 			name: step.name,

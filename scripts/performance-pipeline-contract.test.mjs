@@ -157,6 +157,8 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			schemaVersion: journeyManifest.schemaVersion,
 			appId: journeyManifest.appId,
 			perRouteEventBudget: journeyManifest.perRouteEventBudget,
+			vitalsReadyMark: journeyManifest.vitalsReadyMark,
+			vitalsReadyTimeoutMs: journeyManifest.vitalsReadyTimeoutMs,
 			telemetryAttemptTimeoutMs: journeyManifest.telemetryAttemptTimeoutMs,
 			telemetryResponseTimeoutMs: journeyManifest.telemetryResponseTimeoutMs,
 			requiredMetrics: journeyManifest.requiredMetrics,
@@ -169,6 +171,8 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			schemaVersion: 2,
 			appId: "babysteps",
 			perRouteEventBudget: 40,
+			vitalsReadyMark: "babysteps.web-vitals.ready",
+			vitalsReadyTimeoutMs: 10_000,
 			telemetryAttemptTimeoutMs: 3_000,
 			telemetryResponseTimeoutMs: 15_000,
 			requiredMetrics: [
