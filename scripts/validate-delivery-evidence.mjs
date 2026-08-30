@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import journeyManifest from "./performance-journey.manifest.json" with {
+	type: "json",
+};
 
 const requiredHeaders = [
 	"作业要求",
@@ -11,6 +14,15 @@ const requiredHeaders = [
 	"当前状态",
 ];
 const allowedStatuses = new Set(["complete", "partial", "pending", "blocked"]);
+const allowedJourneyStages = new Set([
+	"local-verified",
+	"sepolia-verified",
+	"aws-live-verified",
+	"production-verified",
+	"blocked",
+]);
+const expectedImplementedJourneyIds =
+	journeyManifest.implementedFeatureJourneys.map(({ journeyId }) => journeyId);
 const teacherRequirementPrefixes = [
 	"1. 链上任务列表",
 	"2. Owner 管理商家/老师",
@@ -526,6 +538,64 @@ function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
 	return errors;
 }
 
+export function validateImplementedFeatureJourneyEvidence(evidence, pageText) {
+	const errors = [];
+	const journeys = Array.isArray(evidence?.journeys) ? evidence.journeys : [];
+	const journeyIds = journeys.map(({ journeyId }) => journeyId);
+	if (
+		evidence?.schemaVersion !== 1 ||
+		JSON.stringify(journeyIds) !== JSON.stringify(expectedImplementedJourneyIds)
+	) {
+		errors.push(
+			"implemented-feature Evidence must contain the exact 31 journey catalog",
+		);
+	}
+	if (!allowedJourneyStages.has(evidence?.stage)) {
+		errors.push("implemented-feature Evidence stage is invalid");
+	}
+	for (const journey of journeys) {
+		if (!allowedJourneyStages.has(journey?.status)) {
+			errors.push(
+				`implemented-feature journey status is invalid: ${journey?.journeyId ?? "unknown"}`,
+			);
+		}
+	}
+	const exclusions = Array.isArray(evidence?.exclusions)
+		? evidence.exclusions.join(" ")
+		: "";
+	if (
+		(evidence?.exclusions?.length ?? 0) < 7 ||
+		!exclusions.includes("Agent Market") ||
+		!exclusions.includes("Cocos")
+	) {
+		errors.push(
+			"implemented-feature Evidence must preserve explicit exclusions",
+		);
+	}
+	if (
+		evidence?.stage === "production-verified" &&
+		(!evidence?.finalRun?.workflowRunId ||
+			!evidence?.finalRun?.cloudflareDeploymentId ||
+			evidence?.finalRun?.cleanup?.remainingProjectResources !== 0)
+	) {
+		errors.push("production stage requires final run proof");
+	}
+	for (const marker of [
+		"31 个 Journey",
+		"当前实现边界",
+		...allowedJourneyStages,
+		"2026-08-30-implemented-feature-live-journey.json",
+		"2026-08-30-implemented-feature-live-journey.md",
+	]) {
+		if (!pageText.includes(marker)) {
+			errors.push(
+				`implemented-feature Evidence page is missing marker: ${marker}`,
+			);
+		}
+	}
+	return [...new Set(errors)];
+}
+
 export function validateDeliveryEvidence(
 	mapText,
 	architectureText,
@@ -695,6 +765,9 @@ async function main() {
 	const machineEvidencePath =
 		process.argv[6] ??
 		"docs/evidence/deployment/2026-08-29-performance-aws-final.json";
+	const implementedJourneyEvidencePath =
+		process.argv[7] ??
+		"docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json";
 	const [
 		mapText,
 		architectureText,
@@ -702,6 +775,7 @@ async function main() {
 		evidencePageText,
 		assetFacts,
 		machineEvidenceText,
+		implementedJourneyEvidenceText,
 	] = await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
@@ -709,12 +783,15 @@ async function main() {
 		readFile(evidencePagePath, "utf8"),
 		Promise.all(expectedDiagramAssets.map(({ path }) => readAssetFact(path))),
 		readFile(machineEvidencePath, "utf8"),
+		readFile(implementedJourneyEvidencePath, "utf8"),
 	]);
 	let machineEvidence;
+	let implementedJourneyEvidence;
 	try {
 		machineEvidence = JSON.parse(machineEvidenceText);
+		implementedJourneyEvidence = JSON.parse(implementedJourneyEvidenceText);
 	} catch {
-		console.error("final AWS machine evidence is not valid JSON");
+		console.error("delivery machine evidence is not valid JSON");
 		process.exitCode = 1;
 		return;
 	}
@@ -725,6 +802,12 @@ async function main() {
 		evidencePageText,
 		assetFacts,
 		machineEvidence,
+	);
+	errors.push(
+		...validateImplementedFeatureJourneyEvidence(
+			implementedJourneyEvidence,
+			evidencePageText,
+		),
 	);
 	if (errors.length > 0) {
 		for (const error of errors) console.error(error);

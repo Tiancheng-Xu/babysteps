@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { validateDeliveryEvidence } from "./validate-delivery-evidence.mjs";
+import journeyManifest from "./performance-journey.manifest.json" with {
+	type: "json",
+};
+import {
+	validateDeliveryEvidence,
+	validateImplementedFeatureJourneyEvidence,
+} from "./validate-delivery-evidence.mjs";
 
 const validArchitecture = `
 # BabySteps Web3 architecture
@@ -976,5 +982,47 @@ test("rejects final AWS evidence whose media hash drifts", () => {
 			changed,
 		).join("\n"),
 		/final AWS evidence desktop media hash mismatch/,
+	);
+});
+
+test("implemented-feature Evidence requires the exact 31-journey catalog and honest pending stage", () => {
+	const journeyIds = journeyManifest.implementedFeatureJourneys.map(
+		({ journeyId }) => journeyId,
+	);
+	const evidence = {
+		schemaVersion: 1,
+		stage: "local-verified",
+		journeys: journeyIds.map((journeyId) => ({
+			journeyId,
+			status: "local-verified",
+		})),
+		exclusions: [
+			"Provider D1 draft editing",
+			"Owner role administration",
+			"Task detail comments",
+			"Parent purchase overview",
+			"Automatic swap purchase drawer",
+			"Hidden backend-only capabilities",
+			"Agent Market arbitration and Cocos",
+		],
+	};
+	const page =
+		"31 个 Journey · 当前实现边界 · local-verified · sepolia-verified · aws-live-verified · production-verified · blocked · 2026-08-30-implemented-feature-live-journey.json · 2026-08-30-implemented-feature-live-journey.md";
+
+	assert.deepEqual(
+		validateImplementedFeatureJourneyEvidence(evidence, page),
+		[],
+	);
+	const duplicate = structuredClone(evidence);
+	duplicate.journeys.push(duplicate.journeys[0]);
+	assert.match(
+		validateImplementedFeatureJourneyEvidence(duplicate, page).join("\n"),
+		/exact 31 journey catalog/,
+	);
+	const falseClaim = structuredClone(evidence);
+	falseClaim.stage = "production-verified";
+	assert.match(
+		validateImplementedFeatureJourneyEvidence(falseClaim, page).join("\n"),
+		/production stage requires final run proof/,
 	);
 });

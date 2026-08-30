@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "stage": "local-verified",
+  "provenance": "local-deterministic-gates",
+  "catalogSize": 31,
+  "journeys": [
+    { "journeyId": "NAV-01", "status": "local-verified" },
+    { "journeyId": "WALLET-01", "status": "local-verified" },
+    { "journeyId": "GROWTH-01", "status": "local-verified" },
+    { "journeyId": "GROWTH-02", "status": "local-verified" },
+    { "journeyId": "GROWTH-03", "status": "local-verified" },
+    { "journeyId": "TRANSFER-01", "status": "local-verified" },
+    { "journeyId": "NOTE-01", "status": "local-verified" },
+    { "journeyId": "BABY-01", "status": "local-verified" },
+    { "journeyId": "BABY-02", "status": "local-verified" },
+    { "journeyId": "BABY-03", "status": "local-verified" },
+    { "journeyId": "PARENT-READ-01", "status": "local-verified" },
+    { "journeyId": "MARKET-READ-01", "status": "local-verified" },
+    { "journeyId": "MARKET-APPROVE-01", "status": "local-verified" },
+    { "journeyId": "MARKET-BUY-01", "status": "local-verified" },
+    { "journeyId": "CONTENT-01", "status": "local-verified" },
+    { "journeyId": "COMPLETE-SUBMIT-01", "status": "local-verified" },
+    { "journeyId": "PROVIDER-CREATE-01", "status": "local-verified" },
+    { "journeyId": "OWNER-APPROVE-01", "status": "local-verified" },
+    { "journeyId": "OWNER-REJECT-01", "status": "local-verified" },
+    { "journeyId": "COMPLETION-LOAD-01", "status": "local-verified" },
+    { "journeyId": "COMPLETION-CONFIRM-01", "status": "local-verified" },
+    { "journeyId": "KEEPSAKE-DRAW-01", "status": "local-verified" },
+    { "journeyId": "KEEPSAKE-FUSE-01", "status": "local-verified" },
+    { "journeyId": "KEEPSAKE-RECOVER-01", "status": "local-verified" },
+    { "journeyId": "QUOTE-01", "status": "local-verified" },
+    { "journeyId": "SWAP-01", "status": "local-verified" },
+    { "journeyId": "IDENTITY-LOGIN-01", "status": "local-verified" },
+    { "journeyId": "IDENTITY-SESSION-01", "status": "local-verified" },
+    { "journeyId": "PROFILE-01", "status": "local-verified" },
+    { "journeyId": "PERF-01", "status": "local-verified" },
+    { "journeyId": "EVIDENCE-01", "status": "local-verified" }
+  ],
+  "gates": {
+    "manifestContract": "31/31",
+    "validatorTests": "106/106",
+    "responsiveRoutes": "36/36",
+    "visualRegression": "36/36",
+    "productionBuild": "passed",
+    "publicContent": "passed",
+    "deliveryEvidence": "passed"
+  },
+  "finalRun": null,
+  "exclusions": [
+    "Provider D1 draft editing",
+    "Owner role administration",
+    "Task detail comments",
+    "Parent purchase overview",
+    "Automatic swap purchase drawer",
+    "Hidden backend-only capabilities",
+    "Agent Market arbitration and Cocos"
+  ],
+  "limitations": [
+    "This checkpoint proves deterministic local contracts and UI coverage only.",
+    "Sepolia transactions, visible wallet confirmations, AWS Live aggregation, final recording, cleanup and production readback remain pending Task 7."
+  ]
+}

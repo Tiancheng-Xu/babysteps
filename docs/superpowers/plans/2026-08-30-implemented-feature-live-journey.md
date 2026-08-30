@@ -333,19 +333,19 @@ git commit -m "test: record implemented feature journey evidence"
 - Consumes: Journey JSON、录屏、交易链接、Worker/D1 回读、性能快照与清理 JSON。
 - Produces: “要求 → 实现 → 代码 → 测试/Run/交易 → 状态”的项目 Evidence；失败 Run 33311946947 保留为诊断，不冒充成功快照。
 
-- [ ] **Step 1: 写 Evidence 映射失败测试**
+- [x] **Step 1: 写 Evidence 映射失败测试**
 
 要求所有规格 Journey ID 精确出现一次；明确排除项必须显示“不在当前实现范围”；不得出现私有路径、邮箱、完整地址或 Secret。
 
-- [ ] **Step 2: 更新 Evidence 页面与 JSON**
+- [x] **Step 2: 更新 Evidence 页面与 JSON**
 
 页面必须区分 `local-verified`、`sepolia-verified`、`aws-live-verified`、`production-verified` 和 `blocked`，并展示样本量与低置信度。
 
-- [ ] **Step 3: 运行 Evidence、链接与构建检查**
+- [x] **Step 3: 运行 Evidence、链接与构建检查**
 
 Run: `pnpm --filter @babysteps/web test -- src/pages/EvidencePage.test.tsx && pnpm validate:delivery-evidence && pnpm build`
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add docs/evidence/performance-observability.json docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json web/src/pages/EvidencePage.tsx web/src/pages/EvidencePage.test.tsx scripts/validate-delivery-evidence.mjs scripts/validate-delivery-evidence.test.mjs

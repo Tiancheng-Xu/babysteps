@@ -5,6 +5,7 @@ import renderingSequenceImage from "../../../docs/architecture/starbuddy-renderi
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
+import implementedJourneyEvidenceUrl from "../../../docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json?url";
 import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
 import prdFullWalkthroughVideo from "../../../docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -15,6 +16,7 @@ import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
 import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png";
 import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png";
+import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url";
 import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
 
 const CONTRACTS = [
@@ -33,6 +35,39 @@ const CONTRACTS = [
 	],
 ] as const;
 const KEEPSAKE_RECOVERY_PROOF = "24 小时未回调可恢复";
+const IMPLEMENTED_JOURNEY_GROUPS = [
+	["NAV-01", "WALLET-01", "GROWTH-01", "GROWTH-02", "GROWTH-03"],
+	["TRANSFER-01", "NOTE-01", "BABY-01", "BABY-02", "BABY-03"],
+	[
+		"PARENT-READ-01",
+		"MARKET-READ-01",
+		"MARKET-APPROVE-01",
+		"MARKET-BUY-01",
+		"CONTENT-01",
+		"COMPLETE-SUBMIT-01",
+	],
+	[
+		"PROVIDER-CREATE-01",
+		"OWNER-APPROVE-01",
+		"OWNER-REJECT-01",
+		"COMPLETION-LOAD-01",
+		"COMPLETION-CONFIRM-01",
+	],
+	[
+		"KEEPSAKE-DRAW-01",
+		"KEEPSAKE-FUSE-01",
+		"KEEPSAKE-RECOVER-01",
+		"QUOTE-01",
+		"SWAP-01",
+	],
+	[
+		"IDENTITY-LOGIN-01",
+		"IDENTITY-SESSION-01",
+		"PROFILE-01",
+		"PERF-01",
+		"EVIDENCE-01",
+	],
+] as const;
 
 export function EvidencePage() {
 	return (
@@ -91,6 +126,79 @@ export function EvidencePage() {
 						55fac7c9ab84 · SHA-256 61c0188e…e3dc7f87。
 					</figcaption>
 				</figure>
+			</section>
+
+			<section
+				className="evidence-feature-proof"
+				aria-labelledby="implemented-feature-journey-title"
+			>
+				<header className="evidence-feature-proof__header">
+					<div>
+						<p className="section-kicker">VISIBLE UI · REAL JOURNEY GATE</p>
+						<h2 id="implemented-feature-journey-title">已实现功能真实全旅程</h2>
+					</div>
+					<span className="evidence-diagram-card__status">
+						local-verified · 31 个 Journey
+					</span>
+				</header>
+				<p className="evidence-feature-proof__lead">
+					本地已锁定 31 个可见产品 Journey、20 个低基数业务性能指标、31
+					章录屏合同，以及 9 条路由 × 4 个视口的浏览器与 BackstopJS Gate。旧
+					34.4 秒录屏仍只证明 UI 走读；最终录屏、Sepolia 本轮交易、AWS Live
+					与生产回读必须在同一最终提交上完成后才能升级状态。
+				</p>
+				<div className="evidence-runtime-grid">
+					<article>
+						<strong>状态层级</strong>
+						<span>
+							local-verified → sepolia-verified → aws-live-verified →
+							production-verified；失败使用 blocked
+						</span>
+					</article>
+					<article>
+						<strong>当前确定性 Gate</strong>
+						<span>
+							Validator 106/106 · 页面语义 36/36 · BackstopJS 36/36 ·
+							生产构建通过
+						</span>
+					</article>
+				</div>
+				<section
+					className="evidence-requirement-map"
+					aria-labelledby="implemented-journey-catalog-title"
+				>
+					<h3 id="implemented-journey-catalog-title">Journey ID 目录</h3>
+					<div>
+						{IMPLEMENTED_JOURNEY_GROUPS.map((group) => (
+							<article key={group[0]}>
+								<code>{group.join(" · ")}</code>
+							</article>
+						))}
+					</div>
+				</section>
+				<article className="evidence-diagram-card">
+					<h3>当前实现边界</h3>
+					<p>
+						不在当前实现范围：Provider D1 草稿编辑、Owner
+						角色管理、独立任务详情与评论、 家长购买总览、购买抽屉自动
+						Swap，以及属于 Agent Market 的仲裁和
+						Cocos。它们不会用隐藏接口或夹具冒充产品 UI。
+					</p>
+					<div className="evidence-diagram-card__actions">
+						<a
+							className="evidence-diagram-link"
+							href={implementedJourneyEvidenceUrl}
+						>
+							查看机器证据
+						</a>
+						<a
+							className="evidence-diagram-link"
+							href={implementedJourneyRecordUrl}
+						>
+							查看实现记录
+						</a>
+					</div>
+				</article>
 			</section>
 
 			<section

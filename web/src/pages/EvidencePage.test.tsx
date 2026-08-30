@@ -5,6 +5,22 @@ import { EvidencePage } from "./EvidencePage";
 afterEach(cleanup);
 
 describe("EvidencePage", () => {
+	it("publishes the exact implemented-feature journey boundary without claiming the pending live run", () => {
+		render(<EvidencePage />);
+
+		expect(
+			screen.getByRole("heading", { name: "已实现功能真实全旅程" }),
+		).toBeTruthy();
+		expect(screen.getByText(/local-verified · 31 个 Journey/u)).toBeTruthy();
+		expect(screen.getByText(/NAV-01 · WALLET-01/u)).toBeTruthy();
+		expect(screen.getByText(/PERF-01 · EVIDENCE-01/u)).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "当前实现边界" })).toBeTruthy();
+		expect(screen.getByText(/Agent Market 的仲裁和 Cocos/u)).toBeTruthy();
+		expect(screen.getByRole("link", { name: "查看机器证据" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "查看实现记录" })).toBeTruthy();
+		expect(screen.getByText(/最终录屏、Sepolia/u)).toBeTruthy();
+	});
+
 	it("explains the verified local edge rendering and honest cloud boundary", () => {
 		render(<EvidencePage />);
 
