@@ -510,6 +510,9 @@ describe("performance client", () => {
 			});
 		}
 		for (const name of [
+			"navigation.dns",
+			"navigation.tcp",
+			"navigation.tls",
 			"resource.xhr.duration",
 			"resource.image.duration",
 			"resource.font.duration",
@@ -518,8 +521,11 @@ describe("performance client", () => {
 			client.record({
 				type: name.startsWith("resource.") ? "resource" : "custom",
 				name,
-				value: 8,
+				value: name.startsWith("navigation.") ? 0 : 8,
 				unit: "ms",
+				...(name.startsWith("navigation.")
+					? { outcome: "unavailable" as const }
+					: {}),
 			});
 		}
 
@@ -531,6 +537,9 @@ describe("performance client", () => {
 		);
 		expect(names).toEqual(
 			expect.arrayContaining([
+				"navigation.dns",
+				"navigation.tcp",
+				"navigation.tls",
 				"resource.xhr.duration",
 				"resource.image.duration",
 				"resource.font.duration",

@@ -591,6 +591,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			observed: [...required, "longtask.duration"].sort(),
 			unavailable: ["navigation.dns", "navigation.tcp", "navigation.tls"],
 			missingRequired: [],
+			missingUnavailable: [],
 		},
 		batchCount: 2,
 		acceptedBatchCount: 2,
@@ -731,6 +732,29 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		),
 		/secret|private\.example|token/i,
 	);
+});
+
+test("the Chromium journey cannot claim unavailable navigation coverage without delivered events", async () => {
+	const { assertJourneyComplete, journeyManifest, sanitizeJourneySummary } =
+		await import("./run-performance-browser-journey.mjs");
+	const summary = sanitizeJourneySummary({
+		routes: journeyManifest.routes.map(({ path }) => path),
+		coverage: journeyManifest.requiredMetrics,
+		batchCount: 1,
+		acceptedBatchCount: 1,
+		eventCount: journeyManifest.requiredMetrics.length,
+		representativeMetricObserved: true,
+	});
+
+	assert.deepEqual(summary.coverage.unavailable, []);
+	assert.deepEqual(
+		summary.coverage.missingUnavailable,
+		["navigation.dns", "navigation.tcp", "navigation.tls"],
+	);
+	assert.throws(() => assertJourneyComplete(summary), {
+		message:
+			"INCOMPLETE_UNAVAILABLE_COVERAGE_NAVIGATION_DNS_NAVIGATION_TCP_NAVIGATION_TLS",
+	});
 });
 
 test("the PRD walkthrough records every product route without wallet or chain writes", async () => {

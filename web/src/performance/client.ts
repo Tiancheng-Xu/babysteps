@@ -38,6 +38,9 @@ const workerMinuteQuota = 120;
 export const webVitalsReadyMark = "babysteps.web-vitals.ready";
 const coverageCriticalNames = new Set([
 	...webVitalNames,
+	"navigation.dns",
+	"navigation.tcp",
+	"navigation.tls",
 	"navigation.request_wait",
 	"navigation.download",
 	"navigation.dom_ready",
@@ -66,6 +69,9 @@ const lowPriorityNameLimits = new Map<string, number>([
 const highPriorityNameLimits = new Map<string, number>([
 	["rpc.read", 2],
 	["web3.rpc.read", 2],
+	["navigation.dns", 1],
+	["navigation.tcp", 1],
+	["navigation.tls", 1],
 	["navigation.request_wait", 1],
 	["navigation.download", 1],
 	["navigation.dom_ready", 1],

@@ -27,6 +27,9 @@
 ### Task 1: 修复显式不可用导航阶段的云端聚合契约
 
 **Files:**
+- Modify: `web/src/performance/client.ts`
+- Modify: `web/src/performance/client.test.ts`
+- Modify: `scripts/run-performance-browser-journey.mjs`
 - Modify: `aws/src/performance/pipeline.ts`
 - Modify: `aws/test/performancePipeline.test.ts`
 - Modify: `scripts/validate-performance-readback.mjs`
@@ -37,7 +40,7 @@
 - Consumes: `PerformanceEvent.outcome: "unavailable"` 与 Manifest 的 `unavailableMetrics`。
 - Produces: `computePerformanceDashboard(events)` 对 DNS/TCP/TLS 返回 `sampleCount=0`、空分位数以及 `coverage/status="unavailable"`；`validatePerformanceReadback()` 接受这一精确形状。
 
-- [ ] **Step 1: 写入真实失败回归测试**
+- [x] **Step 1: 写入真实失败回归测试**
 
 ```ts
 it("preserves unavailable DNS TCP and TLS through aggregate coverage", () => {
@@ -55,13 +58,13 @@ it("preserves unavailable DNS TCP and TLS through aggregate coverage", () => {
 });
 ```
 
-- [ ] **Step 2: 运行失败测试并复现 Run 33311946947 的错误**
+- [x] **Step 2: 运行失败测试并复现 Run 33311946947 的错误**
 
 Run: `pnpm --filter @babysteps/aws test -- --runInBand && node --test --test-name-pattern='performance readback' scripts/performance-pipeline-contract.test.mjs`
 
 Expected: 新测试在修复前失败，或夹具复现 `INVALID_UNAVAILABLE_COVERAGE_navigation_dns`。
 
-- [ ] **Step 3: 修复聚合而不把 0ms 冒充观测值**
+- [x] **Step 3: 修复聚合而不把 0ms 冒充观测值**
 
 ```ts
 function summarizeMetric(events, name, unit) {
@@ -79,13 +82,13 @@ function summarizeMetric(events, name, unit) {
 
 同时确认 Cleaner/PostgreSQL 没有丢弃 `outcome="unavailable"`；若丢弃，修复映射并增加数据库往返测试，不能放宽 Validator 绕过事实。
 
-- [ ] **Step 4: 运行目标测试与管线契约**
+- [x] **Step 4: 运行目标测试与管线契约**
 
 Run: `pnpm --filter @babysteps/aws test && pnpm test:validators && pnpm validate:performance-pipeline`
 
 Expected: PASS，且错误/Long Task 的 healthy-zero 语义不回归。
 
-- [ ] **Step 5: 记录根因并提交**
+- [x] **Step 5: 记录根因并提交**
 
 ```bash
 git add aws/src/performance/pipeline.ts aws/test/performancePipeline.test.ts scripts/validate-performance-readback.mjs scripts/performance-pipeline-contract.test.mjs docs/evidence/testing/2026-08-30-performance-readback-unavailable.md
