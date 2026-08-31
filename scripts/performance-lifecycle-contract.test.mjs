@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -204,9 +205,9 @@ test("parsed start stop and safety-expiry cleanup topology are explicit", async 
 	const idempotentStopIndex = resolve.run.indexOf("action=idempotent-stop");
 	assert.ok(stopBindingIndex >= 0 && stopBindingIndex < idempotentStopIndex);
 	assert.match(resolve.run, /operation_id="\$REQUESTED_OPERATION_ID"/);
-	assert.doesNotMatch(
+	assert.match(
 		resolve.run,
-		/test "\$REQUESTED_OPERATION_ID" = "\$active_operation_id"/,
+		/if test "\$REQUESTED_OPERATION_ID" = "\$active_operation_id"; then/,
 	);
 
 	for (const name of [
@@ -280,8 +281,10 @@ test("callbacks use v1 headers and HMAC timestamp dot exact raw body", async () 
 		"https://baby2b.online/api/performance/control/callback",
 	);
 	assert.doesNotMatch(source, /evidence\.baby2b\.online/);
-	for (const step of steps.filter((candidate) =>
-		/callback/i.test(candidate.name ?? ""),
+	for (const step of steps.filter(
+		(candidate) =>
+			/^Publish /.test(candidate.name ?? "") &&
+			/callback/i.test(candidate.name ?? ""),
 	)) {
 		if (!step.run) continue;
 		assert.match(step.run, /performance_post_callback/);
@@ -555,6 +558,175 @@ test("expiry retains the exact stack after schema failure and reports honest cle
 	assert.match(cleanup.run, /zeroResidualVerified:false/);
 });
 
+test("before-database-access failures bypass secret and ECS cleanup but still prove zero residue", async () => {
+	const { steps } = await loadWorkflow();
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(resolve.run, /database_state=before-database-access/);
+	assert.match(resolve.run, /CLEANUP_STATE_PARAMETER/);
+	assert.match(resolve.run, /\.databaseState/);
+	assert.match(resolve.run, /database_state=\$database_state/);
+
+	const runningMarker = stepByName(
+		steps,
+		"Mark persistent cleanup state running",
+	);
+	assert.match(runningMarker.run, /databaseState/);
+	assert.match(runningMarker.run, /before-database-access/);
+
+	const databaseAccess = stepByName(
+		steps,
+		"Mark database lifecycle access started",
+	);
+	assert.equal(databaseAccess.if, "steps.resolve.outputs.action == 'start'");
+	assert.match(databaseAccess.run, /schema-initialized/);
+	assert.ok(
+		steps.indexOf(databaseAccess) <
+			steps.indexOf(
+				stepByName(steps, "Initialize exact project database schema"),
+			),
+	);
+
+	for (const name of [
+		"Resolve ephemeral origin token from exact stack secret",
+		"Run final-aggregate",
+		"DROP SCHEMA using exact schema-cleanup task",
+	]) {
+		assert.match(
+			stepByName(steps, name).if,
+			/steps\.resolve\.outputs\.database_state == 'schema-initialized'/,
+		);
+	}
+
+	const deletion = stepByName(steps, "Delete exact stable project stack");
+	assert.match(deletion.if, /database_state == 'before-database-access'/);
+	assert.match(deletion.if, /schema-cleanup\.outcome == 'success'/);
+	const residue = stepByName(steps, "Verify zero project residue");
+	assert.equal(
+		residue.env.DATABASE_STATE,
+		"${{ steps.resolve.outputs.database_state }}",
+	);
+	assert.match(residue.run, /databaseState/);
+
+	const terminal = stepByName(
+		steps,
+		"Publish verified stopped before database access callback",
+	);
+	assert.match(terminal.if, /database_state == 'before-database-access'/);
+	assert.match(terminal.if, /zero-residue\.outcome == 'success'/);
+	assert.match(terminal.run, /--arg status stopped/);
+	assert.doesNotMatch(terminal.run, /performance-snapshot/);
+});
+
+test("scheduled and manual recovery callbacks bind to the persisted expected predecessor", async () => {
+	const { steps } = await loadWorkflow();
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(resolve.run, /expected_workflow_run_id="\$GITHUB_RUN_ID"/);
+	assert.match(resolve.run, /\.expectedWorkflowRunId/);
+	assert.match(
+		resolve.run,
+		/action=expiry\s+expected_workflow_run_id="\$persisted_expected_workflow_run_id"/,
+		"scheduled expiry must retain the workflow Run already bound by the start operation",
+	);
+	assert.match(
+		resolve.run,
+		/test "\$REQUESTED_OPERATION_ID" = "\$active_operation_id"/,
+	);
+	assert.match(
+		resolve.run,
+		/expected_workflow_run_id=\$expected_workflow_run_id/,
+	);
+
+	const runningMarker = stepByName(
+		steps,
+		"Mark persistent cleanup state running",
+	);
+	assert.match(runningMarker.run, /expectedWorkflowRunId/);
+	assert.match(runningMarker.run, /GITHUB_RUN_ID/);
+
+	const lineage = stepByName(steps, "Persist recovery callback lineage");
+	assert.match(lineage.if, /action == 'stop'/);
+	assert.match(lineage.if, /action == 'expiry'/);
+	assert.match(lineage.if, /action == 'idempotent-stop'/);
+	assert.match(lineage.run, /expectedWorkflowRunId/);
+	assert.match(lineage.run, /EXPECTED_WORKFLOW_RUN_ID/);
+
+	for (const name of [
+		"Publish running callback",
+		"Publish verified stopped snapshot callback",
+		"Publish verified stopped before database access callback",
+		"Publish idempotent stopped callback",
+		"Publish cleanup_required without claiming cleanup success",
+	]) {
+		const callback = stepByName(steps, name);
+		assert.equal(
+			callback.env.WORKFLOW_RUN_ID,
+			"${{ steps.resolve.outputs.expected_workflow_run_id }}",
+			`${name} must use the persisted expected predecessor`,
+		);
+		assert.match(callback.run, /delivery_id="github-\$\{GITHUB_RUN_ID\}/);
+	}
+});
+
+test("legacy lifecycle records migrate only after independently verified stack absence", async () => {
+	const { steps } = await loadWorkflow();
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(
+		resolve.run,
+		/jq -r '\.Parameter\.Value \| fromjson \| \.expectedWorkflowRunId \/\/ ""'/,
+		"legacy active-operation records must be parsed without crashing",
+	);
+	assert.match(
+		resolve.run,
+		/jq -r '\.Parameter\.Value \| fromjson \| \.databaseState \/\/ ""'/,
+		"legacy cleanup markers must be parsed without crashing",
+	);
+	const legacyActive = JSON.stringify({
+		Parameter: {
+			Value: JSON.stringify({
+				schemaVersion: "1.0",
+				operationId: "legacy-operation-1",
+				generation: 1,
+				expiresAt: "2026-08-31T20:00:00Z",
+			}),
+		},
+	});
+	for (const field of ["expectedWorkflowRunId", "databaseState"]) {
+		const result = spawnSync(
+			"jq",
+			["-r", `.Parameter.Value | fromjson | .${field} // ""`],
+			{ input: legacyActive, encoding: "utf8" },
+		);
+		assert.equal(result.status, 0, `${field} legacy parse must exit zero`);
+		assert.equal(result.stdout.trim(), "");
+	}
+	assert.match(resolve.run, /legacy_cleanup_state/);
+	assert.match(
+		resolve.run,
+		/test "\$stack_presence" = 3.*test "\$legacy_cleanup_state" = cleanup_verified/s,
+		"database cleanup may be inferred only after stack absence and prior cleanup verification",
+	);
+	assert.match(resolve.run, /database_state=schema-cleanup-verified/);
+	assert.match(
+		resolve.run,
+		/test -n "\$persisted_expected_workflow_run_id"/,
+		"replaying a legacy operation without its bound predecessor must fail closed",
+	);
+	const markerRequired = stepByName(
+		steps,
+		"Mark persistent cleanup state required",
+	);
+	assert.equal(
+		markerRequired.env.DATABASE_STATE,
+		"${{ steps.resolve.outputs.database_state }}",
+	);
+	assert.match(
+		markerRequired.run,
+		/jq -r '\.databaseState \/\/ ""'/,
+		"downgrading a legacy verified marker must not exit before recording cleanup_required",
+	);
+	assert.match(markerRequired.run, /database_state="\$DATABASE_STATE"/);
+});
+
 test("start derives safe required deployment identity without raw approval material", async () => {
 	const { job, steps } = await loadWorkflow();
 	assert.equal(job.env.RUN_ID, "${{ github.run_id }}");
@@ -643,6 +815,14 @@ test("persistent cleanup marker gates lifecycle and idempotent stopped callbacks
 	assert.match(
 		cleanup.if,
 		/cleanup-marker\.outputs\.state != 'cleanup_verified'/,
+	);
+	assert.match(
+		required.if,
+		/idempotent-stop'.*zero-residue\.outcome != 'success'/,
+	);
+	assert.match(
+		cleanup.if,
+		/idempotent-stop'.*zero-residue\.outcome != 'success'/,
 	);
 });
 
