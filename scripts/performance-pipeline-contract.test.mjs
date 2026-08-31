@@ -986,6 +986,22 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 		sanitizeJourneyFailure(new Error("socket closed"), "/performance"),
 		"ROUTE_FAILED_PERFORMANCE",
 	);
+	assert.equal(
+		sanitizeJourneyFailure(
+			new Error("Timeout 15000ms exceeded while awaiting private telemetry"),
+			"/performance",
+			"telemetry-acceptance",
+		),
+		"ROUTE_TIMEOUT_PERFORMANCE_TELEMETRY_ACCEPTANCE",
+	);
+	assert.equal(
+		sanitizeJourneyFailure(
+			new Error("Timeout while loading https://private.example/font.woff2"),
+			"/performance",
+			"resource-probes",
+		),
+		"ROUTE_TIMEOUT_PERFORMANCE_RESOURCE_PROBES",
+	);
 	assert.doesNotMatch(
 		sanitizeJourneyFailure(
 			new Error("secret=https://private.example/?token=redacted-fixture"),
