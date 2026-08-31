@@ -33,11 +33,15 @@ const routeTokens = new Map([
 	["/evidence", "EVIDENCE"],
 ]);
 
-export function sanitizeJourneyFailure(error, route) {
+export function sanitizeJourneyFailure(error, route, stage) {
 	const message =
 		error instanceof Error ? `${error.name} ${error.message}` : String(error);
 	const kind = /timeout/iu.test(message) ? "TIMEOUT" : "FAILED";
-	return `ROUTE_${kind}_${routeTokens.get(route) ?? "UNKNOWN"}`;
+	const stageToken =
+		typeof stage === "string" && /^[a-z][a-z-]*$/u.test(stage)
+			? `_${stage.toUpperCase().replaceAll("-", "_")}`
+			: "";
+	return `ROUTE_${kind}_${routeTokens.get(route) ?? "UNKNOWN"}${stageToken}`;
 }
 
 function boundedCount(value) {
@@ -770,22 +774,29 @@ async function runJourney() {
 				{ path: route, heading },
 			] of journeyRoutes.entries()) {
 				process.stdout.write(`BROWSER_ROUTE_START ${routeTokens.get(route)}\n`);
+				let activeStage = "navigation";
 				try {
 					const response = await page.goto(
 						new URL(route, parsedOrigin).toString(),
 						{ waitUntil: "domcontentloaded" },
 					);
 					if (!response?.ok()) throw new Error("HTTP_STATUS");
+					activeStage = "heading";
 					await page
 						.getByRole("heading", { name: heading, exact: true })
 						.waitFor({ state: "visible" });
 					observedRoutes.add(route);
+					activeStage = "read-only-settles";
 					await performSafeReadOnlySettles(page, route);
+					activeStage = "resource-probes";
 					await performSafeResourceProbes(page, route);
+					activeStage = "representative-interaction";
 					await performRepresentativeInteraction(page, route);
+					activeStage = "safe-business-interactions";
 					await performSafeBusinessInteractions(page, route);
 					await page.waitForTimeout(350);
 					if (artifactsDir) {
+						activeStage = "screenshot";
 						await page.screenshot({
 							path: join(
 								artifactsDir,
@@ -794,7 +805,9 @@ async function runJourney() {
 							fullPage: true,
 						});
 					}
+					activeStage = "spa-navigation";
 					await performSpaNavigation(page, route);
+					activeStage = "telemetry-acceptance";
 					await finalizeControlledLifecycle(
 						page,
 						deliveryTracker,
@@ -812,7 +825,7 @@ async function runJourney() {
 						await page.waitForTimeout(journeyManifest.quotaWindowPauseMs);
 					}
 				} catch (error) {
-					throw new Error(sanitizeJourneyFailure(error, route));
+					throw new Error(sanitizeJourneyFailure(error, route, activeStage));
 				}
 			}
 		}
