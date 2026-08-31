@@ -18,6 +18,7 @@ const expectedReadActions = [
 	"lambda:ListFunctions",
 	"logs:DescribeLogGroups",
 	"secretsmanager:DescribeSecret",
+	"secretsmanager:GetSecretValue",
 	"secretsmanager:ListSecrets",
 	"sqs:GetQueueUrl",
 	"tag:GetResources",
@@ -94,6 +95,37 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"arn:aws:iam::782086108248:role/babysteps-performance-query-control",
 		"arn:aws:iam::782086108248:role/babysteps-performance-task-control",
 	]);
+	const secretStatements = policy.Statement.filter((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).some(
+			(action) => action.startsWith("secretsmanager:"),
+		),
+	);
+	const describeSecret = secretStatements.find((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
+			"secretsmanager:DescribeSecret",
+		),
+	);
+	assert.deepEqual(describeSecret?.Resource, [
+		"arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-db-control-*",
+		"arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-origin-control-*",
+	]);
+	const readOriginValue = secretStatements.filter((statement) =>
+		(Array.isArray(statement.Action) ? statement.Action : [statement.Action]).includes(
+			"secretsmanager:GetSecretValue",
+		),
+	);
+	assert.equal(readOriginValue.length, 1);
+	assert.equal(
+		readOriginValue[0].Resource,
+		"arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-origin-control-*",
+	);
+	for (const statement of secretStatements) {
+		for (const action of Array.isArray(statement.Action)
+			? statement.Action
+			: [statement.Action]) {
+			assert.doesNotMatch(action, /\*/);
+		}
+	}
 	assert.ok(
 		policy.Statement.filter((statement) => statement.Resource === "*").every(
 			(statement) =>

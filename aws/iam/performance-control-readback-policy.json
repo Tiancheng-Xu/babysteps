@@ -35,6 +35,12 @@
       ]
     },
     {
+      "Sid": "ReadExactPerformanceOriginSecretValue",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:us-east-1:782086108248:secret:babysteps-performance-origin-control-*"
+    },
+    {
       "Sid": "ReadPerformanceRegionalInventory",
       "Effect": "Allow",
       "Action": [

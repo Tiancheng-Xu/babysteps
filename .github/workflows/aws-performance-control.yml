@@ -129,6 +129,8 @@ jobs:
           source scripts/aws-performance-control-state.sh
           action="$REQUESTED_ACTION"
           operation_id="$REQUESTED_OPERATION_ID"
+          database_state=""
+          expected_workflow_run_id="$GITHUB_RUN_ID"
           set +e
           aws_classify_to_file stack.json cloudformation-stack aws cloudformation describe-stacks --stack-name "$STACK_NAME"
           stack_presence=$?
@@ -145,12 +147,21 @@ jobs:
               operation_id="$(jq -er '.Parameter.Value | fromjson | .operationId' active-operation.json)"
               generation="$(jq -er '.Parameter.Value | fromjson | .generation' active-operation.json)"
               expires_at="$(jq -er '.Parameter.Value | fromjson | .expiresAt' active-operation.json)"
+              persisted_expected_workflow_run_id="$(jq -r '.Parameter.Value | fromjson | .expectedWorkflowRunId // ""' active-operation.json)"
+              test -n "$persisted_expected_workflow_run_id" || { echo "Legacy active operation cannot be expired without an expected workflow Run" >&2; exit 1; }
+              [[ "$persisted_expected_workflow_run_id" =~ ^[1-9][0-9]*$ ]]
+              aws_classify_to_file cleanup-state.json ssm-parameter aws ssm get-parameter --name "$CLEANUP_STATE_PARAMETER"
+              database_state="$(jq -r '.Parameter.Value | fromjson | .databaseState // ""' cleanup-state.json)"
+              test -n "$database_state" || { echo "Legacy active stack has no trustworthy database lifecycle state" >&2; exit 1; }
+              [[ "$database_state" =~ ^(before-database-access|schema-initialized|schema-cleanup-verified)$ ]]
               [[ "$operation_id" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$ ]]
               [[ "$generation" =~ ^[1-9][0-9]*$ ]]
               if test "$(date -u +%s)" -ge "$(date -u -d "$expires_at" +%s)"; then
                 action=expiry
+                expected_workflow_run_id="$persisted_expected_workflow_run_id"
               else
                 action=noop
+                expected_workflow_run_id="$persisted_expected_workflow_run_id"
               fi
             else
               exit 1
@@ -176,6 +187,19 @@ jobs:
             active_operation_id="$(jq -er '.Parameter.Value | fromjson | .operationId' active-operation.json)"
             active_generation="$(jq -er '.Parameter.Value | fromjson | .generation' active-operation.json)"
             active_expires_at="$(jq -er '.Parameter.Value | fromjson | .expiresAt' active-operation.json)"
+            persisted_expected_workflow_run_id="$(jq -r '.Parameter.Value | fromjson | .expectedWorkflowRunId // ""' active-operation.json)"
+            if test -n "$persisted_expected_workflow_run_id"; then
+              [[ "$persisted_expected_workflow_run_id" =~ ^[1-9][0-9]*$ ]]
+            fi
+            aws_classify_to_file cleanup-state.json ssm-parameter aws ssm get-parameter --name "$CLEANUP_STATE_PARAMETER"
+            database_state="$(jq -r '.Parameter.Value | fromjson | .databaseState // ""' cleanup-state.json)"
+            legacy_cleanup_state="$(jq -er '.Parameter.Value | fromjson | .state' cleanup-state.json)"
+            if test -z "$database_state"; then
+              test "$stack_presence" = 3
+              test "$legacy_cleanup_state" = cleanup_verified
+              database_state=schema-cleanup-verified
+            fi
+            [[ "$database_state" =~ ^(before-database-access|schema-initialized|schema-cleanup-verified)$ ]]
             test -n "$active_expires_at"
             date -u -d "$active_expires_at" +%s >/dev/null
             test "$REQUESTED_GENERATION" = "$active_generation"
@@ -183,6 +207,12 @@ jobs:
             operation_id="$REQUESTED_OPERATION_ID"
             generation="$active_generation"
             expires_at="$active_expires_at"
+            if test "$REQUESTED_OPERATION_ID" = "$active_operation_id"; then
+              test -n "$persisted_expected_workflow_run_id"
+              expected_workflow_run_id="$persisted_expected_workflow_run_id"
+            else
+              expected_workflow_run_id="$GITHUB_RUN_ID"
+            fi
             source=control
             if test "$stack_presence" = 3; then
               action=idempotent-stop
@@ -192,6 +222,7 @@ jobs:
           elif test "$action" = "start"; then
             generation="$REQUESTED_GENERATION"
             expires_at="$REQUESTED_EXPIRES_AT"
+            database_state=before-database-access
             source=control
             if test "$stack_presence" = 0; then
               echo "The fixed BabySteps performance stack is already live" >&2
@@ -203,7 +234,24 @@ jobs:
           echo "operation_id=$operation_id" >> "$GITHUB_OUTPUT"
           echo "generation=$generation" >> "$GITHUB_OUTPUT"
           echo "source=$source" >> "$GITHUB_OUTPUT"
+          echo "database_state=$database_state" >> "$GITHUB_OUTPUT"
+          if test "$action" = "start" || test "$action" = "stop" || test "$action" = "expiry" || test "$action" = "idempotent-stop"; then
+            [[ "$expected_workflow_run_id" =~ ^[1-9][0-9]*$ ]]
+          fi
+          echo "expected_workflow_run_id=$expected_workflow_run_id" >> "$GITHUB_OUTPUT"
           echo "EXPIRES_AT=$expires_at" >> "$GITHUB_ENV"
+      - name: Persist recovery callback lineage
+        if: steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry' || steps.resolve.outputs.action == 'idempotent-stop'
+        env:
+          OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+          GENERATION: ${{ steps.resolve.outputs.generation }}
+          EXPECTED_WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
+        run: |
+          [[ "$OPERATION_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$ ]]
+          [[ "$GENERATION" =~ ^[1-9][0-9]*$ ]]
+          [[ "$EXPECTED_WORKFLOW_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          active_operation="$(jq -nc --arg operationId "$OPERATION_ID" --arg generation "$GENERATION" --arg expiresAt "$EXPIRES_AT" --arg expectedWorkflowRunId "$EXPECTED_WORKFLOW_RUN_ID" '{schemaVersion:"1.0",operationId:$operationId,generation:($generation|tonumber),expiresAt:$expiresAt,expectedWorkflowRunId:$expectedWorkflowRunId}')"
+          aws ssm put-parameter --name "$ACTIVE_OPERATION_PARAMETER" --type String --tier Standard --overwrite --value "$active_operation" >/dev/null
       - name: Verify protected shared foundation is ready
         if: steps.resolve.outputs.action != 'noop' && steps.resolve.outputs.action != 'idempotent-stop' && steps.resolve.outputs.action != 'preflight' && steps.resolve.outputs.action != 'bootstrap'
         run: |
@@ -229,9 +277,9 @@ jobs:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
           GENERATION: ${{ steps.resolve.outputs.generation }}
         run: |
-          marker="$(jq -nc --arg state "running" --arg operationId "$OPERATION_ID" --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,cleanupOwner:$owner}')"
+          marker="$(jq -nc --arg state "running" --arg operationId "$OPERATION_ID" --arg databaseState "before-database-access" --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,databaseState:$databaseState,cleanupOwner:$owner}')"
           aws ssm put-parameter --name "$CLEANUP_STATE_PARAMETER" --type String --tier Standard --overwrite --value "$marker" >/dev/null
-          active_operation="$(jq -nc --arg operationId "$OPERATION_ID" --arg generation "$GENERATION" --arg expiresAt "$EXPIRES_AT" '{schemaVersion:"1.0",operationId:$operationId,generation:($generation|tonumber),expiresAt:$expiresAt}')"
+          active_operation="$(jq -nc --arg operationId "$OPERATION_ID" --arg generation "$GENERATION" --arg expiresAt "$EXPIRES_AT" --arg expectedWorkflowRunId "$GITHUB_RUN_ID" '{schemaVersion:"1.0",operationId:$operationId,generation:($generation|tonumber),expiresAt:$expiresAt,expectedWorkflowRunId:$expectedWorkflowRunId}')"
           aws ssm put-parameter --name "$ACTIVE_OPERATION_PARAMETER" --type String --tier Standard --overwrite --value "$active_operation" >/dev/null
       - name: Build existing performance artifacts
         if: steps.resolve.outputs.action == 'start'
@@ -291,6 +339,16 @@ jobs:
           repository="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='CleanerRepositoryUri'].OutputValue" --output text)"
           aws ecr get-login-password | docker login --username AWS --password-stdin "${repository%%/*}"
           docker buildx build --platform linux/arm64 --provenance=false --push -t "$repository:$GITHUB_SHA" -f aws/performance.Dockerfile .
+      - name: Mark database lifecycle access started
+        if: steps.resolve.outputs.action == 'start'
+        env:
+          OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+        run: |
+          current="$(aws ssm get-parameter --name "$CLEANUP_STATE_PARAMETER" --query Parameter.Value --output text)"
+          test "$(printf '%s' "$current" | jq -er '.operationId')" = "$OPERATION_ID"
+          test "$(printf '%s' "$current" | jq -er '.databaseState')" = "before-database-access"
+          marker="$(jq -nc --arg state running --arg operationId "$OPERATION_ID" --arg databaseState schema-initialized --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,databaseState:$databaseState,cleanupOwner:$owner}')"
+          aws ssm put-parameter --name "$CLEANUP_STATE_PARAMETER" --type String --tier Standard --overwrite --value "$marker" >/dev/null
       - name: Initialize exact project database schema
         id: database-init
         if: steps.resolve.outputs.action == 'start'
@@ -309,7 +367,7 @@ jobs:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
           GENERATION: ${{ steps.resolve.outputs.generation }}
           CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
         run: |
           source scripts/aws-performance-control-state.sh
           mkdir -p evidence
@@ -319,7 +377,7 @@ jobs:
           printf '%s\n' "$body" > evidence/running-callback.json
           performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
       - name: Resolve ephemeral origin token from exact stack secret
-        if: steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry'
+        if: (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.resolve.outputs.database_state == 'schema-initialized'
         run: |
           mkdir -p evidence
           printf '{"status":"pending-cloud-readback","requiredActions":["secretsmanager:DescribeSecret","secretsmanager:GetSecretValue"]}\n' > evidence/origin-secret-iam.json
@@ -333,7 +391,7 @@ jobs:
           printf '{"status":"verified-cloud-readback","requiredActions":["secretsmanager:DescribeSecret","secretsmanager:GetSecretValue"]}\n' > evidence/origin-secret-iam.json
       - name: Run final-aggregate
         id: aggregate
-        if: steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry'
+        if: (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.resolve.outputs.database_state == 'schema-initialized'
         continue-on-error: true
         run: |
           mkdir -p evidence
@@ -375,7 +433,7 @@ jobs:
           node -e 'const s=require("./evidence/performance-snapshot.json");if(s.schemaVersion!==2||!Array.isArray(s.metrics)||s.metrics.length<1||s.summary.totalEvents<1)process.exit(1)'
       - name: DROP SCHEMA using exact schema-cleanup task
         id: schema-cleanup
-        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry')
+        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.resolve.outputs.database_state == 'schema-initialized'
         run: |
           for attempt in 1 2 3; do
             cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text 2>/dev/null)" || true
@@ -393,7 +451,7 @@ jobs:
           exit 1
       - name: Delete exact stable project stack
         id: delete-stack
-        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.schema-cleanup.outcome == 'success'
+        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.resolve.outputs.database_state == 'before-database-access' || steps.schema-cleanup.outcome == 'success')
         run: |
           source scripts/aws-performance-control-state.sh
           deleted=false
@@ -440,6 +498,7 @@ jobs:
         if: always() && (steps.delete-stack.outcome == 'success' || steps.resolve.outputs.action == 'idempotent-stop' || steps.resolve.outputs.action == 'preflight' || steps.resolve.outputs.action == 'bootstrap')
         env:
           ACTION: ${{ steps.resolve.outputs.action }}
+          DATABASE_STATE: ${{ steps.resolve.outputs.database_state }}
           SCHEMA_CLEANUP_OUTCOME: ${{ steps.schema-cleanup.outcome }}
         run: |
           source scripts/aws-performance-control-state.sh
@@ -524,14 +583,16 @@ jobs:
           test "$iam_role_count" = 0
           schema_deleted=unknown
           if test "$SCHEMA_CLEANUP_OUTCOME" = "success"; then schema_deleted=true; fi
+          if test "$DATABASE_STATE" = "before-database-access"; then schema_deleted=not-required; fi
           jq -nc \
+            --arg databaseState "$DATABASE_STATE" \
             --arg schemaDeleted "$schema_deleted" \
             --argjson ecsClusters "$ecs_cluster_count" \
             --argjson ecsTasks "$ecs_task_count" \
             --argjson taskDefinitions "$task_definition_count" \
             --argjson iamRoles "$iam_role_count" \
             --argjson cloudWatchLogGroups "$log_group_count" \
-            '{cloudFormationStackAbsent:true,schemaDeleted:(if $schemaDeleted=="true" then true else $schemaDeleted end),remainingRunnableProjectResources:0,inventory:{ecsClusters:$ecsClusters,ecsTasks:$ecsTasks,taskDefinitions:$taskDefinitions,cloudWatchLogGroups:$cloudWatchLogGroups,iamRoles:$iamRoles},sharedFoundationProtected:true}' > evidence/cleanup-readback.json
+            '{cloudFormationStackAbsent:true,databaseState:$databaseState,schemaDeleted:(if $schemaDeleted=="true" then true else $schemaDeleted end),remainingRunnableProjectResources:0,inventory:{ecsClusters:$ecsClusters,ecsTasks:$ecsTasks,taskDefinitions:$taskDefinitions,cloudWatchLogGroups:$cloudWatchLogGroups,iamRoles:$iamRoles},sharedFoundationProtected:true}' > evidence/cleanup-readback.json
       - name: Publish initial verified stopped bootstrap callback
         id: bootstrap-stopped-callback
         if: steps.resolve.outputs.action == 'bootstrap' && steps.zero-residue.outcome == 'success'
@@ -557,19 +618,24 @@ jobs:
           performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
       - name: Mark persistent cleanup state required
         id: marker-required
-        if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.schema-cleanup.outcome != 'success' || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && steps.cleanup-marker.outputs.state != 'cleanup_verified') || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))
+        if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && ((steps.resolve.outputs.database_state == 'schema-initialized' && steps.schema-cleanup.outcome != 'success') || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && (steps.cleanup-marker.outputs.state != 'cleanup_verified' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))
         env:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+          DATABASE_STATE: ${{ steps.resolve.outputs.database_state }}
         run: |
-          marker="$(jq -nc --arg state "cleanup_required" --arg operationId "$OPERATION_ID" --arg schemaResidue unknown --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,schemaResidue:$schemaResidue,cleanupOwner:$owner}')"
+          current="$(aws ssm get-parameter --name "$CLEANUP_STATE_PARAMETER" --query Parameter.Value --output text)"
+          database_state="$(printf '%s' "$current" | jq -r '.databaseState // ""')"
+          if test -z "$database_state"; then database_state="$DATABASE_STATE"; fi
+          [[ "$database_state" =~ ^(before-database-access|schema-initialized|schema-cleanup-verified)$ ]]
+          marker="$(jq -nc --arg state cleanup_required --arg operationId "$OPERATION_ID" --arg databaseState "$database_state" --arg schemaResidue unknown --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,databaseState:$databaseState,schemaResidue:$schemaResidue,cleanupOwner:$owner}')"
           aws ssm put-parameter --name "$CLEANUP_STATE_PARAMETER" --type String --tier Standard --overwrite --value "$marker" >/dev/null
       - name: Mark persistent cleanup state verified
         id: marker-verified
-        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.schema-cleanup.outcome == 'success' && steps.delete-stack.outcome == 'success' && steps.zero-residue.outcome == 'success'
+        if: always() && (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.resolve.outputs.database_state == 'before-database-access' || steps.schema-cleanup.outcome == 'success') && steps.delete-stack.outcome == 'success' && steps.zero-residue.outcome == 'success'
         env:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
         run: |
-          marker="$(jq -nc --arg state "cleanup_verified" --arg operationId "$OPERATION_ID" --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,schemaDeleted:true,stackDeleted:true,zeroResidue:true,cleanupOwner:$owner}')"
+          marker="$(jq -nc --arg state cleanup_verified --arg operationId "$OPERATION_ID" --arg databaseState schema-cleanup-verified --arg owner babysteps-performance-control '{state:$state,operationId:$operationId,databaseState:$databaseState,schemaDeleted:true,stackDeleted:true,zeroResidue:true,cleanupOwner:$owner}')"
           aws ssm put-parameter --name "$CLEANUP_STATE_PARAMETER" --type String --tier Standard --overwrite --value "$marker" >/dev/null
       - name: Publish verified stopped snapshot callback
         id: stopped-callback
@@ -579,13 +645,29 @@ jobs:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
           GENERATION: ${{ steps.resolve.outputs.generation }}
           CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
         run: |
           source scripts/aws-performance-control-state.sh
           delivery_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-stopped"
           occurred_at="$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')"
           body="$(jq -nc --slurpfile snapshot evidence/performance-snapshot.json --arg deliveryId "$delivery_id" --arg source "$CALLBACK_SOURCE" --arg operationId "$OPERATION_ID" --arg generation "$GENERATION" --arg workflowRunId "$WORKFLOW_RUN_ID" --arg status stopped --arg occurredAt "$occurred_at" '{schemaVersion:"1.0",deliveryId:$deliveryId,source:$source,operationId:$operationId,generation:($generation|tonumber),workflowRunId:$workflowRunId,status:$status,occurredAt:$occurredAt,cleanupVerified:true,zeroResidualVerified:true,snapshot:$snapshot[0]}')"
           printf '%s\n' "$body" > evidence/stopped-callback.json
+          performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
+      - name: Publish verified stopped before database access callback
+        id: before-database-stopped-callback
+        if: (steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && steps.resolve.outputs.database_state == 'before-database-access' && steps.zero-residue.outcome == 'success' && steps.marker-verified.outcome == 'success'
+        env:
+          CALLBACK_HMAC_SECRET: ${{ secrets.PERFORMANCE_CONTROL_CALLBACK_HMAC_SECRET }}
+          OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
+          GENERATION: ${{ steps.resolve.outputs.generation }}
+          CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
+          WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
+        run: |
+          source scripts/aws-performance-control-state.sh
+          delivery_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-stopped-before-database-access"
+          occurred_at="$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')"
+          body="$(jq -nc --arg deliveryId "$delivery_id" --arg source "$CALLBACK_SOURCE" --arg operationId "$OPERATION_ID" --arg generation "$GENERATION" --arg workflowRunId "$WORKFLOW_RUN_ID" --arg status stopped --arg occurredAt "$occurred_at" '{schemaVersion:"1.0",deliveryId:$deliveryId,source:$source,operationId:$operationId,generation:($generation|tonumber),workflowRunId:$workflowRunId,status:$status,occurredAt:$occurredAt,cleanupVerified:true,zeroResidualVerified:true}')"
+          printf '%s\n' "$body" > evidence/stopped-before-database-access-callback.json
           performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
       - name: Publish idempotent stopped callback
         id: idempotent-stopped-callback
@@ -595,7 +677,7 @@ jobs:
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
           GENERATION: ${{ steps.resolve.outputs.generation }}
           CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
         run: |
           source scripts/aws-performance-control-state.sh
           mkdir -p evidence
@@ -605,13 +687,13 @@ jobs:
           printf '%s\n' "$body" > evidence/idempotent-stopped-callback.json
           performance_post_callback "$PERFORMANCE_CONTROL_CALLBACK_URL" "$CALLBACK_HMAC_SECRET" "$body"
       - name: Publish cleanup_required without claiming cleanup success
-        if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && (steps.aggregate.outcome != 'success' || steps.schema-cleanup.outcome != 'success' || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success' || steps.marker-verified.outcome != 'success' || steps.stopped-callback.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && steps.cleanup-marker.outputs.state != 'cleanup_verified') || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))
+        if: always() && (((steps.resolve.outputs.action == 'stop' || steps.resolve.outputs.action == 'expiry') && ((steps.resolve.outputs.database_state == 'schema-initialized' && (steps.aggregate.outcome != 'success' || steps.schema-cleanup.outcome != 'success' || steps.stopped-callback.outcome != 'success')) || (steps.resolve.outputs.database_state == 'before-database-access' && steps.before-database-stopped-callback.outcome != 'success') || steps.delete-stack.outcome != 'success' || steps.zero-residue.outcome != 'success' || steps.marker-verified.outcome != 'success')) || (steps.resolve.outputs.action == 'idempotent-stop' && (steps.cleanup-marker.outputs.state != 'cleanup_verified' || steps.zero-residue.outcome != 'success')) || (steps.resolve.outputs.action == 'start' && steps.running-callback.outcome != 'success'))
         env:
           CALLBACK_HMAC_SECRET: ${{ secrets.PERFORMANCE_CONTROL_CALLBACK_HMAC_SECRET }}
           OPERATION_ID: ${{ steps.resolve.outputs.operation_id }}
           GENERATION: ${{ steps.resolve.outputs.generation }}
           CALLBACK_SOURCE: ${{ steps.resolve.outputs.source }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ID: ${{ steps.resolve.outputs.expected_workflow_run_id }}
         run: |
           source scripts/aws-performance-control-state.sh
           mkdir -p evidence
