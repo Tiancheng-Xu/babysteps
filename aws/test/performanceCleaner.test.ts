@@ -13,18 +13,24 @@ describe("performance cleaner", () => {
 			name: "fetch.duration",
 			value: 42,
 			unit: "ms",
+			category: "fetch",
+			outcome: "unavailable",
 			route: "/tasks/42?token=secret",
 			environment: "preview",
 			version: "abc123",
 			authorization: "Bearer secret",
 		});
 		expect(cleaned.route).toBe("/tasks/:id");
+		expect(cleaned.category).toBe("fetch");
+		expect(cleaned.outcome).toBe("unavailable");
 		expect(JSON.stringify(cleaned)).not.toContain("secret");
 		expect(Object.keys(cleaned).sort()).toEqual(
 			[
+				"category",
 				"environment",
 				"eventId",
 				"name",
+				"outcome",
 				"route",
 				"timestamp",
 				"type",
