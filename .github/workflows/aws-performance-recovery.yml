@@ -7,6 +7,10 @@ on:
         description: Exact failed run stack, for example babysteps-performance-123456
         required: true
         type: string
+      stack_id:
+        description: Optional immutable CloudFormation StackId for automated recovery
+        required: false
+        type: string
       database_state:
         description: Last verified database lifecycle state
         required: true
@@ -38,6 +42,7 @@ jobs:
     env:
       AWS_REGION: us-east-1
       STACK_NAME: ${{ inputs.stack_name }}
+      STACK_ID: ${{ inputs.stack_id }}
       DATABASE_STATE: ${{ inputs.database_state }}
     steps:
       - name: Configure short-lived AWS credentials
@@ -51,30 +56,40 @@ jobs:
           APPROVAL_REFERENCE: ${{ inputs.approval_reference }}
         run: |
           [[ "$STACK_NAME" =~ ^babysteps-performance-[0-9]+$ ]]
+          if test -n "$STACK_ID"; then
+            [[ "$STACK_ID" =~ ^arn:aws:cloudformation:us-east-1:782086108248:stack/babysteps-performance-[0-9]+/[A-Za-z0-9-]+$ ]]
+            stack_path="${STACK_ID#*:stack/}"
+            test "${stack_path%%/*}" = "$STACK_NAME"
+            target_stack="$STACK_ID"
+          else
+            target_stack="$STACK_NAME"
+          fi
           [[ "$DATABASE_STATE" =~ ^(before-database-access|schema-initialized|schema-cleanup-verified)$ ]]
           test -n "$APPROVAL_REFERENCE"
           run_id="${STACK_NAME##*-}"
           mkdir -p evidence
           node -e 'const fs=require("fs"),crypto=require("crypto");fs.writeFileSync("evidence/recovery-run.json",JSON.stringify({runId:process.env.STACK_NAME.split("-").at(-1),databaseState:process.env.DATABASE_STATE,approvalReferenceSha256:crypto.createHash("sha256").update(process.env.APPROVAL_REFERENCE).digest("hex")},null,2))'
           set +e
-          stack_metadata="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json 2> describe-stack-error.txt)"
+          stack_metadata="$(aws cloudformation describe-stacks --stack-name "$target_stack" --output json 2> describe-stack-error.txt)"
           describe_status=$?
           set -e
           if test "$describe_status" = 0; then
+            actual_stack_id="$(printf '%s' "$stack_metadata" | jq -er '.Stacks[0].StackId')"
+            if test -n "$STACK_ID"; then test "$actual_stack_id" = "$STACK_ID"; fi
             project="$(printf '%s' "$stack_metadata" | jq -er '[.Stacks[0].Tags[]? | select(.Key == "Project") | .Value] | if length == 1 then .[0] else error("INVALID_PROJECT_TAG_CARDINALITY") end')"
             tagged_run_id="$(printf '%s' "$stack_metadata" | jq -er '[.Stacks[0].Tags[]? | select(.Key == "RunId") | .Value] | if length == 1 then .[0] else error("INVALID_RUN_ID_TAG_CARDINALITY") end')"
             test "$project" = "babysteps-performance"
             [[ "$tagged_run_id" =~ ^[0-9]+$ ]]
             test "$tagged_run_id" = "$run_id"
             stack_state=present
-            aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' > evidence/control-plane-before-recovery.json
+            aws cloudformation describe-stack-resources --stack-name "$target_stack" --query 'StackResources[].{logicalId:LogicalResourceId,type:ResourceType,status:ResourceStatus}' > evidence/control-plane-before-recovery.json
             for output_key in CleanerTaskDefinitionArn DatabaseAdminTaskDefinitionArn; do
-              task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='$output_key'].OutputValue" --output text)"
+              task_definition="$(aws cloudformation describe-stacks --stack-name "$target_stack" --query "Stacks[0].Outputs[?OutputKey=='$output_key'].OutputValue" --output text)"
               if test -n "$task_definition" && test "$task_definition" != "None"; then
                 aws ecs describe-task-definition --task-definition "$task_definition" >/dev/null
               fi
             done
-            security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+            security_group="$(aws cloudformation describe-stacks --stack-name "$target_stack" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
             if test -n "$security_group" && test "$security_group" != "None"; then
               echo "RUNTIME_SECURITY_GROUP_ID=$security_group" >> "$GITHUB_ENV"
             fi
@@ -88,15 +103,16 @@ jobs:
           fi
           echo "RUN_ID=$run_id" >> "$GITHUB_ENV"
           echo "ENVIRONMENT_NAME=e$run_id" >> "$GITHUB_ENV"
+          echo "TARGET_STACK=$target_stack" >> "$GITHUB_ENV"
           echo "validated=true" >> "$GITHUB_OUTPUT"
           echo "stack_state=$stack_state" >> "$GITHUB_OUTPUT"
       - name: Drop and verify exact run-scoped schema
         id: schema-cleanup
         if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && steps.validate-target.outputs.stack_state == 'present' && inputs.database_state == 'schema-initialized'
         run: |
-          cluster="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
-          task_definition="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
-          security_group="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
+          cluster="$(aws cloudformation describe-stacks --stack-name "$TARGET_STACK" --query "Stacks[0].Outputs[?OutputKey=='ClusterArn'].OutputValue" --output text)"
+          task_definition="$(aws cloudformation describe-stacks --stack-name "$TARGET_STACK" --query "Stacks[0].Outputs[?OutputKey=='DatabaseAdminTaskDefinitionArn'].OutputValue" --output text)"
+          security_group="$(aws cloudformation describe-stacks --stack-name "$TARGET_STACK" --query "Stacks[0].Outputs[?OutputKey=='RuntimeSecurityGroupId'].OutputValue" --output text)"
           for mode in cleanup-schema verify-schema-absent; do
             succeeded=false
             for attempt in 1 2 3; do
@@ -115,12 +131,12 @@ jobs:
         id: delete-stack
         if: always() && steps.validate-target.outcome == 'success' && steps.validate-target.outputs.validated == 'true' && steps.validate-target.outputs.stack_state == 'present' && (inputs.database_state != 'schema-initialized' || steps.schema-cleanup.outcome == 'success')
         run: |
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+          if aws cloudformation describe-stacks --stack-name "$TARGET_STACK" >/dev/null 2>&1; then
             deleted=false
             for attempt in 1 2 3; do
-              aws cloudformation delete-stack --stack-name "$STACK_NAME" --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}' || true
+              aws cloudformation delete-stack --stack-name "$TARGET_STACK" --role-arn '${{ vars.AWS_PERFORMANCE_CLOUDFORMATION_ROLE_ARN }}' || true
               set +e
-              aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+              aws cloudformation wait stack-delete-complete --stack-name "$TARGET_STACK"
               wait_status=$?
               set -e
               if test "$wait_status" = "0"; then deleted=true; break; fi
@@ -157,7 +173,21 @@ jobs:
             test "$STACK_STATE" = "absent"
             test "$DATABASE_STATE" = "before-database-access" || test "$DATABASE_STATE" = "schema-cleanup-verified"
           fi
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then exit 1; fi
+          if test -n "$STACK_ID"; then
+            target_stack_status="$(aws cloudformation describe-stacks --stack-name "$TARGET_STACK" --query 'Stacks[0].StackStatus' --output text)"
+            test "$target_stack_status" = "DELETE_COMPLETE"
+          fi
+          set +e
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2> same-name-stack-error.txt
+          same_name_status=$?
+          set -e
+          if test "$same_name_status" = 0; then
+            echo "A same-name replacement stack exists" >&2
+            exit 1
+          elif ! grep -Eq 'An error occurred \(ValidationError\).*does not exist' same-name-stack-error.txt; then
+            echo "Unable to verify same-name stack absence" >&2
+            exit 1
+          fi
           ecr_remaining=0
           aws ecr describe-repositories --repository-names "babysteps-performance-cleaner-$ENVIRONMENT_NAME" >/dev/null 2>&1 && ecr_remaining=1
           ecs_clusters="$(aws ecs list-clusters --query "clusterArns[?contains(@, 'babysteps-performance-$ENVIRONMENT_NAME')]" --output text)"
@@ -251,13 +281,22 @@ jobs:
             exit 0
           fi
           now_epoch="$(date -u +%s)"
-          stack_names="$(aws cloudformation describe-stacks --query "Stacks[?starts_with(StackName, 'babysteps-performance-')].StackName" --output text)"
-          for stack_name in $stack_names; do
+          stack_arns="$(aws resourcegroupstaggingapi get-resources \
+            --tag-filters Key=Project,Values=babysteps-performance \
+            --resource-type-filters cloudformation:stack \
+            --query 'ResourceTagMappingList[].ResourceARN' \
+            --output text)"
+          for stack_arn in $stack_arns; do
+            [[ "$stack_arn" =~ ^arn:aws:cloudformation:us-east-1:782086108248:stack/babysteps-performance-[0-9]+/[A-Za-z0-9-]+$ ]] || continue
+            stack_path="${stack_arn#*:stack/}"
+            stack_name="${stack_path%%/*}"
             [[ "$stack_name" =~ ^babysteps-performance-[0-9]+$ ]] || continue
-            metadata="$(aws cloudformation describe-stacks --stack-name "$stack_name" --output json)"
+            metadata="$(aws cloudformation describe-stacks --stack-name "$stack_arn" --output json)"
+            actual_stack_id="$(printf '%s' "$metadata" | jq -r '.Stacks[0].StackId // ""')"
             project="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "Project")) | .[0].Value // ""')"
             run_id="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "RunId")) | .[0].Value // ""')"
             expires_at="$(printf '%s' "$metadata" | jq -r '.Stacks[0].Tags // [] | map(select(.Key == "ExpiresAt")) | .[0].Value // ""')"
+            test "$actual_stack_id" = "$stack_arn" || continue
             test "$project" = "babysteps-performance" || continue
             [[ "$run_id" =~ ^[0-9]+$ ]] || continue
             test "$stack_name" = "babysteps-performance-$run_id" || continue
@@ -266,6 +305,7 @@ jobs:
             if test "$now_epoch" -lt "$expires_epoch"; then continue; fi
             gh workflow run aws-performance-recovery.yml --repo "$GITHUB_REPOSITORY" --ref main \
               -f stack_name="$stack_name" \
+              -f stack_id="$stack_arn" \
               -f database_state=schema-initialized \
               -f approval_reference="automatic-ttl-janitor-${GITHUB_RUN_ID}"
             echo "Dispatched fixed recovery for one expired, tag-verified stack."

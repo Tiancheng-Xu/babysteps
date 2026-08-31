@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { parse } from "yaml";
 
@@ -1903,6 +1905,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.equal(validation.id, "validate-target");
 	assert.match(validation.run, /Project/);
 	assert.match(validation.run, /RunId/);
+	assert.match(validation.run, /STACK_ID/);
+	assert.match(validation.run, /TARGET_STACK/);
+	assert.match(validation.run, /Stacks\[0\]\.StackId/);
+	assert.match(validation.run, /test "\$actual_stack_id" = "\$STACK_ID"/);
 	assert.match(validation.run, /test "\$project" = "babysteps-performance"/);
 	assert.match(validation.run, /test "\$tagged_run_id" = "\$run_id"/);
 	assert.match(validation.run, /validated=true.*GITHUB_OUTPUT/s);
@@ -1968,6 +1974,18 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	const inventory = stepByName("Verify exact prefix and tag inventory is zero");
 	assert.match(inventory.if, /steps\.validate-target\.outcome == 'success'/);
 	assert.match(inventory.if, /outputs\.stack_state == 'absent'/);
+	assert.match(inventory.run, /test "\$target_stack_status" = "DELETE_COMPLETE"/);
+	assert.match(
+		inventory.run,
+		/describe-stacks --stack-name "\$STACK_NAME"[^\n]*same-name-stack-error\.txt/,
+	);
+	assert.match(inventory.run, /same_name_status/);
+	assert.match(inventory.run, /ValidationError.*does not exist/);
+	assert.match(inventory.run, /Unable to verify same-name stack absence/);
+	assert.doesNotMatch(
+		inventory.run,
+		/if aws cloudformation describe-stacks --stack-name "\$TARGET_STACK"[^\n]*then exit 1/,
+	);
 	assert.match(
 		inventory.if,
 		/steps\.delete-task-definitions\.outcome == 'success'/,
@@ -2018,7 +2036,81 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	assert.match(recovery, /id-token: write/);
 	assert.match(recovery, /\^babysteps-performance-\[0-9\]\+\$/);
 	assert.match(recovery, /if aws cloudformation describe-stacks/);
-	assert.match(recovery, /delete-stack --stack-name "\$STACK_NAME"/);
+	assert.match(recovery, /delete-stack --stack-name "\$TARGET_STACK"/);
+	assert.doesNotMatch(
+		recovery,
+		/cloudformation (?:describe-stack-resources|delete-stack|wait stack-delete-complete)[^\n]*"\$STACK_NAME"/,
+	);
+	assert.equal(
+		recovery.match(
+			/cloudformation describe-stacks[^\n]*--stack-name "\$STACK_NAME"/g,
+		)?.length,
+		1,
+		"only the post-delete same-name replacement check may use STACK_NAME",
+	);
+	const stackGateStart = inventory.run.indexOf('if test -n "$STACK_ID"; then');
+	const stackGateEnd = inventory.run.indexOf("ecr_remaining=0");
+	assert.ok(stackGateStart >= 0 && stackGateEnd > stackGateStart);
+	const stackGate = inventory.run.slice(stackGateStart, stackGateEnd);
+	const stackGateCwd = await mkdtemp(join(tmpdir(), "babysteps-stack-gate-"));
+	const runStackGate = (targetStatus, nameResult) =>
+		spawnSync(
+			"bash",
+			[
+				"-c",
+				`set -euo pipefail
+aws() {
+  if [[ " $* " == *" Stacks[0].StackStatus "* ]]; then
+    if test "$MOCK_TARGET_STATUS" = "access-denied"; then
+      echo 'An error occurred (AccessDenied) when calling the DescribeStacks operation' >&2
+      return 254
+    fi
+    printf '%s\\n' "$MOCK_TARGET_STATUS"
+    return 0
+  fi
+  if test "$MOCK_NAME_RESULT" = "exists"; then return 0; fi
+  if test "$MOCK_NAME_RESULT" = "not-found"; then
+    echo 'An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id babysteps-performance-123 does not exist' >&2
+    return 255
+  fi
+  echo 'An error occurred (AccessDenied) when calling the DescribeStacks operation' >&2
+  return 254
+}
+${stackGate}`,
+			],
+			{
+				cwd: stackGateCwd,
+				encoding: "utf8",
+				env: {
+					...process.env,
+					STACK_ID:
+						"arn:aws:cloudformation:us-east-1:782086108248:stack/babysteps-performance-123/00000000-0000-0000-0000-000000000000",
+					TARGET_STACK:
+						"arn:aws:cloudformation:us-east-1:782086108248:stack/babysteps-performance-123/00000000-0000-0000-0000-000000000000",
+					STACK_NAME: "babysteps-performance-123",
+					MOCK_TARGET_STATUS: targetStatus,
+					MOCK_NAME_RESULT: nameResult,
+				},
+			},
+		);
+	try {
+		assert.equal(runStackGate("DELETE_COMPLETE", "not-found").status, 0);
+		for (const [targetStatus, nameResult] of [
+			["UPDATE_COMPLETE", "not-found"],
+			["DELETE_FAILED", "not-found"],
+			["access-denied", "not-found"],
+			["DELETE_COMPLETE", "exists"],
+			["DELETE_COMPLETE", "access-denied"],
+		]) {
+			assert.notEqual(
+				runStackGate(targetStatus, nameResult).status,
+				0,
+				`${targetStatus}/${nameResult} must fail closed`,
+			);
+		}
+	} finally {
+		await rm(stackGateCwd, { recursive: true, force: true });
+	}
 	assert.match(recovery, /stack-delete-complete/);
 	assert.match(recovery, /sqs get-queue-url --queue-name/);
 	assert.match(recovery, /lambda list-functions/);
@@ -2095,6 +2187,20 @@ test("a scheduled TTL janitor dispatches the existing exact recovery deep module
 	assert.match(run, /Project/);
 	assert.match(run, /RunId/);
 	assert.match(run, /ExpiresAt/);
+	assert.match(run, /resourcegroupstaggingapi get-resources/);
+	assert.match(run, /Key=Project,Values=babysteps-performance/);
+	assert.match(run, /resource-type-filters cloudformation:stack/);
+	assert.match(
+		run,
+		/\^arn:aws:cloudformation:us-east-1:782086108248:stack\/babysteps-performance-\[0-9\]\+\/\[A-Za-z0-9-\]\+\$/,
+	);
+	assert.match(run, /describe-stacks --stack-name "\$stack_arn"/);
+	assert.match(run, /test "\$actual_stack_id" = "\$stack_arn"/);
+	assert.match(run, /-f stack_id="\$stack_arn"/);
+	assert.doesNotMatch(
+		run,
+		/stack_names="\$\(aws cloudformation describe-stacks/,
+	);
 	assert.match(run, /aws-performance-recovery\.yml/);
 	assert.match(
 		run,
