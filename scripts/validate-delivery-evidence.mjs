@@ -21,6 +21,65 @@ const allowedJourneyStages = new Set([
 	"production-verified",
 	"blocked",
 ]);
+const allowedRoleStatuses = new Set([
+	"implemented",
+	"sepolia-verified",
+	"production-verified",
+	"cloud-verified",
+	"historical",
+	"readiness-only",
+	"deferred",
+]);
+const expectedRoleBoundaryIds = [
+	"public-visitor",
+	"privy-identity",
+	"wallet-siwe-session",
+	"parent-buyer",
+	"token-recipient",
+	"provider-operator",
+	"owner-admin",
+	"completion-review-operator",
+	"child-domain-subject",
+	"babycoin-admin",
+	"babycoin-reward",
+	"marketplace-v2-admin",
+	"marketplace-v2-provider",
+	"marketplace-v2-completion-relayer",
+	"certificate-admin",
+	"certificate-minter",
+	"keepsake-admin",
+	"keepsake-minter",
+	"keepsake-burner",
+	"chainlink-vrf-coordinator",
+	"cloudflare-worker-runtime",
+	"d1-wallet-session-boundary",
+	"performance-control-github-app",
+	"performance-callback-producer",
+	"performance-callback-verifier",
+	"uniswap-external-dependency",
+	"github-actions-oidc-deploy",
+	"cloudformation-execution",
+	"ecs-service-linked-role",
+	"performance-ecs-execution",
+	"performance-cleaner-task",
+	"performance-db-admin-task",
+	"performance-query-lambda",
+	"performance-ingest-lambda",
+	"marketplace-v1-oracle",
+	"legacy-certificate-minter",
+	"readiness-github-pipeline",
+	"readiness-cloudformation",
+	"readiness-codebuild",
+	"readiness-stop-db",
+	"readiness-probe",
+	"relayer-execution-deferred",
+];
+const roleEvidencePageMarkers = [
+	"全角色与权限边界",
+	"babysteps-role-boundaries.html",
+	"2026-08-30-role-boundary-inventory.json",
+	"allow-scripts allow-downloads",
+];
 const expectedImplementedJourneyIds =
 	journeyManifest.implementedFeatureJourneys.map(({ journeyId }) => journeyId);
 const teacherRequirementPrefixes = [
@@ -596,6 +655,65 @@ export function validateImplementedFeatureJourneyEvidence(evidence, pageText) {
 	return [...new Set(errors)];
 }
 
+export function validateRoleBoundaryInventory(inventory, evidencePageText) {
+	const errors = [];
+	if (inventory?.schemaVersion !== 1) {
+		errors.push("role boundary inventory schemaVersion must be 1");
+	}
+	if (!Array.isArray(inventory?.groups) || inventory.groups.length === 0) {
+		return [...errors, "role boundary inventory groups are missing"];
+	}
+
+	const roles = inventory.groups.flatMap((group) =>
+		Array.isArray(group?.roles) ? group.roles : [],
+	);
+	const seenIds = new Set();
+	for (const role of roles) {
+		if (!role?.id) {
+			errors.push("role boundary inventory contains a role without id");
+			continue;
+		}
+		if (seenIds.has(role.id)) {
+			errors.push(`role boundary inventory has duplicate id: ${role.id}`);
+		}
+		seenIds.add(role.id);
+		for (const field of ["name", "holder", "allowed", "denied", "authority"]) {
+			if (typeof role[field] !== "string" || role[field].trim() === "") {
+				errors.push(`role boundary inventory ${role.id} is missing ${field}`);
+			}
+		}
+		if (!allowedRoleStatuses.has(role.status)) {
+			errors.push(
+				`role boundary inventory ${role.id} has invalid status: ${role.status}`,
+			);
+		}
+	}
+	for (const expectedId of expectedRoleBoundaryIds) {
+		if (!seenIds.has(expectedId)) {
+			errors.push(`role boundary inventory is missing: ${expectedId}`);
+		}
+	}
+	if (seenIds.size !== expectedRoleBoundaryIds.length) {
+		errors.push(
+			`role boundary inventory count mismatch: expected ${expectedRoleBoundaryIds.length}, got ${seenIds.size}`,
+		);
+	}
+	if (
+		inventory?.archify?.repository !== "https://github.com/tt-a1i/archify" ||
+		!/^\d+\.\d+\.\d+$/u.test(inventory?.archify?.version ?? "") ||
+		!/^\p{ASCII}{40}$/u.test(inventory?.archify?.commit ?? "") ||
+		!/^\p{ASCII}{64}$/u.test(inventory?.archify?.artifactSha256 ?? "")
+	) {
+		errors.push("role boundary inventory Archify provenance is incomplete");
+	}
+	for (const marker of roleEvidencePageMarkers) {
+		if (!evidencePageText.includes(marker)) {
+			errors.push(`Evidence page is missing role boundary marker: ${marker}`);
+		}
+	}
+	return errors;
+}
+
 export function validateDeliveryEvidence(
 	mapText,
 	architectureText,
@@ -768,6 +886,9 @@ async function main() {
 	const implementedJourneyEvidencePath =
 		process.argv[7] ??
 		"docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json";
+	const roleBoundaryInventoryPath =
+		process.argv[8] ??
+		"docs/evidence/deployment/2026-08-30-role-boundary-inventory.json";
 	const [
 		mapText,
 		architectureText,
@@ -776,6 +897,7 @@ async function main() {
 		assetFacts,
 		machineEvidenceText,
 		implementedJourneyEvidenceText,
+		roleBoundaryInventoryText,
 	] = await Promise.all([
 		readFile(mapPath, "utf8"),
 		readFile(architecturePath, "utf8"),
@@ -784,12 +906,15 @@ async function main() {
 		Promise.all(expectedDiagramAssets.map(({ path }) => readAssetFact(path))),
 		readFile(machineEvidencePath, "utf8"),
 		readFile(implementedJourneyEvidencePath, "utf8"),
+		readFile(roleBoundaryInventoryPath, "utf8"),
 	]);
 	let machineEvidence;
 	let implementedJourneyEvidence;
+	let roleBoundaryInventory;
 	try {
 		machineEvidence = JSON.parse(machineEvidenceText);
 		implementedJourneyEvidence = JSON.parse(implementedJourneyEvidenceText);
+		roleBoundaryInventory = JSON.parse(roleBoundaryInventoryText);
 	} catch {
 		console.error("delivery machine evidence is not valid JSON");
 		process.exitCode = 1;
@@ -808,6 +933,9 @@ async function main() {
 			implementedJourneyEvidence,
 			evidencePageText,
 		),
+	);
+	errors.push(
+		...validateRoleBoundaryInventory(roleBoundaryInventory, evidencePageText),
 	);
 	if (errors.length > 0) {
 		for (const error of errors) console.error(error);

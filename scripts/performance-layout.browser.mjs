@@ -187,3 +187,97 @@ test("all implemented product routes preserve HTTP semantics, headings, and root
 		await browser.close();
 	}
 });
+
+test("the role architecture stays out of the first render and opens in a sandboxed responsive iframe", async () => {
+	const browser = await chromium.launch({ headless: true });
+	try {
+		for (const width of [375, 390, 430, 1440]) {
+			const page = await browser.newPage({
+				viewport: { width, height: width === 1440 ? 1000 : 900 },
+			});
+			const pageErrors = [];
+			const roleArtifactRequests = [];
+			const remoteFontRequests = [];
+			page.on("pageerror", (error) => pageErrors.push(error.message));
+			page.on("request", (request) => {
+				if (
+					request.resourceType() === "document" &&
+					request.url().includes("babysteps-role-boundaries")
+				) {
+					roleArtifactRequests.push(request.url());
+				}
+				if (/fonts\.googleapis\.com\/.*JetBrains\+Mono/u.test(request.url())) {
+					remoteFontRequests.push(request.url());
+				}
+			});
+
+			const response = await page.goto(
+				new URL("/evidence", testOrigin).toString(),
+				{
+					waitUntil: "domcontentloaded",
+				},
+			);
+			assert.ok(
+				response?.ok(),
+				`${width}px Evidence route must return HTTP success`,
+			);
+			await page
+				.getByRole("heading", { name: "全角色与权限边界", exact: true })
+				.waitFor();
+			assert.equal(
+				await page
+					.locator('iframe[title="BabySteps 全角色与信任边界"]')
+					.count(),
+				0,
+				`${width}px first render must not mount the role iframe`,
+			);
+			assert.deepEqual(
+				roleArtifactRequests,
+				[],
+				`${width}px first render must not request the role artifact`,
+			);
+
+			await page.getByRole("button", { name: "打开全角色架构图" }).click();
+			const iframe = page.locator('iframe[title="BabySteps 全角色与信任边界"]');
+			await iframe.waitFor();
+			assert.equal(
+				await iframe.getAttribute("sandbox"),
+				"allow-scripts allow-downloads",
+			);
+			await page
+				.frameLocator('iframe[title="BabySteps 全角色与信任边界"]')
+				.getByRole("heading", {
+					name: "BabySteps 全角色与信任边界",
+					exact: true,
+				})
+				.waitFor();
+			assert.equal(
+				roleArtifactRequests.length,
+				1,
+				`${width}px click must request exactly one role artifact`,
+			);
+			assert.deepEqual(
+				remoteFontRequests,
+				[],
+				`${width}px role artifact must not request remote fonts`,
+			);
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - window.innerWidth,
+			);
+			assert.ok(
+				overflow <= 1,
+				`${width}px open role iframe must not overflow the root`,
+			);
+			await page.getByRole("button", { name: "关闭全角色架构图" }).click();
+			assert.equal(await iframe.count(), 0);
+			assert.deepEqual(
+				pageErrors,
+				[],
+				`${width}px role architecture must not emit a pageerror`,
+			);
+			await page.close();
+		}
+	} finally {
+		await browser.close();
+	}
+});

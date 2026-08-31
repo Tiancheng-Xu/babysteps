@@ -3,10 +3,41 @@ import { test } from "node:test";
 import journeyManifest from "./performance-journey.manifest.json" with {
 	type: "json",
 };
+import roleBoundaryInventory from "../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json" with {
+	type: "json",
+};
 import {
 	validateDeliveryEvidence,
 	validateImplementedFeatureJourneyEvidence,
+	validateRoleBoundaryInventory,
 } from "./validate-delivery-evidence.mjs";
+
+test("role boundary inventory covers every frozen role family and the Evidence delivery contract", () => {
+	assert.deepEqual(
+		validateRoleBoundaryInventory(
+			roleBoundaryInventory,
+			"全角色与权限边界 babysteps-role-boundaries.html 2026-08-30-role-boundary-inventory.json sandbox=allow-scripts allow-downloads",
+		),
+		[],
+	);
+});
+
+test("role boundary inventory rejects a missing current role and duplicate identity", () => {
+	const mutated = structuredClone(roleBoundaryInventory);
+	mutated.groups[1].roles = mutated.groups[1].roles.filter(
+		({ id }) => id !== "marketplace-v2-provider",
+	);
+	mutated.groups[0].roles.push(structuredClone(mutated.groups[0].roles[0]));
+
+	const errors = validateRoleBoundaryInventory(
+		mutated,
+		"全角色与权限边界 babysteps-role-boundaries.html 2026-08-30-role-boundary-inventory.json sandbox=allow-scripts allow-downloads",
+	);
+	assert.ok(
+		errors.includes("role boundary inventory is missing: marketplace-v2-provider"),
+	);
+	assert.ok(errors.includes("role boundary inventory has duplicate id: public-visitor"));
+});
 
 const validArchitecture = `
 # BabySteps Web3 architecture

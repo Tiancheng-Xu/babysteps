@@ -1,10 +1,62 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EvidencePage } from "./EvidencePage";
 
 afterEach(cleanup);
 
 describe("EvidencePage", () => {
+	it("lists every current, service, historical, and deferred role and mounts the Archify artifact only on demand", () => {
+		render(<EvidencePage />);
+
+		expect(
+			screen.getByRole("heading", { name: "全角色与权限边界" }),
+		).toBeTruthy();
+		for (const roleName of [
+			"公开访客",
+			"Privy 登录身份",
+			"外部钱包 / SIWE 会话",
+			"家长 / 购买者",
+			"Provider 操作者",
+			"Owner / DEFAULT_ADMIN_ROLE",
+			"完成审核操作者",
+			"BabyCoin.REWARD_ROLE",
+			"TaskMarketplaceV2.PROVIDER_ROLE",
+			"TaskMarketplaceV2.COMPLETION_RELAYER_ROLE",
+			"GrowthCertificateSBT.MINTER_ROLE",
+			"StarBuddyKeepsakeSBT.MINTER_ROLE",
+			"StarBuddyKeepsakeSBT.BURNER_ROLE",
+			"Chainlink VRF Coordinator",
+			"GitHub Actions OIDC Deploy Role",
+			"CloudFormation Execution Role",
+			"ECS Service-linked Role",
+			"ECS Task Execution Role",
+			"Cleaner Task Role",
+			"Database Admin Task Role",
+			"Query Lambda Role",
+			"Performance Control GitHub App",
+			"TaskMarketplace V1.ORACLE_ROLE",
+			"RelayerExecutionRole（延后）",
+		]) {
+			expect(screen.getByText(roleName)).toBeTruthy();
+		}
+
+		expect(screen.queryByTitle("BabySteps 全角色与信任边界")).toBeNull();
+		const openButton = screen.getByRole("button", {
+			name: "打开全角色架构图",
+		});
+		expect(openButton.getAttribute("aria-expanded")).toBe("false");
+
+		fireEvent.click(openButton);
+		const iframe = screen.getByTitle("BabySteps 全角色与信任边界");
+		expect(iframe.getAttribute("sandbox")).toBe(
+			"allow-scripts allow-downloads",
+		);
+		expect(openButton.getAttribute("aria-expanded")).toBe("true");
+
+		fireEvent.click(screen.getByRole("button", { name: "关闭全角色架构图" }));
+		expect(screen.queryByTitle("BabySteps 全角色与信任边界")).toBeNull();
+	});
+
 	it("publishes the exact implemented-feature journey boundary without claiming the pending live run", () => {
 		render(<EvidencePage />);
 

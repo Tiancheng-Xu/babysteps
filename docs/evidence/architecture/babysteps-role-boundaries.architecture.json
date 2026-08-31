@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "BabySteps 全角色与信任边界",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [1360, 760],
+    "views": [
+      {
+        "id": "product-actors",
+        "label": "产品参与者",
+        "focus": ["visitor", "identity", "parentBuyer", "provider", "privilegedWallets"],
+        "note": "登录身份不自动获得链上管理权限。"
+      },
+      {
+        "id": "web3-roles",
+        "label": "Web3 角色",
+        "focus": ["provider", "privilegedWallets", "marketplaceV2", "growthContracts", "keepsakeContracts", "vrfCoordinator"],
+        "note": "用户角色、合约持有角色与外部可信主体分层展示。"
+      },
+      {
+        "id": "cloud-roles",
+        "label": "交付与云角色",
+        "focus": ["githubOidc", "awsRuntimeRoles"],
+        "note": "AWS IAM 与 Web3 业务权限完全隔离。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "visitor",
+      "type": "external",
+      "label": "公开访客",
+      "sublabel": "只读页面、任务与 Evidence",
+      "tag": "无写权限",
+      "pos": [60, 280],
+      "size": [190, 72]
+    },
+    {
+      "id": "identity",
+      "type": "security",
+      "label": "登录与钱包会话",
+      "sublabel": "Privy / Google / Email / SIWE",
+      "tag": "身份 ≠ 授权",
+      "pos": [300, 280],
+      "size": [190, 72]
+    },
+    {
+      "id": "parentBuyer",
+      "type": "frontend",
+      "label": "家长 / 购买者",
+      "sublabel": "成长、购买、兑换、纪念卡",
+      "tag": "本人钱包签名",
+      "pos": [540, 280],
+      "size": [190, 72]
+    },
+    {
+      "id": "provider",
+      "type": "security",
+      "label": "Provider 钱包",
+      "sublabel": "PROVIDER_ROLE · 草稿与发任务",
+      "tag": "不能审批",
+      "pos": [540, 70],
+      "size": [190, 72]
+    },
+    {
+      "id": "githubOidc",
+      "type": "external",
+      "label": "GitHub Actions OIDC",
+      "sublabel": "Environment 限定短期身份",
+      "tag": "无长期 Access Key",
+      "pos": [60, 520],
+      "size": [190, 72]
+    },
+    {
+      "id": "workerD1",
+      "type": "database",
+      "label": "Worker + D1",
+      "sublabel": "会话、草稿、资料、完成证据",
+      "tag": "钱包与角色二次校验",
+      "pos": [780, 70],
+      "size": [190, 72]
+    },
+    {
+      "id": "marketplaceV2",
+      "type": "backend",
+      "label": "TaskMarketplaceV2",
+      "sublabel": "3 个链上 RBAC 角色",
+      "tag": "当前任务主链路",
+      "pos": [780, 280],
+      "size": [190, 72]
+    },
+    {
+      "id": "privilegedWallets",
+      "type": "security",
+      "label": "Owner 与完成操作员",
+      "sublabel": "DEFAULT_ADMIN / COMPLETION_RELAYER",
+      "tag": "两个独立角色",
+      "pos": [780, 520],
+      "size": [190, 72]
+    },
+    {
+      "id": "awsRuntimeRoles",
+      "type": "cloud",
+      "label": "AWS 部署与运行角色",
+      "sublabel": "Deploy / CFN / ECS / DB / Query",
+      "tag": "项目级最小权限",
+      "pos": [300, 520],
+      "size": [190, 72]
+    },
+    {
+      "id": "keepsakeContracts",
+      "type": "backend",
+      "label": "纪念卡合约组",
+      "sublabel": "MINTER_ROLE / BURNER_ROLE",
+      "tag": "Manager 合约持有",
+      "pos": [540, 520],
+      "size": [190, 72]
+    },
+    {
+      "id": "growthContracts",
+      "type": "backend",
+      "label": "成长与证书合约组",
+      "sublabel": "REWARD_ROLE / MINTER_ROLE",
+      "tag": "合约到合约授权",
+      "pos": [1020, 280],
+      "size": [190, 72]
+    },
+    {
+      "id": "vrfCoordinator",
+      "type": "external",
+      "label": "Chainlink VRF",
+      "sublabel": "唯一随机数回调主体",
+      "tag": "外部可信依赖",
+      "pos": [1020, 70],
+      "size": [190, 72]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "产品身份与可见操作",
+      "wraps": ["visitor", "identity", "parentBuyer", "provider", "privilegedWallets"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Cloudflare 会话与数据边界",
+      "wraps": ["workerD1"]
+    },
+    {
+      "kind": "region",
+      "label": "Sepolia 合约权限边界",
+      "wraps": ["marketplaceV2", "keepsakeContracts", "growthContracts", "vrfCoordinator"]
+    },
+    {
+      "kind": "security-group",
+      "label": "GitHub OIDC → AWS 最小权限",
+      "wraps": ["githubOidc", "awsRuntimeRoles"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "visitor-login",
+      "from": "visitor",
+      "to": "identity",
+      "label": "可选登录",
+      "variant": "dashed"
+    },
+    {
+      "id": "identity-parent",
+      "from": "identity",
+      "to": "parentBuyer",
+      "label": "钱包会话",
+      "variant": "emphasis"
+    },
+    {
+      "id": "parent-marketplace",
+      "from": "parentBuyer",
+      "to": "marketplaceV2",
+      "label": "approve + buy",
+      "labelAt": [755, 366],
+      "variant": "emphasis"
+    },
+    {
+      "id": "parent-keepsake",
+      "from": "parentBuyer",
+      "to": "keepsakeContracts",
+      "label": "抽取 / 融合",
+      "labelAt": [635, 366]
+    },
+    {
+      "id": "provider-d1",
+      "from": "provider",
+      "to": "workerD1",
+      "label": "D1 草稿",
+      "variant": "security"
+    },
+    {
+      "id": "provider-marketplace",
+      "from": "provider",
+      "to": "marketplaceV2",
+      "label": "requestTask",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-marketplace",
+      "from": "workerD1",
+      "to": "marketplaceV2",
+      "label": "交易回绑",
+      "labelAt": [875, 156],
+      "variant": "security"
+    },
+    {
+      "id": "privileged-marketplace",
+      "from": "privilegedWallets",
+      "to": "marketplaceV2",
+      "label": "审批 / 完成",
+      "variant": "security"
+    },
+    {
+      "id": "marketplace-growth",
+      "from": "marketplaceV2",
+      "to": "growthContracts",
+      "label": "奖励 / 铸证",
+      "labelAt": [995, 366],
+      "variant": "emphasis"
+    },
+    {
+      "id": "marketplace-vrf",
+      "from": "marketplaceV2",
+      "to": "vrfCoordinator",
+      "label": "VRF 请求"
+    },
+    {
+      "id": "oidc-aws",
+      "from": "githubOidc",
+      "to": "awsRuntimeRoles",
+      "label": "AssumeRole",
+      "labelAt": [275, 606],
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "产品参与者",
+      "items": [
+        "访客只读；登录用户获得会话，但不会自动得到链上管理权限",
+        "家长/购买者以本人钱包执行成长、购买、兑换与纪念卡操作",
+        "接收者只接收代币；宝宝/孩子是业务对象，不是认证主体"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "当前 V2 权限",
+      "items": [
+        "PROVIDER_ROLE 创建 D1 草稿并调用 requestTask，不能自行审批",
+        "DEFAULT_ADMIN_ROLE 授权 Provider、审批、拒绝与暂停；未兼任 Provider 时不能发任务",
+        "COMPLETION_RELAYER_ROLE 只确认完成并触发 SBT，不能创建、审批或授权"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "合约持有角色",
+      "items": [
+        "GrowthActivities 持有 BabyCoin REWARD_ROLE；Marketplace 持有证书 MINTER_ROLE",
+        "StarBuddy Manager 持有纪念卡 MINTER_ROLE 与 BURNER_ROLE",
+        "V1 ORACLE_ROLE 仅作历史记录；V2 使用 Chainlink VRF Coordinator 回调"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "交付与运行角色",
+      "items": [
+        "GitHub OIDC Deploy Role 只能进入精确项目边界并 PassRole 给精确 CFN Role",
+        "临时 Stack 包含 ECS Execution、Cleaner、DB Admin、Query Lambda 四类运行角色",
+        "ECS Service-linked Role 为账户级共享；Readiness/Relayer 旧路径单独标记历史或 deferred"
+      ]
+    }
+  ]
+}

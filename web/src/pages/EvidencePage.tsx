@@ -1,11 +1,15 @@
+import { useState } from "react";
 import performanceArchitectureImage from "../../../docs/architecture/starbuddy-performance-global-architecture.svg";
 import performanceSequenceImage from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import renderingArchitectureImage from "../../../docs/architecture/starbuddy-rendering-global-architecture.svg";
 import renderingSequenceImage from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
+import roleArchitectureUrl from "../../../docs/evidence/architecture/babysteps-role-boundaries.html?url";
 import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
 import implementedJourneyEvidenceUrl from "../../../docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json?url";
+import roleInventory from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json";
+import roleInventoryUrl from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json?url";
 import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
 import prdFullWalkthroughVideo from "../../../docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -35,6 +39,15 @@ const CONTRACTS = [
 	],
 ] as const;
 const KEEPSAKE_RECOVERY_PROOF = "24 小时未回调可恢复";
+const ROLE_STATUS_LABELS: Record<string, string> = {
+	implemented: "已实现",
+	"sepolia-verified": "Sepolia 已验证",
+	"production-verified": "生产已验证",
+	"cloud-verified": "云端已验证",
+	historical: "历史版本",
+	"readiness-only": "仅就绪模板",
+	deferred: "明确延后",
+};
 const IMPLEMENTED_JOURNEY_GROUPS = [
 	["NAV-01", "WALLET-01", "GROWTH-01", "GROWTH-02", "GROWTH-03"],
 	["TRANSFER-01", "NOTE-01", "BABY-01", "BABY-02", "BABY-03"],
@@ -70,6 +83,8 @@ const IMPLEMENTED_JOURNEY_GROUPS = [
 ] as const;
 
 export function EvidencePage() {
+	const [isRoleArchitectureOpen, setIsRoleArchitectureOpen] = useState(false);
+
 	return (
 		<section className="product-page" aria-labelledby="evidence-heading">
 			<header className="product-page__hero product-page__hero--evidence">
@@ -126,6 +141,126 @@ export function EvidencePage() {
 						55fac7c9ab84 · SHA-256 61c0188e…e3dc7f87。
 					</figcaption>
 				</figure>
+			</section>
+
+			<section
+				className="evidence-role-ledger"
+				aria-labelledby="role-boundary-title"
+			>
+				<header className="evidence-role-ledger__header">
+					<div>
+						<p className="section-kicker">AUTHORIZATION · TRUST · DENY</p>
+						<h2 id="role-boundary-title">全角色与权限边界</h2>
+					</div>
+					<span className="evidence-diagram-card__status">
+						{roleInventory.groups.reduce(
+							(total, group) => total + group.roles.length,
+							0,
+						)}{" "}
+						项 · 当前 / 历史 / 延后分层
+					</span>
+				</header>
+				<p className="evidence-role-ledger__lead">
+					这里把“产品身份、链上 RBAC、合约持有者、后端服务主体、GitHub/AWS
+					角色”分开记录。每项都写明能做什么、明确不能做什么、由谁授予，以及证据状态；
+					同一个钱包可同时持有多个角色，但角色不会互相隐式继承。
+				</p>
+				<div className="evidence-role-ledger__actions">
+					<button
+						type="button"
+						className="evidence-diagram-link evidence-role-ledger__button"
+						aria-expanded={isRoleArchitectureOpen}
+						aria-controls="role-architecture-panel"
+						onClick={() => setIsRoleArchitectureOpen(true)}
+					>
+						打开全角色架构图
+					</button>
+					<a
+						className="evidence-diagram-link"
+						href={roleInventoryUrl}
+						target="_blank"
+						rel="noreferrer"
+					>
+						下载机器可读角色清单
+					</a>
+					<a
+						className="evidence-diagram-link"
+						href={roleArchitectureUrl}
+						target="_blank"
+						rel="noreferrer"
+					>
+						在新窗口打开架构图
+					</a>
+				</div>
+
+				{isRoleArchitectureOpen ? (
+					<div
+						id="role-architecture-panel"
+						className="evidence-role-architecture"
+					>
+						<header>
+							<div>
+								<strong>Archify 交互式角色架构</strong>
+								<span>独立自包含 HTML · 首屏不加载 · 仅点击后挂载</span>
+							</div>
+							<button
+								type="button"
+								onClick={() => setIsRoleArchitectureOpen(false)}
+							>
+								关闭全角色架构图
+							</button>
+						</header>
+						<iframe
+							title="BabySteps 全角色与信任边界"
+							src={roleArchitectureUrl}
+							sandbox="allow-scripts allow-downloads"
+							loading="lazy"
+							referrerPolicy="no-referrer"
+						/>
+					</div>
+				) : null}
+
+				<div className="evidence-role-groups">
+					{roleInventory.groups.map((group, groupIndex) => (
+						<details key={group.id} open={groupIndex < 2}>
+							<summary>
+								<span>{group.title}</span>
+								<small>{group.roles.length} 项</small>
+							</summary>
+							<p>{group.summary}</p>
+							<div className="evidence-role-grid">
+								{group.roles.map((role) => (
+									<article key={role.id}>
+										<header>
+											<h3>{role.name}</h3>
+											<span data-role-status={role.status}>
+												{ROLE_STATUS_LABELS[role.status] ?? role.status}
+											</span>
+										</header>
+										<dl>
+											<div>
+												<dt>主体</dt>
+												<dd>{role.holder}</dd>
+											</div>
+											<div>
+												<dt>允许</dt>
+												<dd>{role.allowed}</dd>
+											</div>
+											<div>
+												<dt>拒绝</dt>
+												<dd>{role.denied}</dd>
+											</div>
+											<div>
+												<dt>授予/约束</dt>
+												<dd>{role.authority}</dd>
+											</div>
+										</dl>
+									</article>
+								))}
+							</div>
+						</details>
+					))}
+				</div>
 			</section>
 
 			<section
