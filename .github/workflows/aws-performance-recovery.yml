@@ -231,7 +231,6 @@ jobs:
     environment: aws-performance
     permissions:
       actions: write
-      contents: read
       id-token: write
     env:
       AWS_REGION: us-east-1
@@ -245,7 +244,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          active_recovery_count="$(gh run list --workflow aws-performance-recovery.yml --limit 100 --json databaseId,status | jq --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId | tostring) != $current and (.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending"))] | length')"
+          test "$GITHUB_REPOSITORY" = "Tiancheng-Xu/babysteps"
+          active_recovery_count="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow aws-performance-recovery.yml --limit 100 --json databaseId,status | jq --arg current "$GITHUB_RUN_ID" '[.[] | select((.databaseId | tostring) != $current and (.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending"))] | length')"
           if test "$active_recovery_count" != "0"; then
             echo "A recovery is already active; the next schedule will rescan."
             exit 0
@@ -264,7 +264,7 @@ jobs:
             [[ "$expires_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || continue
             expires_epoch="$(date -u -d "$expires_at" +%s)"
             if test "$now_epoch" -lt "$expires_epoch"; then continue; fi
-            gh workflow run aws-performance-recovery.yml --ref main \
+            gh workflow run aws-performance-recovery.yml --repo "$GITHUB_REPOSITORY" --ref main \
               -f stack_name="$stack_name" \
               -f database_state=schema-initialized \
               -f approval_reference="automatic-ttl-janitor-${GITHUB_RUN_ID}"
