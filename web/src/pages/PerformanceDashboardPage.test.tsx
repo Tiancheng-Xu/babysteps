@@ -265,11 +265,11 @@ describe("PerformanceDashboardPage", () => {
 		expect(await screen.findByText("历史快照 · 非实时")).toBeTruthy();
 		expect(screen.getByText("最近一次真实闭环")).toBeTruthy();
 		expect(screen.getByRole("status").textContent).toContain("管线失败");
-		expect(screen.getAllByText("Run 33279132965").length).toBeGreaterThan(0);
-		expect(screen.getAllByText("低置信度 · n=4").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("Run 33370197607").length).toBeGreaterThan(0);
+		expect(screen.getByText(/INP 的 n=4.*低置信度/u)).toBeTruthy();
 		expect(screen.queryByText(/32626397427/u)).toBeNull();
 		expect(
-			screen.getByText(/85 个浏览器事件.*85 条写入.*SQS.*DLQ 已全量排空/u),
+			screen.getByText(/232 个浏览器事件.*232 条写入.*SQS.*DLQ 已全量排空/u),
 		).toBeTruthy();
 
 		const vitalsSection = screen
@@ -278,27 +278,27 @@ describe("PerformanceDashboardPage", () => {
 		expect(vitalsSection).not.toBeNull();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /LCP 4 936 ms 992 ms 1076 ms 已观测/u,
+				name: /LCP 6 1244 ms 2568 ms 3372 ms 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /CLS 5 0\.049 0\.052 0\.093 已观测/u,
+				name: /CLS 9 0\.051 0\.090 0\.227 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /INP 1 48 ms 48 ms 48 ms 已观测/u,
+				name: /INP 4 40 ms 48 ms 56 ms 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /FCP 5 728 ms 752 ms 992 ms 已观测/u,
+				name: /FCP 9 528 ms 736 ms 932 ms 已观测/u,
 			}),
 		).toBeTruthy();
 		expect(
 			within(vitalsSection as HTMLElement).getByRole("row", {
-				name: /TTFB 5 4 ms 6 ms 9 ms 已观测/u,
+				name: /TTFB 9 16 ms 63 ms 360 ms 已观测/u,
 			}),
 		).toBeTruthy();
 
@@ -308,7 +308,7 @@ describe("PerformanceDashboardPage", () => {
 		expect(resourceSection).not.toBeNull();
 		expect(
 			within(resourceSection as HTMLElement).getByRole("row", {
-				name: /resource\.script\.duration 30 16 ms 18 ms 31 ms 已观测/u,
+				name: /resource\.script\.duration 9 62 ms 104 ms 466 ms 已观测/u,
 			}),
 		).toBeTruthy();
 
@@ -316,13 +316,18 @@ describe("PerformanceDashboardPage", () => {
 			.getByRole("heading", { name: "导航阶段" })
 			.closest("section");
 		expect(navigationSection).not.toBeNull();
-		for (const name of ["navigation.dns", "navigation.tcp", "navigation.tls"]) {
+		for (const name of ["navigation.dns", "navigation.tcp"]) {
 			expect(
 				within(navigationSection as HTMLElement).getByRole("row", {
-					name: new RegExp(`${name} 0 — — — 本环境不可用`, "u"),
+					name: new RegExp(`${name} [12] 0 ms 0 ms 0 ms 已观测`, "u"),
 				}),
 			).toBeTruthy();
 		}
+		expect(
+			within(navigationSection as HTMLElement).getByRole("row", {
+				name: /navigation\.tls 0 — — — 本环境不可用/u,
+			}),
+		).toBeTruthy();
 
 		expect(screen.getAllByText("本轮未发生（健康）").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("本轮场景未覆盖").length).toBeGreaterThan(0);

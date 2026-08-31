@@ -1,0 +1,14 @@
+{
+  "queue": {
+    "visible": 0,
+    "inFlight": 0,
+    "delayed": 0,
+    "total": 0
+  },
+  "dlq": {
+    "visible": 0,
+    "inFlight": 0,
+    "delayed": 0,
+    "total": 0
+  }
+}

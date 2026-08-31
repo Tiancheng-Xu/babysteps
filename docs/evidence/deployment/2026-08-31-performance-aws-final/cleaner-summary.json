@@ -1,0 +1,9 @@
+{
+  "processed": 232,
+  "inserted": 232,
+  "deduplicated": 0,
+  "discarded": 0,
+  "retryableFailures": 0,
+  "writeDurationMs": 752,
+  "durationMs": 23510
+}

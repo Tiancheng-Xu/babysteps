@@ -92,10 +92,11 @@ import performanceArchitecture from "../../../docs/architecture/starbuddy-perfor
 import performanceSequence from "../../../docs/architecture/starbuddy-performance-pipeline-sequence.svg";
 import performanceDesktop from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-desktop-1920.png";
 import performanceMobile from "../../../docs/evidence/screenshots/2026-08-13-performance/performance-dashboard-mobile-390.png";
-import performanceFinalDesktop from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png";
-import performanceFinalMobile from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png";
-import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
-import performanceFinalEvidence from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
+import performanceFinalDesktop from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png";
+import performanceFinalMobile from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png";
+import performanceJourneyVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm";
+import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm";
+import performanceFinalEvidence from "../../../docs/evidence/deployment/2026-08-31-performance-aws-final.json?url";
 import renderingArchitecture from "../../../docs/architecture/starbuddy-rendering-global-architecture.svg";
 import renderingSequence from "../../../docs/architecture/starbuddy-rendering-resilience-sequence.svg";
 import renderingDesktop from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
@@ -152,8 +153,8 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
   <img src={performanceMobile} alt="性能统计页手机端" />
   <h3>要求、实现与证据映射</h3>
 	<p>浏览器 SDK → Worker → AWS · 真实样本数与 p50 / p75 / p95 · 最终闭环已验证 · 取证后零残留</p>
-	<p>commit 1e703caeba2d · Run 33279132965</p>
-	<p>5 条真实页面路径 · 85 个唯一事件 · ECS Cleaner 处理并写入 85 条 · SQS 与 DLQ 全量排空 · 12 类项目资源全部为 0</p>
+	<p>commit f15bc873b14b · Run 33370197607</p>
+	<p>9 条真实页面路径 · 232 个唯一事件 · ECS Cleaner 处理并写入 232 条 · SQS 与 DLQ 全量排空 · 12 类项目资源全部为 0</p>
 	<code>web/src/pages/PerformanceDashboardPage.tsx</code>
 	<a>查看机器可读证据</a>
 	<a href={performanceFinalEvidence}>查看机器可读证据</a>
@@ -161,6 +162,7 @@ import providerConsoleMobile from "../../../docs/evidence/screenshots/2026-08-20
 	<img src={performanceFinalDesktop} alt="最终 AWS 性能统计桌面端真实页面截图" />
 	<img src={performanceFinalMobile} alt="最终 AWS 性能统计 390 像素手机端真实页面截图" />
 	<video aria-label="最终 AWS 性能统计页面走读录屏"><source src={performanceFinalVideo} /></video>
+	<video aria-label="九路由真实 AWS 性能采样录屏"><source src={performanceJourneyVideo} /></video>
 	<p>应反向优化的共享能力</p>
 </section>
 <section>
@@ -246,8 +248,8 @@ const validAssetFacts = [
 			<text>API Gateway</text><text>SQS 主队列</text><text>SQS DLQ</text>
 			<text>一次性 ECS Fargate Cleaner</text><text>共享 PostgreSQL</text>
 			<text>p50 / p75 / p95</text><text>GitHub Actions + OIDC</text>
-			<text>项目栈自动清理</text><text>临时 AWS 闭环已验证</text><text>零残留</text><text>Run 33279132965</text>
-			<text>85 collected / 85 inserted</text><text>SQS / DLQ 全量排空</text><text>12 类项目资源归零</text>
+			<text>项目栈自动清理</text><text>临时 AWS 闭环已验证</text><text>零残留</text><text>Run 33370197607</text>
+			<text>232 collected / 232 inserted</text><text>SQS / DLQ 全量排空</text><text>12 类项目资源归零</text>
 		</svg>`,
 	},
 	{
@@ -261,7 +263,7 @@ const validAssetFacts = [
 			<text>04 ECS 清洗</text><text>05 真实统计</text><text>06 Evidence 与清理</text>
 			<text>sendBeacon</text><text>失败静默</text><text>maxReceiveCount = 3</text>
 			<text>幂等写入</text><text>sampleCount</text><text>DROP SCHEMA</text><text>delete-stack</text>
-			<text>Run 33279132965</text><text>85 / 85 事件已验证</text>
+			<text>Run 33370197607</text><text>232 / 232 事件已验证</text>
 			<text>LCP / CLS / INP / FCP / TTFB</text><text>SQS / DLQ / Schema / Stack / 12 类资源归零</text><text>12 类项目资源全部为 0</text>
 		</svg>`,
 	},
@@ -382,49 +384,59 @@ const validAssetFacts = [
 		sha256: "4734e52dd36d6cedf4b99d8987f282e1e8ad5f21561da1abc24d832bbb57bf9c",
 	},
 	{
-		path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png",
+		path: "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png",
 		exists: true,
-		bytes: 1316232,
+		bytes: 1672831,
 		width: 0,
 		height: 0,
 		text: "",
-		sha256: "f88e684dcc124aa948ada4ee0b406ebde3749add2ce76e6fd90008a27f8c60f7",
+		sha256: "400a983f87852dbcf02d29cca5cc1d6f9fb75cd4586a3482231f4b753104ddf0",
 	},
 	{
-		path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png",
+		path: "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png",
 		exists: true,
-		bytes: 1009269,
+		bytes: 1207174,
 		width: 0,
 		height: 0,
 		text: "",
-		sha256: "b1b259b10f136ab0ba537aff94f4f842533bda579b18a95f2c04fbbcec75959d",
+		sha256: "b9957f195f0b0937967b7759c46df668f89f82e9ce67f429d29ee5cd110cfff0",
 	},
 	{
-		path: "docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm",
+		path: "docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm",
 		exists: true,
-		bytes: 586854,
+		bytes: 677993,
 		width: 0,
 		height: 0,
 		text: "",
-		sha256: "b11406c9a01a1c5ef4b4ab414f5fa0e07960994c1a64c95d123b366cb417f166",
+		sha256: "5ca39f9b203b10922ee6faddb2342ee2add028a81e0a283c70d65d9b398b9e61",
+	},
+	{
+		path: "docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm",
+		exists: true,
+		bytes: 12151484,
+		width: 0,
+		height: 0,
+		text: "",
+		sha256: "c03aeb0e1693e1102f9f5dff89ced9c4796d6089c338e8ce3d83a43c45eacb7f",
 	},
 ];
 
 const validMachineEvidence = {
-	schemaVersion: 4,
+	schemaVersion: 5,
 	status: "verified-drained-and-cleaned",
 	workflow: {
-		runId: 33279132965,
-		commit: "1e703caeba2d256936f677eb7ea15f2044cc7dd6",
+		runId: 33370197607,
+		commit: "f15bc873b14bb7193495514a6a7cc57c7e0eaf37",
 		validationSurface:
-			"controlled local Chromium and Vite web with local Worker proxy connected to temporary AWS resources",
+			"controlled Chromium and Vite web with local Worker proxy connected to temporary AWS resources",
 	},
 	browserJourney: {
-		batchCount: 14,
-		acceptedBatchCount: 14,
+		routeCount: 9,
+		batchCount: 49,
+		acceptedBatchCount: 49,
 		rejectedBatchCount: 0,
 		transportFailureCount: 0,
-		eventCount: 85,
+		eventCount: 232,
 		unacceptedEventCount: 0,
 	},
 	delivery: {
@@ -433,8 +445,8 @@ const validMachineEvidence = {
 		dlq: { total: 0 },
 	},
 	cleaner: {
-		processed: 85,
-		inserted: 85,
+		processed: 232,
+		inserted: 232,
 		discarded: 0,
 		retryableFailures: 0,
 		exitCode: 0,
@@ -442,38 +454,32 @@ const validMachineEvidence = {
 	dashboard: {
 		mode: "live",
 		source: "live-api",
-		vitals: Object.fromEntries(
-			["LCP", "CLS", "INP", "FCP", "TTFB"].map((name) => [
-				name,
-				{ sampleCount: 1, p50: 1, p75: 1, p95: 1 },
-			]),
-		),
-		navigation: Object.fromEntries(
-			[
-				"navigation.dns",
-				"navigation.tcp",
-				"navigation.tls",
-				"navigation.request_wait",
-				"navigation.download",
-				"navigation.dom_ready",
-				"navigation.window_load",
-			].map((name) => [name, { sampleCount: 1 }]),
-		),
+		vitalSampleCounts: { LCP: 6, CLS: 9, INP: 4, FCP: 9, TTFB: 9 },
+		conditionalNavigation: {
+			"navigation.dns": "observed",
+			"navigation.tcp": "observed",
+			"navigation.tls": "unavailable",
+		},
 		media: {
 			desktop: {
-				path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png",
+				path: "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png",
 				sha256:
-					"f88e684dcc124aa948ada4ee0b406ebde3749add2ce76e6fd90008a27f8c60f7",
+					"400a983f87852dbcf02d29cca5cc1d6f9fb75cd4586a3482231f4b753104ddf0",
 			},
 			mobile390: {
-				path: "docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png",
+				path: "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png",
 				sha256:
-					"b1b259b10f136ab0ba537aff94f4f842533bda579b18a95f2c04fbbcec75959d",
+					"b9957f195f0b0937967b7759c46df668f89f82e9ce67f429d29ee5cd110cfff0",
 			},
-			recording: {
-				path: "docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm",
+			dashboardRecording: {
+				path: "docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm",
 				sha256:
-					"b11406c9a01a1c5ef4b4ab414f5fa0e07960994c1a64c95d123b366cb417f166",
+					"5ca39f9b203b10922ee6faddb2342ee2add028a81e0a283c70d65d9b398b9e61",
+			},
+			journeyRecording: {
+				path: "docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm",
+				sha256:
+					"c03aeb0e1693e1102f9f5dff89ced9c4796d6089c338e8ce3d83a43c45eacb7f",
 			},
 		},
 	},
@@ -961,7 +967,7 @@ test("rejects final AWS evidence when a required performance metric has no sampl
 		["性能观测", "闭环", "`aws/`", "机器证据", "`complete`"],
 	]);
 	const changed = structuredClone(validMachineEvidence);
-	changed.dashboard.vitals.INP.sampleCount = 0;
+	changed.dashboard.vitalSampleCounts.INP = 0;
 
 	assert.match(
 		validate(
