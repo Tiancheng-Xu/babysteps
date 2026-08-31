@@ -20,7 +20,8 @@ export const journeyManifest = JSON.parse(
 );
 export const journeyRoutes = journeyManifest.routes;
 const expectedRoutes = journeyRoutes.map(({ path }) => path);
-const unavailableCoverage = journeyManifest.unavailableMetrics;
+const conditionalAvailabilityCoverage =
+	journeyManifest.conditionalAvailabilityMetrics;
 const routeTokens = new Map([
 	["/", "HOME"],
 	["/tasks", "TASKS"],
@@ -223,13 +224,11 @@ export function assertJourneyComplete(summary) {
 				: "INCOMPLETE_METRIC_COVERAGE",
 		);
 	}
-	if (summary.coverage.missingUnavailable.length > 0) {
-		const missing = summary.coverage.missingUnavailable
+	if (summary.coverage.missingConditionalAvailability.length > 0) {
+		const missing = summary.coverage.missingConditionalAvailability
 			.map((name) => name.toUpperCase().replace(/[^A-Z0-9]+/gu, "_"))
 			.sort();
-		throw new Error(
-			`INCOMPLETE_UNAVAILABLE_COVERAGE_${missing.join("_")}`,
-		);
+		throw new Error(`INCOMPLETE_CONDITIONAL_AVAILABILITY_${missing.join("_")}`);
 	}
 	if (!summary.representativeInteraction.observed) {
 		throw new Error("MISSING_REPRESENTATIVE_INTERACTION_METRIC");
@@ -451,21 +450,36 @@ export function sanitizeJourneySummary(input) {
 	const routes = expectedRoutes.filter((route) =>
 		input.routes?.includes(route),
 	);
-	const names = Array.isArray(input.coverage)
+	const entries = Array.isArray(input.coverage)
 		? input.coverage.filter(
-				(name) =>
-					typeof name === "string" &&
-					/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(name),
+				(entry) =>
+					typeof entry?.name === "string" &&
+					/^[A-Za-z][A-Za-z0-9._-]{0,63}$/u.test(entry.name) &&
+					(entry.status === "observed" || entry.status === "unavailable"),
 			)
 		: [];
 	const observed = [
-		...new Set(names.filter((name) => !unavailableCoverage.includes(name))),
+		...new Set(
+			entries
+				.filter(({ status }) => status === "observed")
+				.map(({ name }) => name),
+		),
 	].sort();
+	const observedSet = new Set(observed);
 	const unavailable = [
-		...new Set(names.filter((name) => unavailableCoverage.includes(name))),
+		...new Set(
+			entries
+				.filter(
+					({ name, status }) =>
+						status === "unavailable" &&
+						conditionalAvailabilityCoverage.includes(name) &&
+						!observedSet.has(name),
+				)
+				.map(({ name }) => name),
+		),
 	].sort();
-	const missingUnavailable = unavailableCoverage
-		.filter((name) => !unavailable.includes(name))
+	const missingConditionalAvailability = conditionalAvailabilityCoverage
+		.filter((name) => !observedSet.has(name) && !unavailable.includes(name))
 		.sort();
 	const coverage = evaluateJourneyCoverage({
 		observed,
@@ -494,7 +508,7 @@ export function sanitizeJourneySummary(input) {
 			observed,
 			unavailable,
 			missingRequired: coverage.missing,
-			missingUnavailable,
+			missingConditionalAvailability,
 		},
 		batchCount: boundedCount(input.batchCount),
 		acceptedBatchCount: boundedCount(input.acceptedBatchCount),
@@ -556,7 +570,7 @@ async function runJourney() {
 		: undefined;
 	if (artifactsDir) await mkdir(artifactsDir, { recursive: true });
 	const observedRoutes = new Set();
-	const coverage = new Set();
+	const coverage = new Map();
 	const deliveryTracker = createTelemetryDeliveryTracker();
 	const safeBusinessOutcomes = Object.fromEntries(
 		journeyManifest.safeBusinessInteractions.map((interaction) => [
@@ -697,7 +711,13 @@ async function runJourney() {
 						}
 					}
 					const coverageMetric = coverageMetricForObservedEvent(event);
-					if (coverageMetric) coverage.add(coverageMetric);
+					if (coverageMetric) {
+						const status =
+							event.outcome === "unavailable" ? "unavailable" : "observed";
+						if (status === "observed" || !coverage.has(coverageMetric)) {
+							coverage.set(coverageMetric, status);
+						}
+					}
 					if (
 						event.name ===
 							journeyManifest.representativeInteraction.expectedMetric &&
@@ -855,7 +875,7 @@ async function runJourney() {
 	}
 	const summary = sanitizeJourneySummary({
 		routes: [...observedRoutes],
-		coverage: [...coverage],
+		coverage: [...coverage].map(([name, status]) => ({ name, status })),
 		...deliveryTracker.snapshot(),
 		representativeMetricObserved,
 		safeBusinessOutcomes,
