@@ -6,7 +6,7 @@ import renderingSequenceImage from "../../../docs/architecture/starbuddy-renderi
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import roleArchitectureUrl from "../../../docs/evidence/architecture/babysteps-role-boundaries.html?url";
-import implementedJourneyEvidenceUrl from "../../../docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json?url";
+import implementedJourneyEvidenceUrl from "../../../docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json?url&no-inline";
 import roleInventory from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json";
 import roleInventoryUrl from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json?url";
 import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-31-performance-aws-final.json?url";
@@ -21,7 +21,7 @@ import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
 import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png";
 import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png";
-import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url";
+import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url&no-inline";
 import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
 
 const CONTRACTS = [

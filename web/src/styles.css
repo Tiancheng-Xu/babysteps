@@ -2886,13 +2886,13 @@ textarea[aria-invalid="true"] {
 
 .evidence-requirement-map > div {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 	gap: 12px;
 }
 
 .evidence-requirement-map article {
 	display: grid;
-	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+	grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
 	gap: 8px 12px;
 	min-width: 0;
 	padding: 16px;
@@ -2906,6 +2906,10 @@ textarea[aria-invalid="true"] {
 .evidence-requirement-map article > :not(strong) {
 	min-width: 0;
 	overflow-wrap: anywhere;
+}
+
+.evidence-requirement-map article > a {
+	grid-column: 2;
 }
 
 .evidence-requirement-map code {
@@ -3104,6 +3108,8 @@ textarea[aria-invalid="true"] {
 	display: block;
 	width: 100%;
 	max-width: 100%;
+	aspect-ratio: 8 / 5;
+	object-fit: contain;
 	border: 2px solid var(--line);
 	border-radius: 18px;
 	background: #1d2630;
@@ -3487,6 +3493,10 @@ textarea[aria-invalid="true"] {
 
 	.evidence-requirement-map article {
 		grid-template-columns: 1fr;
+	}
+
+	.evidence-requirement-map article > a {
+		grid-column: 1;
 	}
 
 	.evidence-trust-flow li:not(:last-child)::after {

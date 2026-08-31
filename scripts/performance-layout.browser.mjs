@@ -294,3 +294,85 @@ test("the role architecture stays out of the first render and opens in a sandbox
 		await browser.close();
 	}
 });
+
+test("deep Evidence content keeps single-card mappings readable at every supported width", async () => {
+	const browser = await chromium.launch({ headless: true });
+	try {
+		for (const width of [375, 390, 430, 1440]) {
+			const page = await browser.newPage({
+				viewport: { width, height: width === 1440 ? 1000 : 900 },
+			});
+			const pageErrors = [];
+			page.on("pageerror", (error) => pageErrors.push(error.message));
+			const response = await page.goto(
+				new URL("/evidence", testOrigin).toString(),
+				{ waitUntil: "domcontentloaded" },
+			);
+			assert.ok(response?.ok(), `${width}px Evidence route must return HTTP success`);
+
+			const heading = page.getByRole("heading", {
+				name: "全路由采样与覆盖语义",
+				exact: true,
+			});
+			await heading.waitFor();
+			const mapping = heading.locator("xpath=..").locator(":scope > div");
+			const [mappingBox, articleBox] = await Promise.all([
+				mapping.boundingBox(),
+				mapping.locator("article").first().boundingBox(),
+			]);
+			assert.ok(mappingBox && articleBox, "Evidence mapping must render");
+			assert.ok(
+				articleBox.width >= mappingBox.width * 0.9,
+				`${width}px single-card Evidence mapping must use the available width`,
+			);
+			if (width === 1440) {
+				const valueBoxes = await mapping
+					.locator("article > :not(strong)")
+					.evaluateAll((elements) =>
+						elements.map((element) => element.getBoundingClientRect().width),
+					);
+				assert.ok(valueBoxes.length > 0, "Evidence mapping value column must render");
+				for (const valueWidth of valueBoxes) {
+					assert.ok(
+						valueWidth >= articleBox.width * 0.6,
+						"every desktop Evidence value must remain in the wide value column",
+					);
+				}
+			}
+
+			for (const name of ["查看机器证据", "查看实现记录"]) {
+				const href = await page.getByRole("link", { name }).getAttribute("href");
+				assert.ok(href, `${name} must have a non-empty href`);
+				assert.ok(
+					!href.startsWith("data:"),
+					`${name} must navigate to an emitted file instead of a blocked data URL`,
+				);
+			}
+
+			const videoRatios = await page
+				.locator(".evidence-video-proof video")
+				.evaluateAll((elements) =>
+					elements.map((element) => {
+						const rect = element.getBoundingClientRect();
+						return rect.height / rect.width;
+					}),
+				);
+			assert.ok(videoRatios.length >= 3, "Evidence must render every recorded proof");
+			for (const ratio of videoRatios) {
+				assert.ok(
+					ratio >= 0.6 && ratio <= 0.65,
+					`${width}px recorded proof must preserve the 1440x900 media ratio, received ${ratio}`,
+				);
+			}
+
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - window.innerWidth,
+			);
+			assert.ok(overflow <= 1, `${width}px Evidence route must not overflow`);
+			assert.deepEqual(pageErrors, [], `${width}px Evidence route must not emit page errors`);
+			await page.close();
+		}
+	} finally {
+		await browser.close();
+	}
+});

@@ -24,7 +24,7 @@ const routeScenarios = productRoutes.map(([label, route]) => ({
 	readyTimeout: 15_000,
 	delay: 800,
 	onReadyScript: "playwright/onReady.cjs",
-	selectors: ["viewport"],
+	selectors: ["document"],
 	selectorExpansion: false,
 	misMatchThreshold: 0.1,
 	requireSameDimensions: true,
