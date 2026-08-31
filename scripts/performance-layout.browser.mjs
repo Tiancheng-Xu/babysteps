@@ -204,7 +204,10 @@ test("the role architecture stays out of the first render and opens in a sandbox
 					request.resourceType() === "document" &&
 					request.url().includes("babysteps-role-boundaries")
 				) {
-					roleArtifactRequests.push(request.url());
+					roleArtifactRequests.push({
+						url: request.url(),
+						redirectedFrom: request.redirectedFrom()?.url() ?? null,
+					});
 				}
 				if (/fonts\.googleapis\.com\/.*JetBrains\+Mono/u.test(request.url())) {
 					remoteFontRequests.push(request.url());
@@ -251,11 +254,21 @@ test("the role architecture stays out of the first render and opens in a sandbox
 					exact: true,
 				})
 				.waitFor();
-			assert.equal(
-				roleArtifactRequests.length,
-				1,
-				`${width}px click must request exactly one role artifact`,
+			const rootRoleArtifactRequests = roleArtifactRequests.filter(
+				({ redirectedFrom }) => redirectedFrom === null,
 			);
+			assert.equal(
+				rootRoleArtifactRequests.length,
+				1,
+				`${width}px click must start exactly one role artifact navigation`,
+			);
+			for (let index = 1; index < roleArtifactRequests.length; index += 1) {
+				assert.equal(
+					roleArtifactRequests[index].redirectedFrom,
+					roleArtifactRequests[index - 1].url,
+					`${width}px extra role artifact requests must belong to the same redirect chain`,
+				);
+			}
 			assert.deepEqual(
 				remoteFontRequests,
 				[],
