@@ -2077,10 +2077,17 @@ test("a scheduled TTL janitor dispatches the existing exact recovery deep module
 	assert.equal(janitor.if, "github.event_name == 'schedule'");
 	assert.equal(janitor.permissions.actions, "write");
 	assert.equal(janitor.permissions["id-token"], "write");
+	assert.equal(janitor.permissions.contents, undefined);
+	assert.equal(
+		janitor.steps.some((step) => step.uses?.startsWith("actions/checkout@")),
+		false,
+	);
 	const run = janitor.steps.find(
 		(step) => step.name === "Dispatch one exact expired recovery",
 	).run;
+	assert.match(run, /test "\$GITHUB_REPOSITORY" = "Tiancheng-Xu\/babysteps"/);
 	assert.match(run, /gh run list/);
+	assert.match(run, /gh run list --repo "\$GITHUB_REPOSITORY"/);
 	assert.match(run, /databaseId/);
 	assert.match(run, /--arg current "\$GITHUB_RUN_ID"/);
 	assert.match(run, /databaseId\s*\|\s*tostring/);
@@ -2089,6 +2096,25 @@ test("a scheduled TTL janitor dispatches the existing exact recovery deep module
 	assert.match(run, /RunId/);
 	assert.match(run, /ExpiresAt/);
 	assert.match(run, /aws-performance-recovery\.yml/);
+	assert.match(
+		run,
+		/gh workflow run aws-performance-recovery\.yml --repo "\$GITHUB_REPOSITORY"/,
+	);
+	const runLines = run.split("\n");
+	const repositoryGuardIndex = runLines.findIndex((line) =>
+		line.includes('test "$GITHUB_REPOSITORY" = "Tiancheng-Xu/babysteps"'),
+	);
+	const ghCommandIndexes = runLines
+		.map((line, index) => ({ line: line.trim(), index }))
+		.filter(
+			({ line }) =>
+				line.includes("gh run list") || line.includes("gh workflow run"),
+		);
+	assert.equal(ghCommandIndexes.length, 2);
+	assert.ok(repositoryGuardIndex < ghCommandIndexes[0].index);
+	for (const command of ghCommandIndexes) {
+		assert.match(command.line, /--repo "\$GITHUB_REPOSITORY"/);
+	}
 	assert.match(run, /database_state=schema-initialized/);
 	assert.doesNotMatch(
 		run,
