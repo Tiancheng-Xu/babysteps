@@ -186,5 +186,5 @@
       "transaction.receipt"
     ]
   },
-  "unavailableMetrics": ["navigation.dns", "navigation.tcp", "navigation.tls"]
+  "conditionalAvailabilityMetrics": ["navigation.dns", "navigation.tcp", "navigation.tls"]
 }

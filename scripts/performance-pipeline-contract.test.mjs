@@ -445,7 +445,8 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			zeroOrObservedMetrics: journeyManifest.zeroOrObservedMetrics,
 			healthyZeroMetrics: journeyManifest.healthyZeroMetrics,
 			conditionalMetrics: journeyManifest.conditionalMetrics,
-			unavailableMetrics: journeyManifest.unavailableMetrics,
+			conditionalAvailabilityMetrics:
+				journeyManifest.conditionalAvailabilityMetrics,
 		},
 		{
 			schemaVersion: 2,
@@ -545,7 +546,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 					"transaction.receipt",
 				],
 			},
-			unavailableMetrics: [
+			conditionalAvailabilityMetrics: [
 				"navigation.dns",
 				"navigation.tcp",
 				"navigation.tls",
@@ -813,11 +814,11 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			"/evidence",
 		],
 		coverage: [
-			...required,
-			"longtask.duration",
-			"navigation.dns",
-			"navigation.tcp",
-			"navigation.tls",
+			...required.map((name) => ({ name, status: "observed" })),
+			{ name: "longtask.duration", status: "observed" },
+			{ name: "navigation.dns", status: "unavailable" },
+			{ name: "navigation.tcp", status: "observed" },
+			{ name: "navigation.tls", status: "unavailable" },
 		],
 		batchCount: 2,
 		acceptedBatchCount: 2,
@@ -849,10 +850,10 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			"/evidence",
 		],
 		coverage: {
-			observed: [...required, "longtask.duration"].sort(),
-			unavailable: ["navigation.dns", "navigation.tcp", "navigation.tls"],
+			observed: [...required, "longtask.duration", "navigation.tcp"].sort(),
+			unavailable: ["navigation.dns", "navigation.tls"],
 			missingRequired: [],
-			missingUnavailable: [],
+			missingConditionalAvailability: [],
 		},
 		batchCount: 2,
 		acceptedBatchCount: 2,
@@ -1011,12 +1012,15 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 });
 
-test("the Chromium journey cannot claim unavailable navigation coverage without delivered events", async () => {
+test("the Chromium journey requires a delivered terminal state for conditional navigation metrics", async () => {
 	const { assertJourneyComplete, journeyManifest, sanitizeJourneySummary } =
 		await import("./run-performance-browser-journey.mjs");
 	const summary = sanitizeJourneySummary({
 		routes: journeyManifest.routes.map(({ path }) => path),
-		coverage: journeyManifest.requiredMetrics,
+		coverage: journeyManifest.requiredMetrics.map((name) => ({
+			name,
+			status: "observed",
+		})),
 		batchCount: 1,
 		acceptedBatchCount: 1,
 		eventCount: journeyManifest.requiredMetrics.length,
@@ -1024,15 +1028,30 @@ test("the Chromium journey cannot claim unavailable navigation coverage without 
 	});
 
 	assert.deepEqual(summary.coverage.unavailable, []);
-	assert.deepEqual(summary.coverage.missingUnavailable, [
+	assert.deepEqual(summary.coverage.missingConditionalAvailability, [
 		"navigation.dns",
 		"navigation.tcp",
 		"navigation.tls",
 	]);
 	assert.throws(() => assertJourneyComplete(summary), {
 		message:
-			"INCOMPLETE_UNAVAILABLE_COVERAGE_NAVIGATION_DNS_NAVIGATION_TCP_NAVIGATION_TLS",
+			"INCOMPLETE_CONDITIONAL_AVAILABILITY_NAVIGATION_DNS_NAVIGATION_TCP_NAVIGATION_TLS",
 	});
+});
+
+test("the Chromium journey keeps observed navigation samples over unavailable events", async () => {
+	const { sanitizeJourneySummary } = await import(
+		"./run-performance-browser-journey.mjs"
+	);
+	const summary = sanitizeJourneySummary({
+		coverage: [
+			{ name: "navigation.tcp", status: "unavailable" },
+			{ name: "navigation.tcp", status: "observed" },
+		],
+	});
+
+	assert(summary.coverage.observed.includes("navigation.tcp"));
+	assert(!summary.coverage.unavailable.includes("navigation.tcp"));
 });
 
 test("the legacy PRD walkthrough stays UI-only and cannot satisfy implemented-feature recording closure", async () => {
@@ -1489,15 +1508,27 @@ test("performance readback rejects partial metric coverage", async () => {
 				p95: 1,
 				coverage: "observed",
 			})),
-			...manifest.unavailableMetrics.map((name) => ({
-				name,
-				unit: "ms",
-				sampleCount: 0,
-				p50: null,
-				p75: null,
-				p95: null,
-				coverage: "unavailable",
-			})),
+			...manifest.conditionalAvailabilityMetrics.map((name) =>
+				name === "navigation.tcp"
+					? {
+							name,
+							unit: "ms",
+							sampleCount: 3,
+							p50: 0.2,
+							p75: 0.3,
+							p95: 0.3,
+							coverage: "observed",
+						}
+					: {
+							name,
+							unit: "ms",
+							sampleCount: 0,
+							p50: null,
+							p75: null,
+							p95: null,
+							coverage: "unavailable",
+						},
+			),
 		],
 		resources: [
 			"resource.fetch.duration",
@@ -1582,9 +1613,9 @@ test("performance readback rejects partial metric coverage", async () => {
 				name,
 				status: "not-exercised",
 			})),
-			...manifest.unavailableMetrics.map((name) => ({
+			...manifest.conditionalAvailabilityMetrics.map((name) => ({
 				name,
-				status: "unavailable",
+				status: name === "navigation.tcp" ? "observed" : "unavailable",
 			})),
 		],
 	};
@@ -1600,7 +1631,7 @@ test("performance readback rejects partial metric coverage", async () => {
 		renderingSampleCount: 3,
 		healthyZeroCount: 12,
 		conditionalNotExercisedCount: 11,
-		unavailableCount: 3,
+		conditionalAvailabilityCount: 3,
 	});
 	for (const [patch, error] of [
 		[
@@ -1695,7 +1726,7 @@ test("performance readback rejects partial metric coverage", async () => {
 			renderingSampleCount: 3,
 			healthyZeroCount: 12,
 			conditionalNotExercisedCount: 11,
-			unavailableCount: 3,
+			conditionalAvailabilityCount: 3,
 		},
 	);
 	assert.throws(
@@ -1739,7 +1770,7 @@ test("performance readback rejects partial metric coverage", async () => {
 	for (const [name, status, error] of [
 		["javascript.error", "instrumented-no-sample", /INVALID_HEALTHY_ZERO/],
 		["wallet.connect", "observed", /INVALID_CONDITIONAL_COVERAGE/],
-		["navigation.dns", "observed", /INVALID_UNAVAILABLE_COVERAGE/],
+		["navigation.dns", "observed", /INVALID_CONDITIONAL_NAVIGATION_SAMPLE/],
 	]) {
 		assert.throws(
 			() =>
@@ -1752,6 +1783,18 @@ test("performance readback rejects partial metric coverage", async () => {
 			error,
 		);
 	}
+	assert.throws(
+		() =>
+			validatePerformanceReadback({
+				...stats,
+				coverage: stats.coverage.map((item) =>
+					item.name === "navigation.tcp"
+						? { ...item, status: "unavailable" }
+						: item,
+				),
+			}),
+		/INVALID_CONDITIONAL_NAVIGATION_SAMPLE_navigation_tcp/,
+	);
 });
 
 test("the pipeline validator follows the manifest-driven metric contract", async () => {
@@ -1763,7 +1806,7 @@ test("the pipeline validator follows the manifest-driven metric contract", async
 	assert.match(source, /performance-journey\.manifest\.json/);
 	assert.match(source, /validate-performance-readback\.mjs/);
 	assert.match(source, /requiredMetrics/);
-	assert.match(source, /unavailableMetrics/);
+	assert.match(source, /conditionalAvailabilityMetrics/);
 	assert.doesNotMatch(source, /"sampleCount"/);
 });
 

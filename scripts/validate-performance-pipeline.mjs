@@ -234,9 +234,9 @@ if (
 	).size !== 31
 )
 	errors.push("implemented feature journey ids must be unique");
-for (const metric of ["navigation.dns", "navigation.tls"]) {
-	if (!manifest.unavailableMetrics?.includes(metric))
-		errors.push(`localhost ${metric} coverage must be unavailable`);
+for (const metric of ["navigation.dns", "navigation.tcp", "navigation.tls"]) {
+	if (!manifest.conditionalAvailabilityMetrics?.includes(metric))
+		errors.push(`localhost ${metric} coverage must be conditionally available`);
 }
 if (/^\s*(?:push|schedule):/m.test(workflow))
 	errors.push("automatic paid deployment triggers are forbidden");

@@ -74,17 +74,25 @@ function requiredHealthyZero(stats, name) {
 	return 1;
 }
 
-function requiredUnavailableNavigation(stats, name) {
-	requiredCoverageStatus(
-		stats?.coverage,
-		name,
-		"unavailable",
-		"INVALID_UNAVAILABLE_COVERAGE",
-	);
+function requiredConditionalNavigation(stats, name) {
+	const coverage = stats?.coverage?.find(
+		(candidate) => candidate?.name === name,
+	)?.status;
 	const metric = stats?.navigation?.find(
 		(candidate) => candidate?.name === name,
 	);
+	if (coverage === "observed") {
+		try {
+			requiredSample(stats?.navigation, name, "ms");
+		} catch {
+			throw new Error(
+				`INVALID_CONDITIONAL_NAVIGATION_SAMPLE_${name.replaceAll(".", "_")}`,
+			);
+		}
+		return 1;
+	}
 	if (
+		coverage !== "unavailable" ||
 		metric?.unit !== "ms" ||
 		metric?.sampleCount !== 0 ||
 		metric?.p50 !== null ||
@@ -92,7 +100,9 @@ function requiredUnavailableNavigation(stats, name) {
 		metric?.p95 !== null ||
 		metric?.coverage !== "unavailable"
 	) {
-		throw new Error(`INVALID_UNAVAILABLE_SAMPLE_${name.replaceAll(".", "_")}`);
+		throw new Error(
+			`INVALID_CONDITIONAL_NAVIGATION_SAMPLE_${name.replaceAll(".", "_")}`,
+		);
 	}
 	return 1;
 }
@@ -300,10 +310,11 @@ export function validatePerformanceReadback(stats, expectations) {
 				),
 			0,
 		),
-		unavailableCount: manifest.unavailableMetrics.reduce(
-			(total, name) => total + requiredUnavailableNavigation(stats, name),
-			0,
-		),
+		conditionalAvailabilityCount:
+			manifest.conditionalAvailabilityMetrics.reduce(
+				(total, name) => total + requiredConditionalNavigation(stats, name),
+				0,
+			),
 	};
 }
 
