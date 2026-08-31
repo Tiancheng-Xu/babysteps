@@ -1,5 +1,5 @@
 import { simulateContract } from "@wagmi/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	type Address,
 	type Hash,
@@ -21,6 +21,7 @@ import {
 	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 
 export type OwnerReviewPhase =
 	| "unavailable"
@@ -48,6 +49,7 @@ export function useOwnerTaskReview(
 	const [message, setMessage] = useState<string>();
 	const pendingRef = useRef(false);
 	const confirmedHashRef = useRef<Hash | undefined>(undefined);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const roleRead = useReadContract({
 		address: marketplaceAddress,
@@ -103,10 +105,11 @@ export function useOwnerTaskReview(
 	useEffect(() => {
 		if (receipt.isError && transactionHash) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setPhase("error");
 			setMessage(toWalletMessage(receipt.error));
 		}
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -118,9 +121,10 @@ export function useOwnerTaskReview(
 		}
 		confirmedHashRef.current = transactionHash;
 		pendingRef.current = false;
+		businessLifecycle.succeed();
 		setPhase("success");
 		setMessage("审核交易已确认，请等待链上状态刷新。");
-	}, [receipt.isSuccess, transactionHash]);
+	}, [businessLifecycle, receipt.isSuccess, transactionHash]);
 
 	const submit = useCallback(
 		async (action: "approve" | "reject") => {
@@ -143,6 +147,11 @@ export function useOwnerTaskReview(
 			}
 
 			pendingRef.current = true;
+			businessLifecycle.start(
+				action === "approve"
+					? "business.owner.approve"
+					: "business.owner.reject",
+			);
 			confirmedHashRef.current = undefined;
 			setPhase("awaiting-signature");
 			setMessage("请在 Owner 钱包确认审核交易。");
@@ -164,12 +173,14 @@ export function useOwnerTaskReview(
 				setMessage("审核交易已广播，正在等待链上确认。");
 			} catch (error) {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setPhase("error");
 				setMessage(toWalletMessage(error));
 			}
 		},
 		[
 			address,
+			businessLifecycle,
 			marketplaceAddress,
 			ready,
 			rejectionReason,

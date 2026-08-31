@@ -1,5 +1,5 @@
 import { simulateContract } from "@wagmi/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Address, type Hash, keccak256, stringToBytes } from "viem";
 import {
 	useAccount,
@@ -16,6 +16,7 @@ import {
 	taskMarketplaceV2Address,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 
 export type ProviderActivity = "meal" | "walk" | "read";
@@ -64,6 +65,7 @@ export function useProviderTaskCreation(
 	const [transactionMessage, setTransactionMessage] = useState<string>();
 	const pendingRef = useRef(false);
 	const confirmedHashRef = useRef<Hash | undefined>(undefined);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -90,9 +92,10 @@ export function useProviderTaskCreation(
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("error");
 		setTransactionMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -104,11 +107,12 @@ export function useProviderTaskCreation(
 		}
 		confirmedHashRef.current = transactionHash;
 		pendingRef.current = false;
+		businessLifecycle.succeed();
 		setMetadataUri("");
 		setMetadataHash("");
 		setTransactionPhase("success");
 		setTransactionMessage("任务申请已确认，正在等待 Owner 审核。");
-	}, [receipt.isSuccess, transactionHash]);
+	}, [businessLifecycle, receipt.isSuccess, transactionHash]);
 
 	const hasProviderRole = roleRead.data === true;
 	let phase: ProviderTaskPhase = "unavailable";
@@ -145,6 +149,7 @@ export function useProviderTaskCreation(
 		}
 
 		pendingRef.current = true;
+		businessLifecycle.start("business.provider.create");
 		confirmedHashRef.current = undefined;
 		setTransactionHash(undefined);
 		setTransactionPhase("awaiting-signature");
@@ -169,12 +174,14 @@ export function useProviderTaskCreation(
 			setTransactionMessage("创建交易已广播，正在等待链上确认。");
 		} catch (error) {
 			pendingRef.current = false;
+			businessLifecycle.fail();
 			setTransactionPhase("error");
 			setTransactionMessage(toWalletMessage(error));
 		}
 	}, [
 		activity,
 		address,
+		businessLifecycle,
 		canSubmit,
 		marketplaceContractAddress,
 		metadataHash,

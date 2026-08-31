@@ -1,6 +1,43 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { validateDeliveryEvidence } from "./validate-delivery-evidence.mjs";
+import journeyManifest from "./performance-journey.manifest.json" with {
+	type: "json",
+};
+import roleBoundaryInventory from "../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json" with {
+	type: "json",
+};
+import {
+	validateDeliveryEvidence,
+	validateImplementedFeatureJourneyEvidence,
+	validateRoleBoundaryInventory,
+} from "./validate-delivery-evidence.mjs";
+
+test("role boundary inventory covers every frozen role family and the Evidence delivery contract", () => {
+	assert.deepEqual(
+		validateRoleBoundaryInventory(
+			roleBoundaryInventory,
+			"全角色与权限边界 babysteps-role-boundaries.html 2026-08-30-role-boundary-inventory.json sandbox=allow-scripts allow-downloads",
+		),
+		[],
+	);
+});
+
+test("role boundary inventory rejects a missing current role and duplicate identity", () => {
+	const mutated = structuredClone(roleBoundaryInventory);
+	mutated.groups[1].roles = mutated.groups[1].roles.filter(
+		({ id }) => id !== "marketplace-v2-provider",
+	);
+	mutated.groups[0].roles.push(structuredClone(mutated.groups[0].roles[0]));
+
+	const errors = validateRoleBoundaryInventory(
+		mutated,
+		"全角色与权限边界 babysteps-role-boundaries.html 2026-08-30-role-boundary-inventory.json sandbox=allow-scripts allow-downloads",
+	);
+	assert.ok(
+		errors.includes("role boundary inventory is missing: marketplace-v2-provider"),
+	);
+	assert.ok(errors.includes("role boundary inventory has duplicate id: public-visitor"));
+});
 
 const validArchitecture = `
 # BabySteps Web3 architecture
@@ -976,5 +1013,47 @@ test("rejects final AWS evidence whose media hash drifts", () => {
 			changed,
 		).join("\n"),
 		/final AWS evidence desktop media hash mismatch/,
+	);
+});
+
+test("implemented-feature Evidence requires the exact 31-journey catalog and honest pending stage", () => {
+	const journeyIds = journeyManifest.implementedFeatureJourneys.map(
+		({ journeyId }) => journeyId,
+	);
+	const evidence = {
+		schemaVersion: 1,
+		stage: "local-verified",
+		journeys: journeyIds.map((journeyId) => ({
+			journeyId,
+			status: "local-verified",
+		})),
+		exclusions: [
+			"Provider D1 draft editing",
+			"Owner role administration",
+			"Task detail comments",
+			"Parent purchase overview",
+			"Automatic swap purchase drawer",
+			"Hidden backend-only capabilities",
+			"Agent Market arbitration and Cocos",
+		],
+	};
+	const page =
+		"31 个 Journey · 当前实现边界 · local-verified · sepolia-verified · aws-live-verified · production-verified · blocked · 2026-08-30-implemented-feature-live-journey.json · 2026-08-30-implemented-feature-live-journey.md";
+
+	assert.deepEqual(
+		validateImplementedFeatureJourneyEvidence(evidence, page),
+		[],
+	);
+	const duplicate = structuredClone(evidence);
+	duplicate.journeys.push(duplicate.journeys[0]);
+	assert.match(
+		validateImplementedFeatureJourneyEvidence(duplicate, page).join("\n"),
+		/exact 31 journey catalog/,
+	);
+	const falseClaim = structuredClone(evidence);
+	falseClaim.stage = "production-verified";
+	assert.match(
+		validateImplementedFeatureJourneyEvidence(falseClaim, page).join("\n"),
+		/production stage requires final run proof/,
 	);
 });

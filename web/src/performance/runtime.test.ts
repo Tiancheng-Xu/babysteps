@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	createBusinessOperationLifecycle,
+	measureBusinessPerformance,
 	measurePerformance,
 	recordPerformance,
 	setPerformanceClient,
@@ -35,5 +37,50 @@ describe("performance runtime bridge", () => {
 		expect(record).toHaveBeenCalledWith(
 			expect.objectContaining({ name: "spa.route.duration", value: 24 }),
 		);
+	});
+
+	it("measures a bounded business operation through the configured client", async () => {
+		const markBusinessOperation = vi.fn(async (_name, operation) =>
+			operation(),
+		);
+		setPerformanceClient({
+			markOperation: vi.fn(),
+			markBusinessOperation,
+			record: vi.fn(),
+		} as unknown as PerformanceClient);
+
+		await expect(
+			measureBusinessPerformance("business.profile.write", async () => "saved"),
+		).resolves.toBe("saved");
+		expect(markBusinessOperation).toHaveBeenCalledWith(
+			"business.profile.write",
+			expect.any(Function),
+		);
+	});
+
+	it("measures one business lifecycle through its explicit product readback", async () => {
+		const markBusinessOperation = vi.fn(async (_name, operation) =>
+			operation(),
+		);
+		setPerformanceClient({
+			markOperation: vi.fn(),
+			markBusinessOperation,
+			record: vi.fn(),
+		} as unknown as PerformanceClient);
+		const lifecycle = createBusinessOperationLifecycle();
+
+		expect(lifecycle.start("business.growth.activity")).toBe(true);
+		expect(lifecycle.start("business.growth.transfer")).toBe(false);
+		expect(markBusinessOperation).toHaveBeenCalledOnce();
+		expect(markBusinessOperation).toHaveBeenCalledWith(
+			"business.growth.activity",
+			expect.any(Function),
+		);
+
+		lifecycle.succeed();
+		await expect(markBusinessOperation.mock.results[0]?.value).resolves.toBe(
+			undefined,
+		);
+		expect(lifecycle.isPending()).toBe(false);
 	});
 });

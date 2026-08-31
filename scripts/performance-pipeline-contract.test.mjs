@@ -5,6 +5,267 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
 
+const expectedBusinessMetrics = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+];
+
+const expectedImplementedJourneyIds = [
+	"NAV-01",
+	"WALLET-01",
+	"GROWTH-01",
+	"GROWTH-02",
+	"GROWTH-03",
+	"TRANSFER-01",
+	"NOTE-01",
+	"BABY-01",
+	"BABY-02",
+	"BABY-03",
+	"PARENT-READ-01",
+	"MARKET-READ-01",
+	"MARKET-APPROVE-01",
+	"MARKET-BUY-01",
+	"CONTENT-01",
+	"COMPLETE-SUBMIT-01",
+	"PROVIDER-CREATE-01",
+	"OWNER-APPROVE-01",
+	"OWNER-REJECT-01",
+	"COMPLETION-LOAD-01",
+	"COMPLETION-CONFIRM-01",
+	"KEEPSAKE-DRAW-01",
+	"KEEPSAKE-FUSE-01",
+	"KEEPSAKE-RECOVER-01",
+	"QUOTE-01",
+	"SWAP-01",
+	"IDENTITY-LOGIN-01",
+	"IDENTITY-SESSION-01",
+	"PROFILE-01",
+	"PERF-01",
+	"EVIDENCE-01",
+];
+
+test("the performance manifest owns the exact bounded business metric catalog", async () => {
+	const manifest = JSON.parse(
+		await readFile("scripts/performance-journey.manifest.json", "utf8"),
+	);
+
+	assert.deepEqual(manifest.businessMetrics, expectedBusinessMetrics);
+	assert.equal(new Set(manifest.businessMetrics).size, 20);
+});
+
+test("implemented feature journeys are exact, bounded, and privacy safe", async () => {
+	const [manifestRaw, schemaRaw] = await Promise.all([
+		readFile("scripts/performance-journey.manifest.json", "utf8"),
+		readFile("scripts/implemented-feature-journey.schema.json", "utf8"),
+	]);
+	const manifest = JSON.parse(manifestRaw);
+	const schema = JSON.parse(schemaRaw);
+	const journeys = manifest.implementedFeatureJourneys;
+
+	assert.deepEqual(
+		journeys.map(({ journeyId }) => journeyId),
+		expectedImplementedJourneyIds,
+	);
+	assert.equal(new Set(expectedImplementedJourneyIds).size, 31);
+	assert.equal(schema.minItems, 31);
+	assert.equal(schema.maxItems, 31);
+	assert.deepEqual(
+		[
+			...new Set(
+				journeys.flatMap(({ businessMetric }) => businessMetric ?? []),
+			),
+		],
+		expectedBusinessMetrics,
+	);
+	assert.doesNotMatch(
+		manifestRaw,
+		/privateKey|mnemonic|cookie|0x[0-9a-fA-F]{40}|\/Users\/|\/home\//u,
+	);
+	for (const journey of journeys) {
+		assert.ok(journey.finalProof.length > 0, journey.journeyId);
+		assert.equal(
+			journey.manualSignature,
+			journey.transaction === "sepolia-write" ||
+				journey.journeyId === "WALLET-01" ||
+				journey.journeyId === "IDENTITY-LOGIN-01" ||
+				journey.journeyId === "IDENTITY-SESSION-01",
+			journey.journeyId,
+		);
+	}
+});
+
+test("implemented feature preflight fails closed and returns only aliases", async () => {
+	const { evaluateImplementedFeaturePreflight } = await import(
+		"./run-implemented-feature-preflight.mjs"
+	);
+	const safeSnapshot = {
+		provenance: "live-readonly",
+		collectedAt: "2026-08-30T12:00:00.000Z",
+		sources: {
+			sepolia: "public-rpc-readonly",
+			product: "production-ui-readonly",
+			aws: "oidc-readonly-inventory",
+		},
+		chainId: 11155111,
+		contractsConfigured: true,
+		roles: {
+			"parent-a": true,
+			"recipient-b": true,
+			"provider-c": true,
+			"owner-relayer-d": true,
+		},
+		balances: { gasReady: true, babyReady: true, growthReady: true },
+		marketplace: { activeTaskCount: 1, allowanceReady: true },
+		keepsakes: {
+			vrfReady: true,
+			fusionSetCount: 1,
+			recoverableRequestCount: 1,
+		},
+		identity: { privyReady: true, workerOriginReady: true },
+		awsRuntime: {
+			state: "stopped",
+			budgetGuardPassed: true,
+			zeroResidueVerified: true,
+		},
+	};
+
+	assert.equal(
+		evaluateImplementedFeaturePreflight(safeSnapshot, {
+			now: Date.parse("2026-08-30T12:01:00.000Z"),
+		}).ready,
+		true,
+	);
+	const denied = evaluateImplementedFeaturePreflight(
+		{
+			...safeSnapshot,
+			roles: { ...safeSnapshot.roles, "provider-c": false },
+		},
+		{ now: Date.parse("2026-08-30T12:01:00.000Z") },
+	);
+	assert.equal(denied.ready, false);
+	assert.deepEqual(denied.blockers, ["ROLE_PROVIDER_C_UNAVAILABLE"]);
+	assert.doesNotMatch(
+		JSON.stringify(denied),
+		/0x[0-9a-fA-F]{40}|privateKey|mnemonic|cookie/u,
+	);
+});
+
+test("implemented feature live preflight rejects stale evidence and a running AWS runtime", async () => {
+	const { evaluateImplementedFeaturePreflight } = await import(
+		"./run-implemented-feature-preflight.mjs"
+	);
+	const snapshot = {
+		provenance: "live-readonly",
+		collectedAt: "2026-08-30T11:00:00.000Z",
+		sources: {
+			sepolia: "public-rpc-readonly",
+			product: "production-ui-readonly",
+			aws: "oidc-readonly-inventory",
+		},
+		chainId: 11155111,
+		contractsConfigured: true,
+		roles: {
+			"parent-a": true,
+			"recipient-b": true,
+			"provider-c": true,
+			"owner-relayer-d": true,
+		},
+		balances: { gasReady: true, babyReady: true, growthReady: true },
+		marketplace: { activeTaskCount: 1, allowanceReady: true },
+		keepsakes: {
+			vrfReady: true,
+			fusionSetCount: 1,
+			recoverableRequestCount: 1,
+		},
+		identity: { privyReady: true, workerOriginReady: true },
+		awsRuntime: {
+			state: "running",
+			budgetGuardPassed: true,
+			zeroResidueVerified: false,
+		},
+	};
+	const result = evaluateImplementedFeaturePreflight(snapshot, {
+		now: Date.parse("2026-08-30T12:00:00.000Z"),
+	});
+	assert.equal(result.ready, false);
+	assert.deepEqual(result.blockers, [
+		"PREFLIGHT_SNAPSHOT_STALE",
+		"AWS_ZERO_RESIDUE_UNVERIFIED",
+		"AWS_RUNTIME_NOT_STOPPED",
+	]);
+});
+
+test("implemented feature result separates execution proof from compensation closure", async () => {
+	const {
+		validateImplementedFeatureClosure,
+		validateImplementedFeatureResult,
+	} = await import("./run-implemented-feature-journey.mjs");
+	const valid = {
+		journeyId: "GROWTH-01",
+		roleAlias: "parent-a",
+		outcome: "success",
+		uiFinalState: true,
+		productReadback: true,
+		telemetryAccepted: true,
+		acceptedEventIds: ["evt-redacted-1"],
+		compensation: {
+			kind: "persistent-test-history",
+			status: "verified-non-reversible",
+		},
+	};
+
+	assert.equal(validateImplementedFeatureResult(valid).valid, true);
+	assert.equal(validateImplementedFeatureClosure([valid]).valid, true);
+	assert.deepEqual(
+		validateImplementedFeatureResult({ ...valid, productReadback: false })
+			.errors,
+		["PRODUCT_READBACK_MISSING"],
+	);
+	const pending = {
+		...valid,
+		journeyId: "PERF-01",
+		compensation: {
+			kind: "clear-query-and-clean-aws",
+			status: "pending-external-proof",
+		},
+	};
+	assert.equal(
+		validateImplementedFeatureResult(pending).valid,
+		true,
+		"browser execution may finish while external cleanup remains explicit",
+	);
+	assert.deepEqual(validateImplementedFeatureClosure([valid, pending]), {
+		valid: false,
+		errors: ["COMPENSATION_PENDING_PERF_01"],
+	});
+	assert.equal(
+		validateImplementedFeatureResult({
+			...valid,
+			compensation: { kind: "clear-note", status: "complete" },
+		}).valid,
+		false,
+		"unknown compensation statuses must fail closed",
+	);
+});
+
 test("the AWS unit suite owns the executable performance event contract", async () => {
 	const source = await readFile("aws/test/performancePipeline.test.ts", "utf8");
 
@@ -591,6 +852,7 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 			observed: [...required, "longtask.duration"].sort(),
 			unavailable: ["navigation.dns", "navigation.tcp", "navigation.tls"],
 			missingRequired: [],
+			missingUnavailable: [],
 		},
 		batchCount: 2,
 		acceptedBatchCount: 2,
@@ -733,7 +995,31 @@ test("the Chromium journey emits only a bounded sanitized summary", async () => 
 	);
 });
 
-test("the PRD walkthrough records every product route without wallet or chain writes", async () => {
+test("the Chromium journey cannot claim unavailable navigation coverage without delivered events", async () => {
+	const { assertJourneyComplete, journeyManifest, sanitizeJourneySummary } =
+		await import("./run-performance-browser-journey.mjs");
+	const summary = sanitizeJourneySummary({
+		routes: journeyManifest.routes.map(({ path }) => path),
+		coverage: journeyManifest.requiredMetrics,
+		batchCount: 1,
+		acceptedBatchCount: 1,
+		eventCount: journeyManifest.requiredMetrics.length,
+		representativeMetricObserved: true,
+	});
+
+	assert.deepEqual(summary.coverage.unavailable, []);
+	assert.deepEqual(summary.coverage.missingUnavailable, [
+		"navigation.dns",
+		"navigation.tcp",
+		"navigation.tls",
+	]);
+	assert.throws(() => assertJourneyComplete(summary), {
+		message:
+			"INCOMPLETE_UNAVAILABLE_COVERAGE_NAVIGATION_DNS_NAVIGATION_TCP_NAVIGATION_TLS",
+	});
+});
+
+test("the legacy PRD walkthrough stays UI-only and cannot satisfy implemented-feature recording closure", async () => {
 	const source = await readFile(
 		"scripts/run-prd-walkthrough-recording.mjs",
 		"utf8",
@@ -802,6 +1088,7 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.equal(manifest.pageErrors, 0);
 	assert.equal(manifest.walletWrites, 0);
 	assert.equal(manifest.chainTransactions, 0);
+	assert.equal(manifest.fullJourneyProof, false);
 	assert.equal(manifest.coverage.length, 16);
 	assert.deepEqual(manifest.settledOutcomes, [
 		{ operation: "web3.uniswap.quote", outcome: "failure" },
@@ -812,6 +1099,94 @@ test("the PRD walkthrough records every product route without wallet or chain wr
 	assert.match(evidencePage, /PRD 全功能可见走读/);
 	assert.match(evidencePage, /钱包写入 0、链上交易/);
 	assert.match(evidencePage, /性能筛选保持禁用并记录为/);
+});
+
+test("implemented-feature recording requires all 31 real chapters and reviewed media", async () => {
+	const { validateImplementedFeatureRecording } = await import(
+		"./validate-implemented-feature-recording.mjs"
+	);
+	const results = expectedImplementedJourneyIds.map((journeyId, index) => ({
+		journeyId,
+		route: index === 0 ? "*" : "/",
+		outcome: "success",
+		uiFinalState: true,
+		productReadback: true,
+		telemetryAccepted: true,
+		acceptedEventIds: [`event-${index}`],
+		compensation: { kind: "none", status: "not-required" },
+	}));
+	const recording = {
+		schemaVersion: 1,
+		provenance: "visible-ui-controlled-browser",
+		version: "a".repeat(40),
+		media: {
+			file: "implemented-feature.webm",
+			sha256: "b".repeat(64),
+			bytes: 1024,
+			durationSeconds: 120,
+			audio: false,
+			contactSheetReviewed: true,
+		},
+		viewports: [375, 390, 430, 1440],
+		pageErrors: 0,
+		rootOverflow: 0,
+		chapters: results.map(({ journeyId, route }) => ({
+			journeyId,
+			route,
+			outcome: "success",
+			startedAt: "2026-08-30T00:00:00.000Z",
+			finishedAt: "2026-08-30T00:00:01.000Z",
+		})),
+	};
+
+	assert.deepEqual(
+		validateImplementedFeatureRecording(recording, { results }),
+		{ valid: true, errors: [] },
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{ ...recording, chapters: recording.chapters.slice(1) },
+			{ results },
+		).errors.join(" "),
+		/RECORDING_CHAPTERS_NOT_EXACT/,
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{
+				...recording,
+				media: { ...recording.media, contactSheetReviewed: false },
+			},
+			{ results },
+		).errors.join(" "),
+		/CONTACT_SHEET_NOT_REVIEWED/,
+	);
+	const runnerSource = await readFile(
+		"scripts/run-implemented-feature-journey.mjs",
+		"utf8",
+	);
+	assert.match(runnerSource, /recordVideo/);
+	assert.match(runnerSource, /RECORDING_REQUIRES_OWNED_CONTEXT/);
+	assert.match(runnerSource, /COPYFILE_EXCL/);
+	assert.match(runnerSource, /contactSheetReviewed:\s*false/);
+	assert.match(runnerSource, /responsiveChecks/);
+	const backstopSource = await readFile("backstop.config.cjs", "utf8");
+	assert.match(
+		backstopSource,
+		/engineOptions:\s*\{\s*gotoParameters:\s*\{\s*waitUntil:\s*"domcontentloaded"/u,
+		"BackstopJS must pass navigation readiness through scenario.engineOptions",
+	);
+	const visualGateSource = await readFile(
+		"scripts/run-visual-gate.mjs",
+		"utf8",
+	);
+	assert.match(visualGateSource, /deterministicVisualEnvironment/);
+	assert.match(visualGateSource, /VITE_PRIVY_APP_ID:\s*""/);
+	assert.match(visualGateSource, /VITE_TASK_MARKETPLACE_V2_ADDRESS:\s*""/);
+	assert.doesNotMatch(
+		runnerSource,
+		/JSON\.stringify\(\{[^}]*recordingOutput:\s*resolve/u,
+		"recording stdout must not expose an absolute output path",
+	);
 });
 
 test("the Chromium journey reconciles a transient transport failure by event id", async () => {
@@ -1016,7 +1391,7 @@ test("conditional wallet, identity, RPC and transaction scenarios have real inst
 	);
 	assert.match(
 		exchangeSource,
-		/catch \(error\) \{[\s\S]*setMessage\(toWalletMessage\(error\)\);[\s\S]*throw error;[\s\S]*\}\)\.catch\(\(\) => undefined\)/,
+		/catch \(error\) \{[\s\S]*setMessage\(toWalletMessage\(error\)\);[\s\S]*throw error;[\s\S]*\}[\s\S]*\),[\s\S]*\)\.catch\(\(\) => undefined\)/,
 		"swap failures must reach the outer metric before the UI swallows rejection",
 	);
 });

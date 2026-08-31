@@ -61,6 +61,28 @@ const web3Names = [
 	"transaction.submit",
 	"transaction.receipt",
 ] as const;
+const businessOperationNames = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+] as const;
 const renderingNames = [
 	"spa.route.duration",
 	"ssr.shell.duration",
@@ -82,6 +104,7 @@ const coverageNames = [
 	...renderingNames,
 	...errorNames,
 	...web3Names,
+	...businessOperationNames,
 ] as const;
 
 function emptyMetric(
@@ -139,6 +162,18 @@ const response = {
 		coverage: "instrumented-no-sample" as const,
 	})),
 	web3: web3Names.map((name) => ({
+		name,
+		unit: "ms" as const,
+		sampleCount: 0,
+		successCount: 0,
+		failureCount: 0,
+		successRate: null,
+		p50: null,
+		p75: null,
+		p95: null,
+		coverage: "instrumented-no-sample" as const,
+	})),
+	businessOperations: businessOperationNames.map((name) => ({
 		name,
 		unit: "ms" as const,
 		sampleCount: 0,
@@ -241,6 +276,13 @@ describe("performance query API", () => {
 			{ ...response, rendering: response.rendering.slice(0, -1) },
 		],
 		["missing Web3 operation", { ...response, web3: response.web3.slice(1) }],
+		[
+			"missing business operation",
+			{
+				...response,
+				businessOperations: response.businessOperations.slice(1),
+			},
+		],
 		[
 			"duplicate coverage",
 			{
@@ -356,6 +398,25 @@ describe("performance query API", () => {
 						coverage: "observed",
 					},
 					...response.web3.slice(1),
+				],
+			},
+		],
+		[
+			"business sample count mismatch",
+			{
+				...response,
+				businessOperations: [
+					{
+						...response.businessOperations[0],
+						sampleCount: 2,
+						successCount: 1,
+						successRate: 1,
+						p50: 10,
+						p75: 10,
+						p95: 10,
+						coverage: "observed",
+					},
+					...response.businessOperations.slice(1),
 				],
 			},
 		],

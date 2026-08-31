@@ -219,6 +219,14 @@ export function assertJourneyComplete(summary) {
 				: "INCOMPLETE_METRIC_COVERAGE",
 		);
 	}
+	if (summary.coverage.missingUnavailable.length > 0) {
+		const missing = summary.coverage.missingUnavailable
+			.map((name) => name.toUpperCase().replace(/[^A-Z0-9]+/gu, "_"))
+			.sort();
+		throw new Error(
+			`INCOMPLETE_UNAVAILABLE_COVERAGE_${missing.join("_")}`,
+		);
+	}
 	if (!summary.representativeInteraction.observed) {
 		throw new Error("MISSING_REPRESENTATIVE_INTERACTION_METRIC");
 	}
@@ -449,6 +457,12 @@ export function sanitizeJourneySummary(input) {
 	const observed = [
 		...new Set(names.filter((name) => !unavailableCoverage.includes(name))),
 	].sort();
+	const unavailable = [
+		...new Set(names.filter((name) => unavailableCoverage.includes(name))),
+	].sort();
+	const missingUnavailable = unavailableCoverage
+		.filter((name) => !unavailable.includes(name))
+		.sort();
 	const coverage = evaluateJourneyCoverage({
 		observed,
 		required: journeyManifest.requiredMetrics,
@@ -474,8 +488,9 @@ export function sanitizeJourneySummary(input) {
 		routes,
 		coverage: {
 			observed,
-			unavailable: unavailableCoverage,
+			unavailable,
 			missingRequired: coverage.missing,
+			missingUnavailable,
 		},
 		batchCount: boundedCount(input.batchCount),
 		acceptedBatchCount: boundedCount(input.acceptedBatchCount),
@@ -537,7 +552,7 @@ async function runJourney() {
 		: undefined;
 	if (artifactsDir) await mkdir(artifactsDir, { recursive: true });
 	const observedRoutes = new Set();
-	const coverage = new Set(unavailableCoverage);
+	const coverage = new Set();
 	const deliveryTracker = createTelemetryDeliveryTracker();
 	const safeBusinessOutcomes = Object.fromEntries(
 		journeyManifest.safeBusinessInteractions.map((interaction) => [

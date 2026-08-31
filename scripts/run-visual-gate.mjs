@@ -33,6 +33,19 @@ const root = process.cwd();
 const backstop = resolve(root, "node_modules/.bin/backstop");
 await access(backstop);
 
+const deterministicVisualEnvironment = {
+	VITE_BABYSTEPS_API_URL: "",
+	VITE_PRIVY_APP_ID: "",
+	VITE_BABY_COIN_ADDRESS: "",
+	VITE_GROWTH_ACTIVITIES_ADDRESS: "",
+	VITE_GROWTH_CERTIFICATE_ADDRESS: "",
+	VITE_TASK_MARKETPLACE_ADDRESS: "",
+	VITE_GROWTH_CERTIFICATE_SBT_ADDRESS: "",
+	VITE_TASK_MARKETPLACE_V2_ADDRESS: "",
+	VITE_STARBUDDY_KEEPSAKE_SBT_ADDRESS: "",
+	VITE_STARBUDDY_KEEPSAKES_ADDRESS: "",
+};
+
 if (command === "approve") {
 	await run(backstop, ["approve", "--config=backstop.config.cjs"], {
 		cwd: root,
@@ -61,6 +74,10 @@ const server = spawn(
 	{
 		cwd: resolve(root, "web"),
 		stdio: "inherit",
+		env: {
+			...process.env,
+			...deterministicVisualEnvironment,
+		},
 	},
 );
 

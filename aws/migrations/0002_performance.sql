@@ -3,7 +3,7 @@ CREATE SCHEMA IF NOT EXISTS babysteps_performance;
 CREATE TABLE IF NOT EXISTS babysteps_performance.events (
   event_id UUID PRIMARY KEY,
   timestamp_ms BIGINT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('metric', 'resource', 'error', 'custom', 'web3')),
+  type TEXT NOT NULL CHECK (type IN ('metric', 'resource', 'error', 'custom', 'web3', 'business')),
   name VARCHAR(64) NOT NULL,
   value DOUBLE PRECISION NOT NULL,
   unit TEXT NOT NULL CHECK (unit IN ('ms', 'score', 'count')),
@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS performance_events_route_window
 
 CREATE TABLE IF NOT EXISTS babysteps_performance.hourly_aggregates (
   bucket_start_ms BIGINT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('metric', 'resource', 'error', 'custom', 'web3')),
+  type TEXT NOT NULL CHECK (type IN ('metric', 'resource', 'error', 'custom', 'web3', 'business')),
   name VARCHAR(64) NOT NULL,
   unit TEXT NOT NULL CHECK (unit IN ('ms', 'score', 'count')),
   category VARCHAR(32) NOT NULL DEFAULT '',
@@ -56,6 +56,13 @@ ALTER TABLE babysteps_performance.events
     outcome IS NULL OR outcome IN ('success', 'failure', 'unavailable')
   );
 
+ALTER TABLE babysteps_performance.events
+  DROP CONSTRAINT IF EXISTS events_type_check,
+  DROP CONSTRAINT IF EXISTS performance_events_type_allowed,
+  ADD CONSTRAINT performance_events_type_allowed CHECK (
+    type IN ('metric', 'resource', 'error', 'custom', 'web3', 'business')
+  );
+
 ALTER TABLE babysteps_performance.hourly_aggregates
   ADD COLUMN IF NOT EXISTS category VARCHAR(32) NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS outcome VARCHAR(16) NOT NULL DEFAULT '';
@@ -75,6 +82,13 @@ ALTER TABLE babysteps_performance.hourly_aggregates
   DROP CONSTRAINT IF EXISTS hourly_aggregates_pkey,
   ADD CONSTRAINT hourly_aggregates_pkey PRIMARY KEY (
     bucket_start_ms, type, name, unit, category, outcome, route, environment, version
+  );
+
+ALTER TABLE babysteps_performance.hourly_aggregates
+  DROP CONSTRAINT IF EXISTS hourly_aggregates_type_check,
+  DROP CONSTRAINT IF EXISTS performance_aggregates_type_allowed,
+  ADD CONSTRAINT performance_aggregates_type_allowed CHECK (
+    type IN ('metric', 'resource', 'error', 'custom', 'web3', 'business')
   );
 
 CREATE INDEX IF NOT EXISTS performance_aggregates_window_metric

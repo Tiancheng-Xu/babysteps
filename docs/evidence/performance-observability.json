@@ -31,6 +31,13 @@
     "projectStackDeleted": true,
     "remainingProjectRuntimeResources": 0
   },
+  "implementedFeatureJourney": {
+    "stage": "local-verified",
+    "catalogSize": 31,
+    "machineEvidence": "docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json",
+    "implementationRecord": "docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md",
+    "boundary": "Sepolia writes, visible wallet confirmations, AWS Live, final recording and production readback remain pending."
+  },
   "proof": [
     {
       "kind": "live-event",

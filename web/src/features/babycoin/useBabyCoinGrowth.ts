@@ -1,5 +1,5 @@
 import { simulateContract } from "@wagmi/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Address, Hash } from "viem";
 import {
 	useAccount,
@@ -18,6 +18,7 @@ import {
 	growthActivitiesAddress,
 } from "../../contracts/web3Contracts";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import {
 	GROWTH_ACTIVITIES,
 	type GrowthActivityId,
@@ -67,6 +68,7 @@ export function useBabyCoinGrowth(
 	const activityRef = useRef<(typeof GROWTH_ACTIVITIES)[number] | undefined>(
 		undefined,
 	);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -209,9 +211,10 @@ export function useBabyCoinGrowth(
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -225,6 +228,7 @@ export function useBabyCoinGrowth(
 		void refetchAll()
 			.then(() => {
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setTransactionPhase("success");
 				setMessage(
 					`活动已确认，获得 +${activityRef.current?.reward ?? 0} BABY。`,
@@ -232,10 +236,11 @@ export function useBabyCoinGrowth(
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setMessage("交易已确认，但刷新 BabyCoin 状态失败，请重试读取。");
 			});
-	}, [receipt.isSuccess, refetchAll, transactionHash]);
+	}, [businessLifecycle, receipt.isSuccess, refetchAll, transactionHash]);
 
 	let phase: BabyCoinGrowthPhase = "unavailable";
 	if (transactionPhase) phase = transactionPhase;
@@ -269,6 +274,7 @@ export function useBabyCoinGrowth(
 			}
 
 			pendingRef.current = true;
+			businessLifecycle.start("business.babycoin.activity");
 			confirmedHashRef.current = undefined;
 			activityRef.current = activity;
 			setTransactionHash(undefined);
@@ -289,6 +295,7 @@ export function useBabyCoinGrowth(
 				setMessage("活动交易已广播，正在等待链上确认。");
 			} catch (error) {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setMessage(toWalletMessage(error));
 			}
@@ -297,6 +304,7 @@ export function useBabyCoinGrowth(
 			activitiesContractAddress,
 			address,
 			availabilityByActivity,
+			businessLifecycle,
 			walletState,
 			writeContractAsync,
 		],

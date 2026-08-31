@@ -10,6 +10,7 @@
     "contactSheetReviewed": true
   },
   "provenance": "controlled-browser-local-production-build",
+  "fullJourneyProof": false,
   "version": "55fac7c9ab84097ba55ac4547dc218a521ee0efb",
   "origin": "http://127.0.0.1:4178",
   "video": "babysteps-prd-full-walkthrough.webm",

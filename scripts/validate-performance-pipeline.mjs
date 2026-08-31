@@ -1,15 +1,53 @@
 import { readFile } from "node:fs/promises";
 
-const [workflow, recovery, template, journey, manifestSource, readback] =
-	await Promise.all([
-		readFile(".github/workflows/aws-performance.yml", "utf8"),
-		readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
-		readFile("aws/performance-template.yaml", "utf8"),
-		readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
-		readFile("scripts/performance-journey.manifest.json", "utf8"),
-		readFile("scripts/validate-performance-readback.mjs", "utf8"),
-	]);
+const [
+	workflow,
+	recovery,
+	template,
+	journey,
+	manifestSource,
+	readback,
+	implementedJourney,
+	implementedPreflight,
+	implementedSchema,
+	controlWorkflow,
+	bootstrapContract,
+] = await Promise.all([
+	readFile(".github/workflows/aws-performance.yml", "utf8"),
+	readFile(".github/workflows/aws-performance-recovery.yml", "utf8"),
+	readFile("aws/performance-template.yaml", "utf8"),
+	readFile("scripts/run-performance-browser-journey.mjs", "utf8"),
+	readFile("scripts/performance-journey.manifest.json", "utf8"),
+	readFile("scripts/validate-performance-readback.mjs", "utf8"),
+	readFile("scripts/run-implemented-feature-journey.mjs", "utf8"),
+	readFile("scripts/run-implemented-feature-preflight.mjs", "utf8"),
+	readFile("scripts/implemented-feature-journey.schema.json", "utf8"),
+	readFile(".github/workflows/aws-performance-control.yml", "utf8"),
+	readFile("scripts/performance-control-bootstrap.mjs", "utf8"),
+]);
 const manifest = JSON.parse(manifestSource);
+const expectedBusinessMetrics = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+];
 
 const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
@@ -63,6 +101,56 @@ const required = [
 		journey,
 		"performance-journey.manifest.json",
 		"browser journey manifest is missing",
+	],
+	[
+		implementedJourney,
+		"WAITING_FOR_USER_",
+		"visible wallet journey checkpoints are missing",
+	],
+	[
+		implementedJourney,
+		"telemetryAccepted",
+		"implemented journey telemetry gate is missing",
+	],
+	[
+		implementedPreflight,
+		"AWS_BUDGET_GUARD_NOT_PASSED",
+		"implemented journey Budget Guard preflight is missing",
+	],
+	[
+		implementedPreflight,
+		"AWS_RUNTIME_NOT_STOPPED",
+		"implemented journey preflight must refuse a running AWS runtime",
+	],
+	[
+		implementedPreflight,
+		"PREFLIGHT_SNAPSHOT_STALE",
+		"implemented journey preflight must reject stale readback",
+	],
+	[
+		controlWorkflow,
+		"babysteps-performance-control-bootstrap-v1",
+		"dedicated stopped bootstrap source is missing",
+	],
+	[
+		controlWorkflow,
+		"Publish initial verified stopped bootstrap callback",
+		"stopped bootstrap callback step is missing",
+	],
+	[
+		bootstrapContract,
+		"insert-initial-stopped-row",
+		"bootstrap must remain insert-only for an absent control row",
+	],
+	[
+		bootstrapContract,
+		"github-actions-artifact+aws-zero-residue-readback",
+		"bootstrap dual-authority cleanup proof is missing",
+	],
+	[
+		implementedSchema,
+		'"maxItems": 31',
+		"implemented journey schema must remain exactly bounded",
 	],
 	[
 		readback,
@@ -130,6 +218,22 @@ for (const path of ["/tasks", "/profile", "/performance", "/evidence"]) {
 }
 if (!(manifest.requiredMetrics?.length > 0))
 	errors.push("browser journey required metrics are missing");
+if (
+	JSON.stringify(manifest.businessMetrics) !==
+	JSON.stringify(expectedBusinessMetrics)
+)
+	errors.push("bounded business metric catalog is incomplete or reordered");
+if (manifest.implementedFeatureJourneys?.length !== 31)
+	errors.push(
+		"implemented feature journey catalog must contain exactly 31 items",
+	);
+if (
+	new Set(
+		manifest.implementedFeatureJourneys?.map(({ journeyId }) => journeyId) ??
+			[],
+	).size !== 31
+)
+	errors.push("implemented feature journey ids must be unique");
 for (const metric of ["navigation.dns", "navigation.tls"]) {
 	if (!manifest.unavailableMetrics?.includes(metric))
 		errors.push(`localhost ${metric} coverage must be unavailable`);

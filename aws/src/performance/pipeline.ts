@@ -34,6 +34,29 @@ const web3OperationNames = [
 	"transaction.receipt",
 ] as const;
 
+export const businessOperationNames = [
+	"business.growth.activity",
+	"business.growth.transfer",
+	"business.notebook.write",
+	"business.babycoin.activity",
+	"business.marketplace.approve",
+	"business.marketplace.buy",
+	"business.marketplace.content_unlock",
+	"business.marketplace.completion_submit",
+	"business.provider.create",
+	"business.owner.approve",
+	"business.owner.reject",
+	"business.owner.completion_confirm",
+	"business.keepsake.draw",
+	"business.keepsake.fuse",
+	"business.keepsake.recover",
+	"business.exchange.quote",
+	"business.exchange.swap",
+	"business.identity.login",
+	"business.identity.session",
+	"business.profile.write",
+] as const;
+
 const allowedEventNames = {
 	metric: new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]),
 	resource: new Set([
@@ -79,6 +102,10 @@ const allowedEventNames = {
 		...web3OperationNames,
 		...web3OperationNames.map((name) => `${name}.error`),
 	]),
+	business: new Set([
+		...businessOperationNames,
+		...businessOperationNames.map((name) => `${name}.error`),
+	]),
 } as const;
 
 const allowedRoutes = [
@@ -100,7 +127,7 @@ const eventSchema = z
 	.object({
 		eventId: z.uuid(),
 		timestamp: z.number().int().nonnegative(),
-		type: z.enum(["metric", "resource", "error", "custom", "web3"]),
+		type: z.enum(["metric", "resource", "error", "custom", "web3", "business"]),
 		name: z.string().regex(/^[a-z0-9._-]{1,64}$/iu),
 		value: z.number().finite(),
 		unit: z.enum(["ms", "score", "count"]),
@@ -145,6 +172,17 @@ const eventSchema = z
 				context.addIssue({
 					code: "custom",
 					message: "Web3 metric name and outcome mismatch",
+				});
+			}
+		}
+		if (event.type === "business") {
+			const expectedOutcome = event.name.endsWith(".error")
+				? "failure"
+				: "success";
+			if (event.outcome !== expectedOutcome) {
+				context.addIssue({
+					code: "custom",
+					message: "business metric name and outcome mismatch",
 				});
 			}
 		}
@@ -338,6 +376,18 @@ export type PerformanceDashboardResponse = {
 		coverage: PerformanceCoverageStatus;
 	}>;
 	web3: Array<{
+		name: string;
+		unit: "ms";
+		sampleCount: number;
+		successCount: number;
+		failureCount: number;
+		successRate: number | null;
+		p50: number | null;
+		p75: number | null;
+		p95: number | null;
+		coverage: PerformanceCoverageStatus;
+	}>;
+	businessOperations: Array<{
 		name: string;
 		unit: "ms";
 		sampleCount: number;
@@ -712,6 +762,37 @@ export function computePerformanceDashboard(
 					: coverageFor(operationEvents),
 		};
 	});
+	const businessOperations = businessOperationNames.map((name) => {
+		const operationEvents = events.filter(
+			(event) => event.name === name || event.name === `${name}.error`,
+		);
+		const observed = operationEvents.filter(
+			({ outcome }) => outcome !== "unavailable",
+		);
+		const successCount = observed.filter(
+			(event) => event.outcome === "success",
+		).length;
+		const failureCount = observed.filter(
+			(event) => event.outcome === "failure",
+		).length;
+		const denominator = successCount + failureCount;
+		const values = observed.map(({ value }) => value);
+		return {
+			name,
+			unit: "ms" as const,
+			sampleCount: observed.length,
+			successCount,
+			failureCount,
+			successRate: denominator === 0 ? null : successCount / denominator,
+			p50: nullablePercentile(values, 0.5),
+			p75: nullablePercentile(values, 0.75),
+			p95: nullablePercentile(values, 0.95),
+			coverage:
+				operationEvents.length === 0 && pageObservationCount > 0
+					? ("not-exercised" as const)
+					: coverageFor(operationEvents),
+		};
+	});
 	const routeSummaries = summarizeDimension(diagnosticEvents, "route");
 	const versionSummaries = summarizeDimension(diagnosticEvents, "version");
 	const observedRouteGroups = new Map<string, StoredPerformanceEvent[]>();
@@ -795,6 +876,7 @@ export function computePerformanceDashboard(
 			coverage: status,
 		})),
 		...web3,
+		...businessOperations,
 	].map(({ name, coverage: status }) => ({ name, status }));
 
 	return {
@@ -829,6 +911,7 @@ export function computePerformanceDashboard(
 		},
 		errors,
 		web3,
+		businessOperations,
 		routes: routeSummaries.map(({ key, ...summary }) => ({
 			route: key,
 			...summary,

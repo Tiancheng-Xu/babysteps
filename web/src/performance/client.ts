@@ -7,11 +7,13 @@ import {
 	safeMetricName,
 } from "./sanitize";
 import type {
+	BusinessOperationName,
 	PerformanceBatch,
 	PerformanceClient,
 	PerformanceEvent,
 	PerformanceEventInput,
 } from "./types";
+import { businessOperationNames } from "./types";
 
 type ClientOptions = {
 	endpoint?: string;
@@ -34,10 +36,17 @@ type PendingRetry = { events: QueuedEvent[]; readyAt: number };
 type FlushDisposition = "empty" | "sent" | "drop" | "retry";
 
 const webVitalNames = new Set(["LCP", "CLS", "INP", "FCP", "TTFB"]);
+const businessMetricNames = businessOperationNames.flatMap((name) => [
+	name,
+	`${name}.error`,
+]);
 const workerMinuteQuota = 120;
 export const webVitalsReadyMark = "babysteps.web-vitals.ready";
 const coverageCriticalNames = new Set([
 	...webVitalNames,
+	"navigation.dns",
+	"navigation.tcp",
+	"navigation.tls",
 	"navigation.request_wait",
 	"navigation.download",
 	"navigation.dom_ready",
@@ -53,6 +62,7 @@ const coverageCriticalNames = new Set([
 	"hydration.duration",
 	"longtask.duration",
 	"web3.uniswap.quote",
+	...businessMetricNames,
 ]);
 const lowPriorityNameLimits = new Map<string, number>([
 	["resource.duration", 2],
@@ -66,6 +76,9 @@ const lowPriorityNameLimits = new Map<string, number>([
 const highPriorityNameLimits = new Map<string, number>([
 	["rpc.read", 2],
 	["web3.rpc.read", 2],
+	["navigation.dns", 1],
+	["navigation.tcp", 1],
+	["navigation.tls", 1],
 	["navigation.request_wait", 1],
 	["navigation.download", 1],
 	["navigation.dom_ready", 1],
@@ -86,6 +99,7 @@ const highPriorityNameLimits = new Map<string, number>([
 	["FCP", 2],
 	["TTFB", 2],
 	["web3.uniswap.quote", 2],
+	...businessMetricNames.map((name) => [name, 2] as const),
 ]);
 
 export function normalizeMaxEventsPerMinute(value: number): number {
@@ -129,12 +143,17 @@ export function createPerformanceClient(
 		event.type === "metric" ||
 		event.type === "error" ||
 		event.type === "web3" ||
+		event.type === "business" ||
 		coverageCriticalNames.has(safeMetricName(event.name));
 	const isCoverageCritical = (event: PerformanceEventInput) =>
 		event.type === "error" ||
+		event.type === "business" ||
 		coverageCriticalNames.has(safeMetricName(event.name));
 	const isUrgent = (event: PerformanceEventInput) =>
-		event.type === "metric" || event.type === "error" || event.type === "web3";
+		event.type === "metric" ||
+		event.type === "error" ||
+		event.type === "web3" ||
+		event.type === "business";
 	const queueSize = () =>
 		urgentPriority.length + coveragePriority.length + lowPriority.length;
 	const enqueue = (event: QueuedEvent) => {
@@ -452,7 +471,41 @@ export function createPerformanceClient(
 		}
 	};
 
-	return { start, stop, record, flush, markOperation };
+	const markBusinessOperation = async <T>(
+		name: BusinessOperationName,
+		operation: () => Promise<T>,
+	) => {
+		const startedAt = performance.now();
+		try {
+			const result = await operation();
+			record({
+				type: "business",
+				name,
+				value: performance.now() - startedAt,
+				unit: "ms",
+				outcome: "success",
+			});
+			return result;
+		} catch (error) {
+			record({
+				type: "business",
+				name: `${name}.error`,
+				value: performance.now() - startedAt,
+				unit: "ms",
+				outcome: "failure",
+			});
+			throw error;
+		}
+	};
+
+	return {
+		start,
+		stop,
+		record,
+		flush,
+		markOperation,
+		markBusinessOperation,
+	};
 }
 
 export function isWebVital(name: string): boolean {

@@ -510,6 +510,9 @@ describe("performance client", () => {
 			});
 		}
 		for (const name of [
+			"navigation.dns",
+			"navigation.tcp",
+			"navigation.tls",
 			"resource.xhr.duration",
 			"resource.image.duration",
 			"resource.font.duration",
@@ -518,8 +521,11 @@ describe("performance client", () => {
 			client.record({
 				type: name.startsWith("resource.") ? "resource" : "custom",
 				name,
-				value: 8,
+				value: name.startsWith("navigation.") ? 0 : 8,
 				unit: "ms",
+				...(name.startsWith("navigation.")
+					? { outcome: "unavailable" as const }
+					: {}),
 			});
 		}
 
@@ -531,6 +537,9 @@ describe("performance client", () => {
 		);
 		expect(names).toEqual(
 			expect.arrayContaining([
+				"navigation.dns",
+				"navigation.tcp",
+				"navigation.tls",
 				"resource.xhr.duration",
 				"resource.image.duration",
 				"resource.font.duration",
@@ -665,5 +674,52 @@ describe("performance client", () => {
 		const body = bodies.join("");
 		expect(body).toContain("contract.write");
 		expect(body).not.toContain("private-result");
+	});
+
+	it("measures bounded business success and failure without recording private results", async () => {
+		const bodies: string[] = [];
+		const client = createPerformanceClient({
+			environment: "test",
+			version: "v1",
+			beacon: (_url, body) => {
+				bodies.push(String(body));
+				return true;
+			},
+			fetcher: vi.fn(),
+			random: () => 0,
+		});
+
+		await expect(
+			client.markBusinessOperation(
+				"business.growth.activity",
+				async () => "private-result",
+			),
+		).resolves.toBe("private-result");
+		await expect(
+			client.markBusinessOperation("business.marketplace.buy", async () => {
+				throw new Error("private-failure");
+			}),
+		).rejects.toThrow("private-failure");
+		await client.flush();
+
+		const events = bodies.flatMap(
+			(body) => JSON.parse(body).events as Array<Record<string, unknown>>,
+		);
+		expect(events).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "business",
+					name: "business.growth.activity",
+					outcome: "success",
+				}),
+				expect.objectContaining({
+					type: "business",
+					name: "business.marketplace.buy.error",
+					outcome: "failure",
+				}),
+			]),
+		);
+		expect(JSON.stringify(events)).not.toContain("private-result");
+		expect(JSON.stringify(events)).not.toContain("private-failure");
 	});
 });

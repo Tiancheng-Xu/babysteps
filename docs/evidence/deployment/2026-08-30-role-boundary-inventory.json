@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "project": "BabySteps",
+  "capturedAt": "2026-08-30",
+  "network": "Sepolia (chainId 11155111)",
+  "scope": "Implemented product actors, current contract roles, service principals, delivery/runtime roles, and explicitly historical or deferred roles.",
+  "limitations": [
+    "This inventory documents authorization boundaries; it does not expose private keys, secrets, cookies, full wallet addresses, or IAM policy bodies.",
+    "A product actor may hold more than one on-chain role. DEFAULT_ADMIN_ROLE alone does not grant PROVIDER_ROLE behavior.",
+    "Historical and deferred roles are not represented as currently usable product permissions."
+  ],
+  "archify": {
+    "repository": "https://github.com/tt-a1i/archify",
+    "version": "2.16.0",
+    "commit": "5de7275fe87a66a19d52a4d9b0b3a4f2a5a90115",
+    "specification": "docs/evidence/architecture/babysteps-role-boundaries.architecture.json",
+    "artifact": "docs/evidence/architecture/babysteps-role-boundaries.html",
+    "artifactSha256": "1bbca05422f7b3dd3ee44086f7ee3db19b5f016764eae3f9691d87e3c9e5b732",
+    "validation": "9/9 structural checks passed; light and dark screenshots reviewed; iframe artifact is intentionally vertically scrollable and has no horizontal overflow."
+  },
+  "groups": [
+    {
+      "id": "product-actors",
+      "title": "产品参与者",
+      "summary": "用户在 UI 中看到的身份与业务身份；它们不等于链上 RBAC 角色。",
+      "roles": [
+        {
+          "id": "public-visitor",
+          "name": "公开访客",
+          "holder": "未登录浏览器",
+          "allowed": "只读公开页面、任务、架构和 Evidence。",
+          "denied": "不能创建、审批、购买、完成任务，也不能写入 D1 或链上。",
+          "authority": "无需授予；公开路由边界。",
+          "status": "implemented"
+        },
+        {
+          "id": "privy-identity",
+          "name": "Privy 登录身份",
+          "holder": "Google、邮箱或钱包登录后的用户",
+          "allowed": "建立产品登录身份，并继续申请钱包签名会话。",
+          "denied": "登录本身不会自动获得 Provider、Owner 或完成审核权限。",
+          "authority": "Privy 身份提供方 + BabySteps 会话校验。",
+          "status": "implemented"
+        },
+        {
+          "id": "wallet-siwe-session",
+          "name": "外部钱包 / SIWE 会话",
+          "holder": "完成 challenge、签名和 verify 的钱包",
+          "allowed": "证明地址控制权，访问与钱包绑定的链下资料和受保护 API。",
+          "denied": "会话不会绕过合约 RBAC，也不会替用户签署链上交易。",
+          "authority": "钱包私钥签名 + Worker 验签。",
+          "status": "implemented"
+        },
+        {
+          "id": "parent-buyer",
+          "name": "家长 / 购买者",
+          "holder": "连接钱包的普通购买用户",
+          "allowed": "浏览获批任务、授权代币、购买任务并提交完成申请。",
+          "denied": "不能创建、审批、拒绝、暂停或最终确认任务。",
+          "authority": "公开购买流程 + 钱包余额和合约状态。",
+          "status": "implemented"
+        },
+        {
+          "id": "token-recipient",
+          "name": "代币接收者",
+          "holder": "接收 BabyCoin 的地址",
+          "allowed": "接收与持有可转让 BabyCoin。",
+          "denied": "收币不会获得任务管理、铸造或后台权限。",
+          "authority": "BabyCoin ERC-20 转账语义。",
+          "status": "implemented"
+        },
+        {
+          "id": "provider-operator",
+          "name": "Provider 操作者",
+          "holder": "已登录、已签名且链上持有 PROVIDER_ROLE 的钱包",
+          "allowed": "创建 D1 草稿并调用 requestTask 发起任务。",
+          "denied": "不能仅凭 Provider 身份审批、拒绝、暂停或确认完成。",
+          "authority": "TaskMarketplaceV2 DEFAULT_ADMIN_ROLE 授予/撤销 PROVIDER_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "owner-admin",
+          "name": "Owner / DEFAULT_ADMIN_ROLE",
+          "holder": "TaskMarketplaceV2 管理钱包",
+          "allowed": "授予/撤销 Provider，审批、拒绝和暂停任务。",
+          "denied": "仅持有 Admin 不能 requestTask；必须同时持有 PROVIDER_ROLE 才能发任务。",
+          "authority": "合约部署与 DEFAULT_ADMIN_ROLE 管理。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "completion-review-operator",
+          "name": "完成审核操作者",
+          "holder": "持有 COMPLETION_RELAYER_ROLE 的受控钱包或服务",
+          "allowed": "确认购买者完成任务并触发成长值与证书发放。",
+          "denied": "不能创建、审批、拒绝或暂停任务。",
+          "authority": "TaskMarketplaceV2 DEFAULT_ADMIN_ROLE 授予/撤销。",
+          "status": "implemented"
+        },
+        {
+          "id": "child-domain-subject",
+          "name": "宝宝 / 孩子（领域对象）",
+          "holder": "家庭成长记录中的业务对象",
+          "allowed": "作为成长记录、纪念卡和证书的主题。",
+          "denied": "不是认证主体，不自动持有钱包、会话或任何 RBAC 角色。",
+          "authority": "链下家庭资料与业务模型。",
+          "status": "implemented"
+        }
+      ]
+    },
+    {
+      "id": "current-onchain-rbac",
+      "title": "当前链上访问控制",
+      "summary": "每个合约地址拥有独立的 DEFAULT_ADMIN_ROLE；同名角色不能跨合约通用。",
+      "roles": [
+        {
+          "id": "babycoin-admin",
+          "name": "BabyCoin.DEFAULT_ADMIN_ROLE",
+          "holder": "BabyCoin 管理钱包",
+          "allowed": "管理 REWARD_ROLE，并执行明确保留的测试铸币入口。",
+          "denied": "不能代替 Marketplace 的 Admin、Provider 或 Relayer。",
+          "authority": "BabyCoin 合约自身的 AccessControl。",
+          "status": "implemented"
+        },
+        {
+          "id": "babycoin-reward",
+          "name": "BabyCoin.REWARD_ROLE",
+          "holder": "GrowthActivities 合约",
+          "allowed": "通过 reward(account, amount) 增加 lifetimeEarned 成长值。",
+          "denied": "不能管理任务、纪念卡或证书角色。",
+          "authority": "BabyCoin.DEFAULT_ADMIN_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "marketplace-v2-admin",
+          "name": "TaskMarketplaceV2.DEFAULT_ADMIN_ROLE",
+          "holder": "Owner 管理钱包",
+          "allowed": "管理 Provider/Relayer，审批、拒绝、暂停任务。",
+          "denied": "未同时持有 PROVIDER_ROLE 时不能 requestTask。",
+          "authority": "TaskMarketplaceV2 合约自身的 AccessControl。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "marketplace-v2-provider",
+          "name": "TaskMarketplaceV2.PROVIDER_ROLE",
+          "holder": "Provider 钱包；演示钱包 0x4D9D…Fa88 已只读核验",
+          "allowed": "调用 requestTask 发起任务。",
+          "denied": "不能审批、拒绝、暂停或确认完成。",
+          "authority": "TaskMarketplaceV2.DEFAULT_ADMIN_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "marketplace-v2-completion-relayer",
+          "name": "TaskMarketplaceV2.COMPLETION_RELAYER_ROLE",
+          "holder": "受控完成确认钱包或延后接入的 Relayer",
+          "allowed": "调用 confirmCompletion，结算成长奖励并铸造 SBT。",
+          "denied": "不能创建或审批任务。",
+          "authority": "TaskMarketplaceV2.DEFAULT_ADMIN_ROLE。",
+          "status": "implemented"
+        },
+        {
+          "id": "certificate-admin",
+          "name": "GrowthCertificateSBT.DEFAULT_ADMIN_ROLE",
+          "holder": "证书合约管理钱包",
+          "allowed": "管理证书 MINTER_ROLE。",
+          "denied": "不能直接管理 Marketplace 任务状态。",
+          "authority": "GrowthCertificateSBT 合约自身的 AccessControl。",
+          "status": "implemented"
+        },
+        {
+          "id": "certificate-minter",
+          "name": "GrowthCertificateSBT.MINTER_ROLE",
+          "holder": "TaskMarketplaceV2 合约",
+          "allowed": "在任务完成结算中铸造不可转让 ERC-5192 成长证书。",
+          "denied": "不能转移已锁定证书，也不能创建任务。",
+          "authority": "GrowthCertificateSBT.DEFAULT_ADMIN_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "keepsake-admin",
+          "name": "StarBuddyKeepsakeSBT.DEFAULT_ADMIN_ROLE",
+          "holder": "纪念卡 SBT 管理钱包",
+          "allowed": "管理纪念卡 MINTER_ROLE 与 BURNER_ROLE。",
+          "denied": "不能管理任务市场或成长币。",
+          "authority": "StarBuddyKeepsakeSBT 合约自身的 AccessControl。",
+          "status": "implemented"
+        },
+        {
+          "id": "keepsake-minter",
+          "name": "StarBuddyKeepsakeSBT.MINTER_ROLE",
+          "holder": "StarBuddyKeepsakes Manager 合约",
+          "allowed": "在 VRF 抽卡完成或融合后铸造纪念卡 SBT。",
+          "denied": "不能随意转移灵魂绑定纪念卡。",
+          "authority": "StarBuddyKeepsakeSBT.DEFAULT_ADMIN_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "keepsake-burner",
+          "name": "StarBuddyKeepsakeSBT.BURNER_ROLE",
+          "holder": "StarBuddyKeepsakes Manager 合约",
+          "allowed": "在三卡融合中销毁匹配的输入纪念卡。",
+          "denied": "不能铸造任务证书或操作 Marketplace。",
+          "authority": "StarBuddyKeepsakeSBT.DEFAULT_ADMIN_ROLE。",
+          "status": "sepolia-verified"
+        },
+        {
+          "id": "chainlink-vrf-coordinator",
+          "name": "Chainlink VRF Coordinator",
+          "holder": "Chainlink Sepolia 协调器合约",
+          "allowed": "作为唯一可信随机数回调主体完成抽卡请求。",
+          "denied": "不是 BabySteps AccessControl 角色，不能管理用户、任务或其他合约角色。",
+          "authority": "StarBuddyKeepsakes 的 Coordinator 地址约束。",
+          "status": "sepolia-verified"
+        }
+      ]
+    },
+    {
+      "id": "backend-and-external-principals",
+      "title": "后端与外部服务主体",
+      "summary": "它们承担会话、存储、派发或回调职责，但不是普通产品用户。",
+      "roles": [
+        {
+          "id": "cloudflare-worker-runtime",
+          "name": "Cloudflare Worker Runtime",
+          "holder": "BabySteps Pages/Worker 运行时",
+          "allowed": "验证会话、访问 D1、提供 API、边缘 SSR 与安全 CSR 降级。",
+          "denied": "不持有用户钱包私钥，不替用户签署链上交易。",
+          "authority": "Cloudflare 绑定与项目部署配置。",
+          "status": "production-verified"
+        },
+        {
+          "id": "d1-wallet-session-boundary",
+          "name": "D1 钱包会话边界",
+          "holder": "已验证钱包会话",
+          "allowed": "读写与钱包绑定的用户名、任务草稿和完成证据。",
+          "denied": "D1 没有独立 Provider/Admin RBAC；敏感动作仍需会话和链上角色双重校验。",
+          "authority": "Worker API 鉴权 + 当前链上角色读回。",
+          "status": "implemented"
+        },
+        {
+          "id": "performance-control-github-app",
+          "name": "Performance Control GitHub App",
+          "holder": "仅安装到 Tiancheng-Xu/babysteps 的私有 GitHub App",
+          "allowed": "用短期 installation token 派发固定性能工作流。",
+          "denied": "不能使用 OAuth Client Secret 冒充用户登录，也不安装到全部仓库。",
+          "authority": "Actions: write + Metadata: read 的最小安装权限。",
+          "status": "implemented"
+        },
+        {
+          "id": "performance-callback-producer",
+          "name": "Performance Callback HMAC Producer",
+          "holder": "受控 GitHub Actions 工作流",
+          "allowed": "为性能控制结果回调生成完整性签名。",
+          "denied": "不能把 HMAC Secret 值写入日志、仓库或 Evidence。",
+          "authority": "GitHub Environment Secret。",
+          "status": "implemented"
+        },
+        {
+          "id": "performance-callback-verifier",
+          "name": "Performance Callback HMAC Verifier",
+          "holder": "控制 Worker",
+          "allowed": "验证回调签名与项目白名单后更新控制状态。",
+          "denied": "无有效签名、错误项目或过期请求必须 fail-closed。",
+          "authority": "Cloudflare Worker Secret + 固定项目白名单。",
+          "status": "implemented"
+        },
+        {
+          "id": "uniswap-external-dependency",
+          "name": "Uniswap Sepolia 外部合约",
+          "holder": "公开 Router/Quoter 合约",
+          "allowed": "提供报价与用户签名后的 Swap 执行。",
+          "denied": "不是 BabySteps 管理角色，不能访问 D1、GitHub 或 AWS。",
+          "authority": "固定网络与合约地址配置。",
+          "status": "implemented"
+        }
+      ]
+    },
+    {
+      "id": "delivery-and-cloud-roles",
+      "title": "交付与云运行角色",
+      "summary": "短期 OIDC、CloudFormation 与临时性能资源的分层职责；共享基础设施保持保护。",
+      "roles": [
+        {
+          "id": "github-actions-oidc-deploy",
+          "name": "GitHub Actions OIDC Deploy Role",
+          "holder": "babysteps / aws-performance Environment 的短期 OIDC 会话",
+          "allowed": "验证共享底座、创建精确项目 Stack、推送项目 ECR、运行/停止临时任务并回读证据。",
+          "denied": "无长期 Access Key；非精确 Environment subject 和共享资源删除被拒绝。",
+          "authority": "AWS OIDC trust 的精确 stable-ID subject。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "cloudformation-execution",
+          "name": "CloudFormation Execution Role",
+          "holder": "tc-course-shared-identity 中的 BabySteps 项目执行角色",
+          "allowed": "只管理 babysteps-performance-* 的临时 API、Lambda、SQS、ECR、ECS、Log、Secret 与 SG。",
+          "denied": "共享 NAT、RDS、ALB、OIDC 与 Foundation 删除/更新为 explicitDeny。",
+          "authority": "Deploy Role 仅可 PassRole 给精确执行角色。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "ecs-service-linked-role",
+          "name": "ECS Service-linked Role",
+          "holder": "AWSServiceRoleForECS",
+          "allowed": "让 ECS 服务管理任务所需的 AWS 网络与服务资源。",
+          "denied": "不授予浏览器、GitHub 或业务代码数据库凭据。",
+          "authority": "ecs.amazonaws.com + AmazonECSServiceRolePolicy。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "performance-ecs-execution",
+          "name": "ECS Task Execution Role",
+          "holder": "babysteps-performance-execution-* 临时角色",
+          "allowed": "拉取项目 ECR 镜像并写入精确项目日志。",
+          "denied": "不执行 Cleaner 业务查询，也不能读取共享 DB Secret 值。",
+          "authority": "临时项目 Stack；随 Stack 清理。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "performance-cleaner-task",
+          "name": "Cleaner Task Role",
+          "holder": "babysteps-performance-task-* 临时 ECS 任务",
+          "allowed": "消费项目 SQS/DLQ 所需消息、读取项目数据库 Secret、写入 PostgreSQL 聚合表。",
+          "denied": "不能删除共享数据库、网络、OIDC 或 Foundation。",
+          "authority": "临时项目 Stack；最小资源 ARN 与 Project 标签。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "performance-db-admin-task",
+          "name": "Database Admin Task Role",
+          "holder": "babysteps-performance-db-admin-* 临时 ECS 任务",
+          "allowed": "为本轮创建和删除精确临时 Schema。",
+          "denied": "不能删除共享 RDS 实例或访问其他项目 Schema。",
+          "authority": "临时项目 Stack + 精确 Secret/Schema 合同。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "performance-query-lambda",
+          "name": "Query Lambda Role",
+          "holder": "babysteps-performance-query-* 临时 Lambda",
+          "allowed": "读取项目数据库 Secret 并查询本轮聚合统计。",
+          "denied": "不能写浏览器事件、修改共享 Foundation 或管理 ECS。",
+          "authority": "临时项目 Stack；随 Stack 清理。",
+          "status": "cloud-verified"
+        },
+        {
+          "id": "performance-ingest-lambda",
+          "name": "Ingest Lambda Role",
+          "holder": "babysteps-performance-ingest-* 临时 Lambda",
+          "allowed": "校验受控浏览器批次并发送到精确项目 SQS。",
+          "denied": "不能直接写 PostgreSQL，也不接收 Cookie、Token、签名或请求正文。",
+          "authority": "临时项目 Stack + API Origin Token 合同。",
+          "status": "cloud-verified"
+        }
+      ]
+    },
+    {
+      "id": "historical-and-deferred",
+      "title": "历史、就绪模板与延后角色",
+      "summary": "为了避免把旧版本或规划中的角色误报为当前权限，这些条目被单独隔离。",
+      "roles": [
+        {
+          "id": "marketplace-v1-oracle",
+          "name": "TaskMarketplace V1.ORACLE_ROLE",
+          "holder": "历史 V1 完成回写主体",
+          "allowed": "仅在 V1 合约中回写完成结果。",
+          "denied": "不用于当前 TaskMarketplaceV2；不能作为当前完成权限证据。",
+          "authority": "历史 V1 DEFAULT_ADMIN_ROLE。",
+          "status": "historical"
+        },
+        {
+          "id": "legacy-certificate-minter",
+          "name": "Legacy GrowthCertificate.MINTER_ROLE",
+          "holder": "历史 Marketplace 合约",
+          "allowed": "历史版本证书铸造。",
+          "denied": "不能作为当前 ERC-5192 GrowthCertificateSBT 权限证据。",
+          "authority": "历史证书合约 Admin。",
+          "status": "historical"
+        },
+        {
+          "id": "readiness-github-pipeline",
+          "name": "GitHubPipelineRole（就绪模板）",
+          "holder": "历史/就绪 AWS CI 模板",
+          "allowed": "在完整 AWS Pipeline 方案中触发构建和部署。",
+          "denied": "当前 BabySteps GitHub OIDC 性能闭环不依赖它。",
+          "authority": "aws/infrastructure readiness 模板。",
+          "status": "readiness-only"
+        },
+        {
+          "id": "readiness-cloudformation",
+          "name": "Readiness CloudFormationExecutionRole",
+          "holder": "历史/就绪 AWS Pipeline 模板",
+          "allowed": "为完整 Pipeline 部署预留执行边界。",
+          "denied": "不是当前共享 Identity Stack 中已验证的性能执行角色。",
+          "authority": "aws/infrastructure readiness 模板。",
+          "status": "readiness-only"
+        },
+        {
+          "id": "readiness-codebuild",
+          "name": "CodeBuildRole（就绪模板）",
+          "holder": "历史/就绪 AWS Pipeline 模板",
+          "allowed": "为 CodeBuild 构建预留权限。",
+          "denied": "当前生产发布由 GitHub Actions/Cloudflare 完成，不宣称此角色在线运行。",
+          "authority": "aws/infrastructure readiness 模板。",
+          "status": "readiness-only"
+        },
+        {
+          "id": "readiness-stop-db",
+          "name": "StopDatabaseFunctionRole（就绪模板）",
+          "holder": "历史/就绪 Lambda",
+          "allowed": "为受控数据库停止动作预留权限。",
+          "denied": "当前性能项目禁止删除共享 RDS，且不以此角色执行清理。",
+          "authority": "aws/infrastructure readiness 模板。",
+          "status": "readiness-only"
+        },
+        {
+          "id": "readiness-probe",
+          "name": "ReadinessProbeFunctionRole（就绪模板）",
+          "holder": "历史/就绪 Lambda",
+          "allowed": "为部署就绪探针预留只读/探测权限。",
+          "denied": "不是当前页面健康状态的数据来源。",
+          "authority": "aws/infrastructure readiness 模板。",
+          "status": "readiness-only"
+        },
+        {
+          "id": "relayer-execution-deferred",
+          "name": "RelayerExecutionRole（延后）",
+          "holder": "尚未启用的自动完成 Relayer",
+          "allowed": "未来可在完整运行时中持有完成确认所需最小能力。",
+          "denied": "当前未启用，不能宣称它已代表用户或已自动确认任务。",
+          "authority": "只有显式部署和角色授予后才生效。",
+          "status": "deferred"
+        }
+      ]
+    }
+  ]
+}

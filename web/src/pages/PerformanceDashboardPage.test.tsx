@@ -15,6 +15,7 @@ import {
 	type PerformanceFilters,
 	type PerformanceMetricSummary,
 } from "../performance/api";
+import { businessOperationNames } from "../performance/types";
 import { PerformanceDashboardPage } from "./PerformanceDashboardPage";
 
 const metric = (
@@ -93,6 +94,7 @@ const coverageNames = [
 	"hydration.recoverable_error",
 	...errorNames,
 	...web3Names,
+	...businessOperationNames,
 ];
 
 const liveStats = {
@@ -140,6 +142,18 @@ const liveStats = {
 		p95: null,
 		coverage: "instrumented-no-sample" as const,
 	})),
+	businessOperations: businessOperationNames.map((name) => ({
+		name,
+		unit: "ms" as const,
+		sampleCount: 0,
+		successCount: 0,
+		failureCount: 0,
+		successRate: null,
+		p50: null,
+		p75: null,
+		p95: null,
+		coverage: "instrumented-no-sample" as const,
+	})),
 	routes: [{ route: "/", sampleCount: 42, p75: 180, p95: 410 }],
 	trend: [
 		{ bucketStart: 1_786_597_200_000, name: "LCP", sampleCount: 42, p75: 180 },
@@ -164,7 +178,7 @@ describe("PerformanceDashboardPage", () => {
 		window.history.replaceState({}, "", "/performance");
 	});
 
-	it("renders the eleven data-driven cockpit sections with coverage and provenance", async () => {
+	it("renders the twelve data-driven cockpit sections with coverage and provenance", async () => {
 		expect(isPerformanceDashboardResponse(liveStats)).toBe(true);
 		render(<PerformanceDashboardPage fetchStats={async () => liveStats} />);
 		await screen.findAllByText("42");
@@ -178,6 +192,7 @@ describe("PerformanceDashboardPage", () => {
 			"资源与主线程",
 			"稳定性错误",
 			"Web3 操作",
+			"业务操作",
 			"AWS 管道健康",
 			"Evidence 与口径",
 		]) {

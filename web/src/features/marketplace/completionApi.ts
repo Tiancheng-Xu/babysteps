@@ -1,3 +1,5 @@
+import { measureBusinessPerformance } from "../../performance/runtime";
+
 type Fetcher = typeof fetch;
 
 type ErrorEnvelope = { error?: { message?: string } };
@@ -42,20 +44,28 @@ export function createCompletionApi(apiUrl: string, fetcher: Fetcher = fetch) {
 
 	return {
 		getContent(taskKey: string): Promise<TaskContent> {
-			return fetcher(taskPath(taskKey, "content"), {
-				credentials: "include",
-			}).then(readJson<TaskContent>);
+			return measureBusinessPerformance(
+				"business.marketplace.content_unlock",
+				() =>
+					fetcher(taskPath(taskKey, "content"), {
+						credentials: "include",
+					}).then(readJson<TaskContent>),
+			);
 		},
 		submit(
 			taskKey: string,
 			input: CompletionInput,
 		): Promise<CompletionSubmission> {
-			return fetcher(taskPath(taskKey, "completions"), {
-				method: "POST",
-				credentials: "include",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify(input),
-			}).then(readJson<CompletionSubmission>);
+			return measureBusinessPerformance(
+				"business.marketplace.completion_submit",
+				() =>
+					fetcher(taskPath(taskKey, "completions"), {
+						method: "POST",
+						credentials: "include",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify(input),
+					}).then(readJson<CompletionSubmission>),
+			);
 		},
 		list(): Promise<{ completions: CompletionSubmission[] }> {
 			return fetcher(`${base}/api/completions`, {

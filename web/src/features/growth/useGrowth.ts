@@ -18,6 +18,7 @@ import {
 	onchainNotebookAbi,
 } from "../../contracts/onchainNotebook";
 import { toWalletMessage } from "../../lib/walletError";
+import { createBusinessOperationLifecycle } from "../../performance/runtime";
 import { deriveWalletState, hasMetaMaskProvider } from "../wallet/walletState";
 import {
 	GROWTH_ACTIVITIES,
@@ -67,6 +68,7 @@ export function useGrowth() {
 	const activityRef = useRef<(typeof GROWTH_ACTIVITIES)[number] | undefined>(
 		undefined,
 	);
+	const businessLifecycle = useMemo(createBusinessOperationLifecycle, []);
 
 	const walletState = deriveWalletState({
 		hasProvider: hasMetaMaskProvider(),
@@ -192,9 +194,10 @@ export function useGrowth() {
 	useEffect(() => {
 		if (!receipt.isError || !transactionHash) return;
 		pendingRef.current = false;
+		businessLifecycle.fail();
 		setTransactionPhase("write-error");
 		setTransactionMessage(toWalletMessage(receipt.error));
-	}, [receipt.error, receipt.isError, transactionHash]);
+	}, [businessLifecycle, receipt.error, receipt.isError, transactionHash]);
 
 	useEffect(() => {
 		if (
@@ -214,6 +217,7 @@ export function useGrowth() {
 		)
 			.then(() => {
 				pendingRef.current = false;
+				businessLifecycle.succeed();
 				setTransactionPhase("success");
 				setTransactionMessage(
 					`记录成功，获得 +${activityRef.current?.reward ?? 0} 枚成长星。`,
@@ -221,10 +225,17 @@ export function useGrowth() {
 			})
 			.catch(() => {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase("write-error");
 				setTransactionMessage("交易已确认，但刷新成长状态失败，请重试读取。");
 			});
-	}, [queryClient, readQueryKeys, receipt.isSuccess, transactionHash]);
+	}, [
+		businessLifecycle,
+		queryClient,
+		readQueryKeys,
+		receipt.isSuccess,
+		transactionHash,
+	]);
 
 	const recordActivity = useCallback(
 		async (activityId: GrowthActivityId) => {
@@ -243,6 +254,7 @@ export function useGrowth() {
 			}
 
 			pendingRef.current = true;
+			businessLifecycle.start("business.growth.activity");
 			confirmedHashRef.current = undefined;
 			activityRef.current = activity;
 			setTransactionHash(undefined);
@@ -264,6 +276,7 @@ export function useGrowth() {
 				setTransactionMessage("交易已广播，正在等待测试链确认。");
 			} catch (error) {
 				pendingRef.current = false;
+				businessLifecycle.fail();
 				setTransactionPhase(isUserRejected(error) ? "rejected" : "write-error");
 				setTransactionMessage(
 					isUserRejected(error)
@@ -272,7 +285,13 @@ export function useGrowth() {
 				);
 			}
 		},
-		[address, availabilityByActivity, walletState, writeContractAsync],
+		[
+			address,
+			availabilityByActivity,
+			businessLifecycle,
+			walletState,
+			writeContractAsync,
+		],
 	);
 
 	const retryRead = useCallback(

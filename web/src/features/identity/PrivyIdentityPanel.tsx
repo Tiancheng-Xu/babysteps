@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 
 import { publicAppConfig } from "../../contracts/web3Contracts";
-import { measurePerformance } from "../../performance/runtime";
+import {
+	measureBusinessPerformance,
+	measurePerformance,
+} from "../../performance/runtime";
 import { createIdentityApi, type Profile } from "./identityApi";
 import {
 	deriveIdentitySummary,
@@ -75,10 +78,17 @@ export function PrivyIdentityPanel() {
 		setPhase("signing");
 		setMessage("请在钱包中签署一次无 Gas 登录消息。");
 		try {
-			await measurePerformance("web3.privy.login", () =>
-				api.login(getAddress(signer.address), (value) => signer.sign(value)),
+			const nextProfile = await measureBusinessPerformance(
+				"business.identity.session",
+				async () => {
+					await measurePerformance("web3.privy.login", () =>
+						api.login(getAddress(signer.address), (value) =>
+							signer.sign(value),
+						),
+					);
+					return api.getProfile();
+				},
 			);
-			const nextProfile = await api.getProfile();
 			setProfile(nextProfile);
 			setUsername(nextProfile.username ?? "");
 			setPhase("ready");
@@ -94,7 +104,10 @@ export function PrivyIdentityPanel() {
 		setPhase("saving");
 		try {
 			const normalized = normalizeUsername(username);
-			const nextProfile = await api.updateProfile(normalized);
+			const nextProfile = await measureBusinessPerformance(
+				"business.profile.write",
+				() => api.updateProfile(normalized),
+			);
 			setProfile(nextProfile);
 			setUsername(nextProfile.username ?? "");
 			setPhase("ready");
@@ -103,6 +116,12 @@ export function PrivyIdentityPanel() {
 			setPhase("error");
 			setMessage(error instanceof Error ? error.message : "用户名保存失败。");
 		}
+	}
+
+	function beginPrivyLogin() {
+		void measureBusinessPerformance("business.identity.login", async () => {
+			await login();
+		}).catch(() => undefined);
 	}
 
 	async function signOut() {
@@ -152,7 +171,7 @@ export function PrivyIdentityPanel() {
 						<button
 							className="button"
 							type="button"
-							onClick={login}
+							onClick={beginPrivyLogin}
 							disabled={!ready}
 						>
 							使用 Privy 登录
