@@ -6,20 +6,21 @@ import renderingSequenceImage from "../../../docs/architecture/starbuddy-renderi
 import businessSequenceImage from "../../../docs/architecture/starbuddy-web3-business-sequence.svg";
 import globalArchitectureImage from "../../../docs/architecture/starbuddy-web3-global-architecture.svg";
 import roleArchitectureUrl from "../../../docs/evidence/architecture/babysteps-role-boundaries.html?url";
-import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-29-performance-aws-final.json?url";
 import implementedJourneyEvidenceUrl from "../../../docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json?url";
 import roleInventory from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json";
 import roleInventoryUrl from "../../../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json?url";
-import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-29-performance-final/performance-live.webm";
+import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-08-31-performance-aws-final.json?url";
 import prdFullWalkthroughVideo from "../../../docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
+import performanceJourneyVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm";
+import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
 import keepsakeMobileImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-mobile-390.png";
 import productClosureDesktopImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/evidence-product-closure-desktop-1440.png";
 import providerConsoleMobileImage from "../../../docs/evidence/screenshots/2026-08-20-web3-product-closure/provider-console-mobile-390.png";
-import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-desktop-1440.png";
-import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-29-performance-final/performance-live-mobile-390.png";
+import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png";
+import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png";
 import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url";
 import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
 
@@ -627,8 +628,8 @@ export function EvidencePage() {
 					</h3>
 					<div>
 						<article>
-							<strong>本地实现状态</strong>
-							<span>本地已验证 · 云端样本待刷新</span>
+							<strong>最终验证状态</strong>
+							<span>云端闭环已验证 · 取证后零残留</span>
 							<strong>修复内容</strong>
 							<span>
 								把“已有样本、健康零事件、场景未执行、真实缺样本、环境不可用”拆成五种状态，不再把错误为
@@ -637,15 +638,16 @@ export function EvidencePage() {
 							</span>
 							<strong>路由与安全采样</strong>
 							<span>
-								9 条产品路由 × 4 个视口共 36 项浏览器检查通过；受控 Journey 完成
-								23 项强制观测：五项 Web Vitals、导航、七类 Resource
-								Timing、三类渲染，以及 contract/RPC/Uniswap
-								只读场景；不制造错误、坏 CLS、钱包授权或链上交易填数。
+								Run 33370197607 的受控 Chromium 访问 9 条产品路由，提交 232
+								个唯一事件与 49 个批次；五项 Web Vitals、导航、七类 Resource
+								Timing、Long Task、三类渲染，以及 contract/RPC/Uniswap
+								只读场景均进入真实 AWS 管线。
 							</span>
 							<strong>验证证据</strong>
 							<span>
-								全量测试、typecheck、生产 build、公开内容扫描、根级
-								overflow/pageerror 检查与 BackstopJS 375/390/430/1440 均通过。
+								Cleaner 232/232 写入，SQS/DLQ 全量排空；LCP n=6、CLS n=9、INP
+								n=4，9/9 路由有样本。Schema、Stack 与 12 类项目资源清理后均为
+								0。
 							</span>
 							<a
 								href={performanceCoverageSemanticsUrl}
@@ -656,10 +658,11 @@ export function EvidencePage() {
 							</a>
 							<strong>证据边界</strong>
 							<span>
-								Run 33304145710 在无 AWS 权限的本地前置 Gate 因缺少 INP
-								停止，云端 Job 被跳过；当前生产历史快照仍来自 Run
-								33279132965。只有合并后新的临时 AWS Run
-								完成采集、Cleaner、查询与零残留清理，才能把新增资源覆盖标记为云端已验证。
+								该 Run 是 controlled-browser，不是生产 Field RUM。TLS 因受控
+								Origin 与连接复用标为 unavailable；错误、CSR fallback 和
+								hydration recoverable error
+								为健康零事件；钱包登录、签名和链上写交易保持
+								not-exercised，未为填数伪造。
 							</span>
 						</article>
 					</div>
@@ -874,8 +877,8 @@ export function EvidencePage() {
 				<p className="evidence-feature-proof__lead">
 					浏览器 SDK → Worker → AWS 的链路把采集、异步入队、ECS
 					清洗、共享数据库和真实统计拆成独立信任边界。GitHub Actions Run
-					33279132965 在 commit 1e703caeba2d 上以受控 Chromium、Vite Web 和本地
-					Worker 代理访问 5 条页面路径，再连接临时 AWS 后端完成 SQS 入队、ECS
+					33370197607 在 commit f15bc873b14b 上以受控 Chromium、Vite Web 和本地
+					Worker 代理访问 9 条页面路径，再连接临时 AWS 后端完成 SQS 入队、ECS
 					Cleaner、PostgreSQL 聚合与 Live Dashboard 取证；随后删除 Schema
 					与精确项目 Stack，复核队列、DLQ 与 12 类项目资源全部为 0。
 				</p>
@@ -894,8 +897,9 @@ export function EvidencePage() {
 							<code>packages/performance-sdk/src</code>
 							<strong>验证证据</strong>
 							<span>
-								5 条真实页面路径、14 个批次、{"85 个唯一事件"}
-								；LCP、CLS、INP、FCP、TTFB 与导航阶段均有受控样本
+								9 条真实页面路径、49 个批次、{"232 个唯一事件"}
+								；LCP、CLS、INP、FCP、TTFB、导航、资源、Long Task
+								与渲染阶段均有受控样本
 							</span>
 							<strong>当前状态</strong>
 							<span>已实现并验证</span>
@@ -908,10 +912,10 @@ export function EvidencePage() {
 							<strong>代码位置</strong>
 							<code>aws/src/performance · aws/performance-template.yaml</code>
 							<strong>验证证据</strong>
-							<code>Run 33279132965</code>
+							<code>Run 33370197607</code>
 							<strong>当前状态</strong>
 							<span>
-								ECS Cleaner 处理并写入 85 条，0 丢弃、0 可重试失败；SQS 与 DLQ
+								ECS Cleaner 处理并写入 232 条，0 丢弃、0 可重试失败；SQS 与 DLQ
 								的 visible、in-flight、delayed 均为 0
 							</span>
 						</article>
@@ -927,8 +931,9 @@ export function EvidencePage() {
 							</code>
 							<strong>验证证据</strong>
 							<span>
-								Live API 实测 LCP/CLS/INP/FCP/TTFB、导航和脚本资源分位数；Schema
-								与精确项目 Stack 已删除，12 类项目资源全部为 0
+								Live API 实测 LCP/CLS/INP/FCP/TTFB、导航、七类资源、Long
+								Task、SSR/水合与只读 Web3 分位数；Schema 与精确项目 Stack
+								已删除，12 类项目资源全部为 0
 							</span>
 							<a
 								href={performanceFinalEvidenceUrl}
@@ -1028,8 +1033,16 @@ export function EvidencePage() {
 						</h4>
 						<ol>
 							<li>
+								<code>Run 33370197607</code>
+								：commit f15bc873b14b 的全覆盖合同完成 9 条产品路由、232
+								个唯一事件与 49 个接收批次；Cleaner 232/232 写入。LCP n=6、CLS
+								n=9、INP n=4，DNS/TCP 有条件样本，TLS 诚实标为
+								unavailable；资源、Long Task、SSR shell、水合和只读 Sepolia RPC
+								均被观测。队列/DLQ、Schema、Stack 与 12 类项目资源全部归零。
+							</li>
+							<li>
 								<code>Run 33279132965</code>
-								：commit 1e703caeba2d 的最终合同完成 5 条页面路径、85
+								：commit 1e703caeba2d 的旧版完整合同完成 5 条页面路径、85
 								个唯一事件、14 个接收批次与 85 条幂等写入；LCP 4、CLS 5、INP
 								1、FCP 5、TTFB 5， 导航分项各 5。队列/DLQ 全量排空，Schema、精确
 								Stack 与 12 类项目资源全部归零。
@@ -1221,7 +1234,7 @@ export function EvidencePage() {
 					</header>
 					<p>
 						截图和录屏由本地 Chromium、Vite Preview 和本地 Worker 代理连接临时
-						AWS API、SQS、ECS 与 PostgreSQL 后采集；随后 Run 33279132965
+						AWS API、SQS、ECS 与 PostgreSQL 后采集；随后 Run 33370197607
 						删除项目 Schema 与临时 Stack，并用固定清单验证零残留。
 						因此这些媒体证明真实运行窗口，公开页面则诚实保持非实时，不伪装成持续在线
 						AWS 服务。
@@ -1252,6 +1265,24 @@ export function EvidencePage() {
 					</div>
 					<figure className="evidence-video-proof">
 						<video
+							aria-label="九路由真实 AWS 性能采样录屏"
+							controls
+							muted
+							playsInline
+							preload="metadata"
+							poster={performanceFinalDesktopImage}
+						>
+							<source src={performanceJourneyVideo} type="video/webm" />
+							当前浏览器不支持 WebM 视频播放。
+						</video>
+						<figcaption>
+							160.32 秒九路由受控 Journey：从首页到
+							Evidence，触发可安全自动化的真实页面与代表性交互，并把 232
+							个事件送入同一临时 AWS 管线。
+						</figcaption>
+					</figure>
+					<figure className="evidence-video-proof">
+						<video
 							aria-label="最终 AWS 性能统计页面走读录屏"
 							controls
 							muted
@@ -1263,7 +1294,7 @@ export function EvidencePage() {
 							当前浏览器不支持 WebM 视频播放。
 						</video>
 						<figcaption>
-							4.84 秒无声走读录屏，只包含真实 Live
+							5.64 秒无声走读录屏，只包含真实 Live
 							Dashboard；不包含账号、Token、 Cookie 或其他窗口内容。
 						</figcaption>
 					</figure>

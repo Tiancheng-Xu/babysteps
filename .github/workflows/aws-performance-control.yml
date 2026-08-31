@@ -545,7 +545,7 @@ jobs:
           delivery_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-bootstrap-stopped"
           occurred_at="$(date -u '+%Y-%m-%dT%H:%M:%S.000Z')"
           node scripts/performance-control-bootstrap.mjs \
-            --evidence docs/evidence/deployment/2026-08-29-performance-aws-final.json \
+            --evidence docs/evidence/deployment/2026-08-31-performance-aws-final.json \
             --current-readback evidence/cleanup-readback.json \
             --delivery-id "$delivery_id" \
             --operation-id "$OPERATION_ID" \

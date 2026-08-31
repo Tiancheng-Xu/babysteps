@@ -99,10 +99,10 @@ describe("EvidencePage", () => {
 		expect(
 			screen.getByRole("heading", { name: "全路由采样与覆盖语义" }),
 		).toBeTruthy();
-		expect(screen.getByText("本地已验证 · 云端样本待刷新")).toBeTruthy();
-		expect(screen.getByText(/23 项强制观测/u)).toBeTruthy();
-		expect(screen.getByText(/33304145710/u)).toBeTruthy();
-		expect(screen.getByText(/9 条产品路由 × 4 个视口共 36 项/u)).toBeTruthy();
+		expect(screen.getByText("云端闭环已验证 · 取证后零残留")).toBeTruthy();
+		expect(screen.getByText(/232 个唯一事件与 49 个批次/u)).toBeTruthy();
+		expect(screen.getAllByText(/33370197607/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/9 条产品路由/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getByRole("link", { name: "查看覆盖语义与全路由检查记录" }),
 		).toBeTruthy();
@@ -125,11 +125,11 @@ describe("EvidencePage", () => {
 		).toBeTruthy();
 		expect(screen.getByText(/31760380214/u)).toBeTruthy();
 		expect(screen.getByText(/31761586956/u)).toBeTruthy();
-		expect(screen.getAllByText(/33279132965/u).length).toBeGreaterThan(0);
-		expect(screen.getAllByText(/commit 1e703caeba2d/u).length).toBeGreaterThan(
+		expect(screen.getAllByText(/33370197607/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/commit f15bc873b14b/u).length).toBeGreaterThan(
 			0,
 		);
-		expect(screen.getAllByText(/5 条真实页面路径/u).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/9 条真实页面路径/u).length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByText(/Schema 与精确项目 Stack/u).length,
 		).toBeGreaterThan(0);

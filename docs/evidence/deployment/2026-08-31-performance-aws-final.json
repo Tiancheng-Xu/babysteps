@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 5,
+  "status": "verified-drained-and-cleaned",
+  "observedAt": "2026-08-31T08:16:54.327Z",
+  "workflow": {
+    "name": "BabySteps AWS Performance Evidence",
+    "runId": 33370197607,
+    "artifactId": 9750458914,
+    "commit": "f15bc873b14bb7193495514a6a7cc57c7e0eaf37",
+    "region": "us-east-1",
+    "mode": "manual temporary validation",
+    "validationSurface": "controlled Chromium and Vite web with local Worker proxy connected to temporary AWS resources",
+    "provenance": "controlled-browser",
+    "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/33370197607"
+  },
+  "browserJourney": {
+    "routeCount": 9,
+    "routes": [
+      "/",
+      "/tasks",
+      "/parent",
+      "/keepsakes",
+      "/provider",
+      "/exchange",
+      "/profile",
+      "/performance",
+      "/evidence"
+    ],
+    "eventCount": 232,
+    "batchCount": 49,
+    "acceptedBatchCount": 49,
+    "rejectedBatchCount": 0,
+    "transportFailureCount": 0,
+    "unacceptedEventCount": 0,
+    "representativeInteraction": {
+      "route": "/performance",
+      "metric": "INP",
+      "sampleCount": 4,
+      "p75Ms": 48,
+      "cpuSlowdownRate": 6
+    },
+    "coverageSummary": {
+      "observed": 30,
+      "unavailable": 1,
+      "healthyZero": 12,
+      "missingRequired": 0,
+      "missingConditionalAvailability": 0
+    }
+  },
+  "pipeline": [
+    "Controlled Chromium and Vite journey",
+    "Local Worker proxy implementing the Cloudflare Worker contract",
+    "API Gateway and ingest Lambda",
+    "SQS with DLQ",
+    "on-demand ECS Fargate cleaner",
+    "isolated project PostgreSQL schema",
+    "query Lambda and live dashboard",
+    "sanitized workflow artifact",
+    "schema and stack cleanup"
+  ],
+  "delivery": {
+    "queue": { "visible": 0, "inFlight": 0, "delayed": 0, "total": 0 },
+    "dlq": { "visible": 0, "inFlight": 0, "delayed": 0, "total": 0 },
+    "fullyDrained": true
+  },
+  "cleaner": {
+    "processed": 232,
+    "inserted": 232,
+    "deduplicated": 0,
+    "discarded": 0,
+    "retryableFailures": 0,
+    "writeDurationMs": 752,
+    "durationMs": 23510,
+    "exitCode": 0
+  },
+  "dashboard": {
+    "mode": "live",
+    "source": "live-api",
+    "window": "1h",
+    "visibleSampleCount": 37,
+    "routeCount": 9,
+    "vitalSampleCounts": {
+      "LCP": 6,
+      "CLS": 9,
+      "INP": 4,
+      "FCP": 9,
+      "TTFB": 9
+    },
+    "conditionalNavigation": {
+      "navigation.dns": "observed",
+      "navigation.tcp": "observed",
+      "navigation.tls": "unavailable"
+    },
+    "media": {
+      "desktop": {
+        "path": "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-desktop-1440.png",
+        "sha256": "400a983f87852dbcf02d29cca5cc1d6f9fb75cd4586a3482231f4b753104ddf0"
+      },
+      "mobile390": {
+        "path": "docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png",
+        "sha256": "b9957f195f0b0937967b7759c46df668f89f82e9ce67f429d29ee5cd110cfff0"
+      },
+      "dashboardRecording": {
+        "path": "docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm",
+        "sha256": "5ca39f9b203b10922ee6faddb2342ee2add028a81e0a283c70d65d9b398b9e61"
+      },
+      "journeyRecording": {
+        "path": "docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm",
+        "sha256": "c03aeb0e1693e1102f9f5dff89ced9c4796d6089c338e8ce3d83a43c45eacb7f"
+      }
+    }
+  },
+  "cleanup": {
+    "schemaDeleted": true,
+    "schemaAbsenceVerified": true,
+    "schemaCleanupAttempt": 1,
+    "cloudFormationStackAbsent": true,
+    "remainingProjectResources": 0,
+    "inventory": {
+      "ecr": 0,
+      "ecsClusters": 0,
+      "ecsTasks": 0,
+      "taskDefinitions": 0,
+      "sqsAndDlq": 0,
+      "apiGateway": 0,
+      "lambda": 0,
+      "cloudWatchLogGroups": 0,
+      "secrets": 0,
+      "securityGroups": 0,
+      "securityGroupIngress": 0,
+      "iamRoles": 0
+    },
+    "sharedResources": {
+      "vpc": "protected-read-only",
+      "nat": "protected-read-only",
+      "database": "protected-read-only",
+      "oidc": "protected-read-only",
+      "artifactBucket": "protected-read-only",
+      "foundation": "explicit deny cleanup"
+    }
+  },
+  "security": {
+    "browserAwsCredentials": false,
+    "longLivedAwsAccessKey": false,
+    "githubIdentity": "short-lived OIDC session",
+    "publishedSecrets": false
+  },
+  "artifactFiles": {
+    "browserJourney": "docs/evidence/deployment/2026-08-31-performance-aws-final/browser-journey.json",
+    "cleanerSummary": "docs/evidence/deployment/2026-08-31-performance-aws-final/cleaner-summary.json",
+    "cleanup": "docs/evidence/deployment/2026-08-31-performance-aws-final/cleanup.json",
+    "dashboardJourney": "docs/evidence/deployment/2026-08-31-performance-aws-final/performance-dashboard-journey.json",
+    "performanceStats": "docs/evidence/deployment/2026-08-31-performance-aws-final/performance-stats.json",
+    "queueAfterCleaner": "docs/evidence/deployment/2026-08-31-performance-aws-final/queue-after-cleaner.json",
+    "run": "docs/evidence/deployment/2026-08-31-performance-aws-final/run.json",
+    "schemaCleanup": "docs/evidence/deployment/2026-08-31-performance-aws-final/schema-cleanup.json"
+  },
+  "limitations": [
+    "This is controlled-browser evidence, not production field RUM or CrUX.",
+    "Sparse metrics remain low confidence; navigation DNS has n=1 and TCP has n=2.",
+    "TLS is unavailable because the controlled origin and connection reuse did not expose a distinct TLS phase.",
+    "Read-only Sepolia RPC succeeded; the Uniswap quote path produced one real failure observation. Wallet login, signatures and write transactions were not exercised or fabricated.",
+    "Healthy zero means the scenario ran and no error or fallback occurred; it is distinct from missing data.",
+    "The project schema and temporary stack were removed after capture, so the public dashboard uses a verified historical snapshot rather than claiming a continuously running AWS backend."
+  ]
+}

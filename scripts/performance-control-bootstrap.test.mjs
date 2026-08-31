@@ -4,8 +4,8 @@ import test from "node:test";
 
 const validProof = {
 	authority: "github-actions-artifact+aws-zero-residue-readback",
-	workflowRunId: "33279132965",
-	artifactId: "9722636468",
+	workflowRunId: "33370197607",
+	artifactId: "9750458914",
 	evidenceSha256:
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	schemaAbsenceVerified: true,
@@ -55,7 +55,7 @@ test("bootstrap proof is derived from the verified GitHub artifact and exact zer
 		"./performance-control-bootstrap.mjs"
 	);
 	const raw = await readFile(
-		"docs/evidence/deployment/2026-08-29-performance-aws-final.json",
+		"docs/evidence/deployment/2026-08-31-performance-aws-final.json",
 		"utf8",
 	);
 	const evidence = JSON.parse(raw);
@@ -65,8 +65,8 @@ test("bootstrap proof is derived from the verified GitHub artifact and exact zer
 		sharedFoundationProtected: true,
 	};
 	const proof = buildBootstrapProofFromEvidence(evidence, raw, currentReadback);
-	assert.equal(proof.workflowRunId, "33279132965");
-	assert.equal(proof.artifactId, "9722636468");
+	assert.equal(proof.workflowRunId, "33370197607");
+	assert.equal(proof.artifactId, "9750458914");
 	assert.match(proof.evidenceSha256, /^[0-9a-f]{64}$/u);
 	assert.equal(proof.schemaAbsenceVerified, true);
 	assert.equal(proof.cloudFormationStackAbsent, true);

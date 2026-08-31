@@ -2,7 +2,7 @@
 
 ## 结论
 
-本次修复只调整性能指标的覆盖语义、受控浏览器 Journey、SDK 的低优先级公平采样与 Dashboard 展示，不把本地验证冒充新的云端闭环。生产历史快照仍来自 Run `33279132965`。首次新云端尝试 Run [`33292966972`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33292966972) 已安全失败并完成零残留清理；后续 Run [`33304145710`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33304145710) 又在无 AWS 权限的 `local-coverage` 前置 Job 因缺少 INP 而停止，`prove-and-clean` 被跳过，因此也没有创建 AWS Runtime、没有替换历史快照。
+本次修复调整性能指标的覆盖语义、受控浏览器 Journey、SDK 的低优先级公平采样与 Dashboard 展示。中间失败 Run [`33292966972`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33292966972) 已安全失败并完成零残留清理；Run [`33304145710`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33304145710) 在无 AWS 权限的 `local-coverage` 前置 Job 停止，未创建 AWS Runtime。最终 Run [`33370197607`](https://github.com/Tiancheng-Xu/babysteps/actions/runs/33370197607) 已在 commit `f15bc873b14b` 完成 9 路由、232 事件、49 批次、Cleaner 232/232、Live Dashboard 与零残留闭环，现为最新生产历史快照；完整证据见 `docs/evidence/testing/2026-08-31-performance-aws-final.md`。
 
 ## 根因与修复
 

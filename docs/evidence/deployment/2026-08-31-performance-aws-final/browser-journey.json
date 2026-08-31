@@ -1,0 +1,108 @@
+{
+  "routes": [
+    "/",
+    "/tasks",
+    "/parent",
+    "/keepsakes",
+    "/provider",
+    "/exchange",
+    "/profile",
+    "/performance",
+    "/evidence"
+  ],
+  "coverage": {
+    "observed": [
+      "CLS",
+      "FCP",
+      "INP",
+      "LCP",
+      "TTFB",
+      "business.exchange.quote.error",
+      "contract.read",
+      "hydration.duration",
+      "longtask.count",
+      "longtask.duration",
+      "longtask.max",
+      "longtask.total",
+      "navigation.dns",
+      "navigation.dom_ready",
+      "navigation.download",
+      "navigation.request_wait",
+      "navigation.tcp",
+      "navigation.window_load",
+      "resource.duration",
+      "resource.fetch.duration",
+      "resource.font.duration",
+      "resource.image.duration",
+      "resource.script.duration",
+      "resource.stylesheet.duration",
+      "resource.xhr.duration",
+      "rpc.read",
+      "spa.route.duration",
+      "ssr.shell.duration",
+      "web3.rpc.read",
+      "web3.uniswap.quote"
+    ],
+    "unavailable": [
+      "navigation.tls"
+    ],
+    "missingRequired": [],
+    "missingConditionalAvailability": []
+  },
+  "batchCount": 49,
+  "acceptedBatchCount": 49,
+  "rejectedBatchCount": 0,
+  "transportFailureCount": 0,
+  "eventCount": 232,
+  "unacceptedEventCount": 0,
+  "representativeInteraction": {
+    "route": "/performance",
+    "metric": "INP",
+    "observed": true,
+    "source": "controlled-browser",
+    "cpuSlowdownRate": 6,
+    "paintSettleFrames": 2,
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "safeBusinessInteractions": [
+    {
+      "id": "sepolia-uniswap-quote",
+      "route": "/exchange",
+      "metric": "web3.uniswap.quote",
+      "safety": "read-only-sepolia",
+      "acceptedOutcomes": [
+        "success",
+        "failure"
+      ],
+      "successObserved": false,
+      "failureObserved": true
+    }
+  ],
+  "zeroOrObserved": [
+    {
+      "name": "longtask.duration",
+      "observed": true
+    }
+  ],
+  "healthyZero": {
+    "expected": [
+      "csr.fallback",
+      "error.javascript.network",
+      "error.javascript.timeout",
+      "error.javascript.type_error",
+      "error.javascript.unknown",
+      "error.promise.network",
+      "error.promise.timeout",
+      "error.promise.type_error",
+      "error.promise.unknown",
+      "hydration.recoverable_error",
+      "javascript.error",
+      "promise.rejection"
+    ],
+    "unexpectedObserved": []
+  },
+  "lifecycleFinalization": "controlled-browser-hidden-pagehide"
+}

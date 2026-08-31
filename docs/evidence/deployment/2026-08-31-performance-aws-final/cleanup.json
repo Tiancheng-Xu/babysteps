@@ -1,0 +1,26 @@
+{
+  "cloudFormationStackAbsent": true,
+  "remainingProjectResources": 0,
+  "inventory": {
+    "ecr": 0,
+    "ecsClusters": 0,
+    "ecsTasks": 0,
+    "taskDefinitions": 0,
+    "sqsAndDlq": 0,
+    "apiGateway": 0,
+    "lambda": 0,
+    "cloudWatchLogGroups": 0,
+    "secrets": 0,
+    "securityGroups": 0,
+    "securityGroupIngress": 0,
+    "iamRoles": 0
+  },
+  "sharedResources": {
+    "vpc": "protected-read-only",
+    "nat": "protected-read-only",
+    "database": "protected-read-only",
+    "oidc": "protected-read-only",
+    "artifactBucket": "protected-read-only",
+    "foundation": "explicit deny cleanup"
+  }
+}

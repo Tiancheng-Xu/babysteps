@@ -26,7 +26,7 @@ Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，
 
 同日使用公开 Worker API 与 Sepolia V2 完成 challenge-sign-verify、canonical D1 草稿、Provider 请求、Owner 审核、VRF 激活、精确 approve、购买、链下绑定、用户名保存与购买门控评论，并从公开 API 读回任务与评论。脱敏证据见 [`2026-08-12-public-api-closed-loop.json`](2026-08-12-public-api-closed-loop.json)；文件不包含 Cookie、签名、私钥或密码。
 
-2026-08-29 最终性能观测 Run `33279132965` 以受控 Chromium、Vite Web 和本地 Worker 代理连接临时 AWS 后端，访问 5 条页面路径，并让 85 个唯一事件穿过 API Gateway/Lambda → SQS/DLQ → 一次性 ECS Cleaner → PostgreSQL → Live Dashboard 完整链路。LCP、CLS、INP、FCP、TTFB 与七项导航分解均有受控样本；Cleaner 85/85 写入，队列和 DLQ 全量排空。取证后已验证 Schema 不存在、精确项目 Stack 不存在、12 类项目资源全部为 0；共享 VPC、NAT、PostgreSQL、OIDC 与 Foundation 保持受保护。机器证据见 [`2026-08-29-performance-aws-final.json`](2026-08-29-performance-aws-final.json)。2026-08-28 的 Run `33160455921` 仍作为部分排空历史记录保留，但不再代表当前完成态。
+2026-08-31 最终全覆盖性能观测 Run `33370197607` 以受控 Chromium、Vite Web 和本地 Worker 代理连接临时 AWS 后端，访问 9 条产品路由，并让 232 个唯一事件穿过 API Gateway/Lambda → SQS/DLQ → 一次性 ECS Cleaner → PostgreSQL → Live Dashboard 完整链路。LCP、CLS、INP、FCP、TTFB、导航、七类资源、Long Task、SSR shell、水合与只读 Sepolia RPC 均有真实受控样本；TLS 因连接复用标为 unavailable，健康零事件与 not-exercised 分开呈现。Cleaner 232/232 写入，队列和 DLQ 全量排空。取证后已验证 Schema 不存在、精确项目 Stack 不存在、12 类项目资源全部为 0；共享 VPC、NAT、PostgreSQL、OIDC 与 Foundation 保持受保护。机器证据见 [`2026-08-31-performance-aws-final.json`](2026-08-31-performance-aws-final.json)。2026-08-29 的 Run `33279132965` 保留为旧版五路由历史记录，但不再代表最新完成态。
 
 ## 后续业务闭环证据清单
 

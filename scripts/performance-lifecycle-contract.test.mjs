@@ -102,7 +102,7 @@ test("stopped bootstrap is read-only, generation one, and cannot impersonate a n
 	assert.match(callback.if, /zero-residue\.outcome == 'success'/);
 	assert.match(
 		callback.run,
-		/docs\/evidence\/deployment\/2026-08-29-performance-aws-final\.json/,
+		/docs\/evidence\/deployment\/2026-08-31-performance-aws-final\.json/,
 	);
 	assert.match(callback.run, /performance-control-bootstrap\.mjs/);
 	assert.match(callback.run, /performance_post_callback/);
