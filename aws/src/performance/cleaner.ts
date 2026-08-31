@@ -39,6 +39,12 @@ export function cleanPerformanceEvent(input: unknown): StoredPerformanceEvent {
 		name: String(event.name),
 		value: Number(event.value),
 		unit: event.unit as PerformanceEvent["unit"],
+		...(event.category !== undefined
+			? { category: event.category as PerformanceEvent["category"] }
+			: {}),
+		...(event.outcome !== undefined
+			? { outcome: event.outcome as PerformanceEvent["outcome"] }
+			: {}),
 		route: normalizeRoute(String(event.route)),
 		environment: String(event.environment),
 		version: String(event.version),
