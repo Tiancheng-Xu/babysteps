@@ -1,11 +1,16 @@
 # TC Flow run memory
 
-- Run: `d82afde8-7c77-40a2-bd0d-1a9bfd867f39`
-- Feature: `performance-sampling-coverage-semantics`
-- Contract: `c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459`
-- N1-N3: resumed an isolated BabySteps worktree, froze the safe coverage contract, and implemented the manifest-driven Journey and readback changes.
-- N4-N5: focused tests, code review, privacy scan, and checkpoints passed; no credentials or private paths were added.
-- N6: full tests, typecheck, build, Evidence, responsive matrix, and BackstopJS passed.
-- N7: central repository policy passed for the committed candidate; independent review is recorded separately before the release commit.
-- N7 amendment: required Web3 coverage now binds type, exact route, name, and outcome; stale versions and old routes cannot satisfy the cloud readback. A PRD-wide controlled-browser recording is mandatory before push.
-- Human clarification: “do not publish” applied only to Google Play and Apple App Store. BabySteps Web, GitHub, Cloudflare, and bounded AWS performance Evidence remain in scope.
+- Run: `c81f8b1b-1ff0-4171-b749-f92ea9f7b5c7`
+- Feature: `babysteps-design-system-modernization`
+- Contract: `5c52084af1481b488287e7251bbb48fd2ed36d19364585241dc10b700bc98506`
+- Base: `origin/main@230b24df3909d3ee2c7081897052f1610bd65f20`
+- N1: started a fresh Feature in `tc/babysteps-design-system-5c52084a`; the unrelated performance run was archived with its N7 state and evidence intact.
+- N2: classified high difficulty because the work spans tokens, primitives, nine routes, SSR, accessibility, visual regression, bundle, and CWV gates; use goal/hook execution with isolated Task review.
+- N3: froze Contract v1. No implementation Task is marked complete and no release action is authorized.
+- N4: completed a single-agent Standards + frozen-specification review. The normal independent reviewer was explicitly waived because the user prohibited subagents for token budget; this is recorded as a limitation rather than presented as independent review.
+- N5: functional, validator, type, check, build, edge runtime, responsive layout, bundle, controlled-browser performance, and 36-scenario BackstopJS gates passed locally.
+- N6: Feature QA found no remaining Critical or Important issue. Evidence video compositing nondeterminism is isolated to the Backstop hook by replacing native video layers with the product poster only during screenshots; production DOM remains unchanged.
+- N7: release is explicitly authorized by the user and is pending commit, push, PR checks, Preview smoke, merge, Cloudflare Git Integration deployment, and production readback. AWS Runtime remains off.
+- Dependency boundary: adopt the already-installed TanStack Query for one HTTP list slice; reject RHF, resolver, Motion, and chart additions for this Feature unless the Contract is explicitly versioned.
+- Ownership boundary: other agents may own business and test files; `.tc-flow/**` metadata changes must not overwrite their work.
+- Release boundary: the frozen Contract kept release separate from implementation; the user's later explicit authorization permits commit, push, PR, merge, and Cloudflare Git Integration production publication after local gates. It does not authorize AWS mutation or blockchain writes.

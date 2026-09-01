@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "label": "candidate-5c52084a",
+  "source": "local-lab",
+  "confidence": "low-n3",
+  "urlOrigin": "http://127.0.0.1:4182",
+  "routes": {
+    "coldLoad": "/",
+    "interaction": "/ -> /tasks"
+  },
+  "environment": {
+    "browser": "Chromium 140.0.7339.16",
+    "viewport": "1440x1000",
+    "deviceScaleFactor": 1,
+    "locale": "zh-CN",
+    "timezone": "UTC",
+    "colorScheme": "light",
+    "reducedMotion": true,
+    "cache": "disabled for cold load; fresh context per sample",
+    "network": "unthrottled loopback",
+    "thirdPartyFonts": "fonts.googleapis.com and fonts.gstatic.com blocked equally for deterministic fallback-font comparison",
+    "cpu": "unthrottled"
+  },
+  "coldLoads": [
+    {
+      "attempt": 1,
+      "pageErrors": [],
+      "ttfbMs": 1.7000000476837158,
+      "fcpMs": 216,
+      "lcpMs": 216,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": null,
+      "domContentLoadedMs": 125.20000004768372,
+      "loadMs": 125.20000004768372
+    },
+    {
+      "attempt": 2,
+      "pageErrors": [],
+      "ttfbMs": 0.7000000476837158,
+      "fcpMs": 160,
+      "lcpMs": 160,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": null,
+      "domContentLoadedMs": 85.70000004768372,
+      "loadMs": 85.79999995231628
+    },
+    {
+      "attempt": 3,
+      "pageErrors": [],
+      "ttfbMs": 0.7000000476837158,
+      "fcpMs": 160,
+      "lcpMs": 160,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": null,
+      "domContentLoadedMs": 84,
+      "loadMs": 84.09999990463257
+    }
+  ],
+  "interactions": [
+    {
+      "attempt": 1,
+      "pageErrors": [],
+      "interactionElapsedMs": 943.2184579999994,
+      "ttfbMs": 0.8999999761581421,
+      "fcpMs": 164,
+      "lcpMs": 164,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": 16,
+      "domContentLoadedMs": 86.20000004768372,
+      "loadMs": 86.20000004768372
+    },
+    {
+      "attempt": 2,
+      "pageErrors": [],
+      "interactionElapsedMs": 929.4321250000012,
+      "ttfbMs": 0.7999999523162842,
+      "fcpMs": 152,
+      "lcpMs": 152,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": 24,
+      "domContentLoadedMs": 81,
+      "loadMs": 81.10000002384186
+    },
+    {
+      "attempt": 3,
+      "pageErrors": [],
+      "interactionElapsedMs": 935.9952080000003,
+      "ttfbMs": 0.6999999284744263,
+      "fcpMs": 160,
+      "lcpMs": 160,
+      "cls": 0,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "inpMs": 24,
+      "domContentLoadedMs": 84.80000007152557,
+      "loadMs": 84.80000007152557
+    }
+  ],
+  "summary": {
+    "coldLoad": {
+      "ttfbMs": {
+        "sampleCount": 3,
+        "p50": 0.7000000476837158,
+        "p75": 1.7000000476837158,
+        "p95": 1.7000000476837158
+      },
+      "fcpMs": {
+        "sampleCount": 3,
+        "p50": 160,
+        "p75": 216,
+        "p95": 216
+      },
+      "lcpMs": {
+        "sampleCount": 3,
+        "p50": 160,
+        "p75": 216,
+        "p95": 216
+      },
+      "cls": {
+        "sampleCount": 3,
+        "p50": 0,
+        "p75": 0,
+        "p95": 0
+      },
+      "longTaskTotalMs": {
+        "sampleCount": 3,
+        "p50": 0,
+        "p75": 0,
+        "p95": 0
+      }
+    },
+    "interaction": {
+      "interactionElapsedMs": {
+        "sampleCount": 3,
+        "p50": 935.9952080000003,
+        "p75": 943.2184579999994,
+        "p95": 943.2184579999994
+      },
+      "inpMs": {
+        "sampleCount": 3,
+        "p50": 24,
+        "p75": 24,
+        "p95": 24
+      },
+      "longTaskTotalMs": {
+        "sampleCount": 3,
+        "p50": 0,
+        "p75": 0,
+        "p95": 0
+      }
+    }
+  }
+}

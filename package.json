@@ -5,11 +5,11 @@
 	"type": "module",
 	"packageManager": "pnpm@11.17.0",
 	"scripts": {
-		"check": "pnpm --filter @babysteps/aws check && pnpm --filter @babysteps/contracts check && pnpm --filter @babysteps/web check && pnpm --filter @babysteps/worker check && pnpm --filter @babysteps/subgraph build && pnpm validate:standalone && pnpm validate:public-copy && pnpm validate:project-naming && pnpm validate:pages-workflow && pnpm validate:aws-readiness && pnpm validate:delivery-evidence",
+		"check": "pnpm --filter @babysteps/aws check && pnpm --filter @babysteps/contracts check && pnpm --filter @babysteps/web check && pnpm --filter @babysteps/worker check && pnpm --filter @babysteps/subgraph build && pnpm validate:standalone && pnpm validate:public-copy && pnpm validate:project-naming && pnpm validate:pages-workflow && pnpm validate:aws-readiness && pnpm validate:delivery-evidence && pnpm validate:design-system",
 		"test": "pnpm test:validators && pnpm --filter @babysteps/aws test && pnpm --filter @babysteps/contracts test && pnpm --filter @babysteps/web test && pnpm --filter @babysteps/worker test && pnpm --filter @babysteps/subgraph test",
 		"test:validators": "node --test scripts/*.test.mjs",
 		"typecheck": "pnpm --filter @babysteps/aws typecheck && pnpm --filter @babysteps/contracts typecheck && pnpm --filter @babysteps/web typecheck && pnpm --filter @babysteps/worker typecheck",
-		"build": "node scripts/build.mjs",
+		"build": "node scripts/build.mjs && node scripts/validate-bundle-budget.mjs",
 		"validate:standalone": "node scripts/validate-standalone.mjs",
 		"validate:public-copy": "node scripts/validate-public-copy.mjs",
 		"validate:project-naming": "node scripts/validate-project-naming.mjs",
@@ -19,12 +19,15 @@
 		"validate:delivery-evidence": "node scripts/validate-delivery-evidence.mjs",
 		"validate:performance-pipeline": "node scripts/validate-performance-pipeline.mjs",
 		"validate:performance-budget": "node scripts/validate-performance-budget.mjs",
+		"validate:bundle-budget": "node scripts/validate-bundle-budget.mjs",
+		"validate:design-system": "node scripts/validate-design-system.mjs",
 		"validate:rendering-runtime": "node web/scripts/validate-rendering-runtime.mjs web/dist/_worker.js",
 		"prepare:ipfs": "node scripts/prepare-ipfs-metadata.mjs",
-		"visual:layout": "node scripts/run-visual-gate.mjs layout",
-		"visual:reference": "node scripts/run-visual-gate.mjs reference",
-		"visual:test": "node scripts/run-visual-gate.mjs test",
-		"visual:approve": "node scripts/run-visual-gate.mjs approve"
+		"test:visual-readiness": "TZ=UTC LANG=zh_CN.UTF-8 node --test scripts/visual-on-ready.browser.mjs",
+		"visual:layout": "TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs layout",
+		"visual:reference": "pnpm test:visual-readiness && TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs reference",
+		"visual:test": "pnpm test:visual-readiness && TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs test",
+		"visual:approve": "TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs approve"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",

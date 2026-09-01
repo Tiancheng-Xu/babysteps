@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "runId": "c81f8b1b-1ff0-4171-b749-f92ea9f7b5c7",
+  "feature": "babysteps-design-system-modernization",
+  "contractHash": "5c52084af1481b488287e7251bbb48fd2ed36d19364585241dc10b700bc98506",
+  "baseHead": "230b24df3909d3ee2c7081897052f1610bd65f20",
+  "allowedRoots": [
+    "DESIGN.md",
+    "docs/superpowers/plans/2026-09-01-babysteps-design-system-modernization.md",
+    "docs/superpowers/specs/2026-09-01-babysteps-design-system-modernization-design.md",
+    "web/src/",
+    "web/scripts/",
+    "scripts/",
+    "backstop.json",
+    "backstop_data/",
+    "docs/qa/",
+    ".tc-flow/"
+  ],
+  "observedAtInitialization": [
+    {
+      "path": "scripts/design-system-contract.test.mjs",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked"
+    },
+    {
+      "path": "web/src/features/provider/OwnerCompletionReviewPanel.test.tsx",
+      "owner": "concurrent-feature-worker",
+      "status": "modified"
+    },
+    {
+      "path": "web/src/features/provider/OwnerCompletionReviewPanel.tsx",
+      "owner": "concurrent-feature-worker",
+      "status": "modified-after-initialization"
+    },
+    {
+      "path": "web/src/styles.css",
+      "owner": "concurrent-feature-worker",
+      "status": "modified-after-initialization"
+    },
+    {
+      "path": "backstop_data/engine_scripts/playwright/onReady.cjs",
+      "owner": "concurrent-feature-worker",
+      "status": "modified-after-initialization"
+    },
+    {
+      "path": "scripts/bundle-budget.test.mjs",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "scripts/validate-bundle-budget.mjs",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "scripts/validate-design-system.mjs",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "scripts/visual-on-ready.browser.mjs",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "DESIGN.md",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-09-01-babysteps-design-system-modernization.md",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-01-babysteps-design-system-modernization-design.md",
+      "owner": "concurrent-feature-worker",
+      "status": "untracked-after-initialization"
+    }
+  ],
+  "metadataOwner": {
+    "scope": ".tc-flow/**",
+    "agentTask": "dependency_audit"
+  }
+}

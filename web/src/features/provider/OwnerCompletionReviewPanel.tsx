@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { publicAppConfig } from "../../contracts/web3Contracts";
 import {
 	type CompletionApi,
@@ -15,6 +16,8 @@ type ReviewRecord = CompletionSubmission & {
 	certificateUri: string;
 	evidenceHash: `0x${string}`;
 };
+
+let nextCompletionReviewScope = 0;
 
 function isReviewRecord(value: CompletionSubmission): value is ReviewRecord {
 	return (
@@ -79,29 +82,38 @@ export function OwnerCompletionReviewPanel({
 }: {
 	api?: CompletionApi;
 }) {
-	const [records, setRecords] = useState<ReviewRecord[]>([]);
-	const [message, setMessage] = useState<string>();
-	const [loading, setLoading] = useState(false);
-
-	const load = async () => {
-		if (!api || loading) return;
-		setLoading(true);
-		setMessage(undefined);
-		try {
+	const queryClient = useQueryClient();
+	const [queryKey] = useState(
+		() =>
+			["provider", "completion-reviews", ++nextCompletionReviewScope] as const,
+	);
+	const completionReviews = useQuery({
+		queryKey,
+		queryFn: async () => {
+			if (!api) throw new Error("任务完成审核 API 未配置。");
 			const response = await api.list();
-			const validRecords = response.completions.filter(isReviewRecord);
-			setRecords(validRecords);
-			setMessage(
-				validRecords.length === 0
-					? "当前没有待审核的任务完成申请。"
-					: undefined,
-			);
-		} catch (error) {
-			setMessage((error as Error).message);
-		} finally {
-			setLoading(false);
-		}
-	};
+			return response.completions.filter(isReviewRecord);
+		},
+		enabled: false,
+		gcTime: 0,
+		retry: false,
+	});
+	useEffect(
+		() => () => {
+			void queryClient.cancelQueries({ queryKey, exact: true });
+			queryClient.removeQueries({ queryKey, exact: true });
+		},
+		[queryClient, queryKey],
+	);
+	const records =
+		completionReviews.isSuccess && !completionReviews.isFetching
+			? (completionReviews.data ?? [])
+			: [];
+	const message = completionReviews.error
+		? completionReviews.error.message
+		: completionReviews.isSuccess && records.length === 0
+			? "当前没有待审核的任务完成申请。"
+			: undefined;
 
 	return (
 		<section
@@ -113,10 +125,10 @@ export function OwnerCompletionReviewPanel({
 			<button
 				type="button"
 				className="button button--secondary"
-				disabled={!api || loading}
-				onClick={() => void load()}
+				disabled={!api || completionReviews.isFetching}
+				onClick={() => void completionReviews.refetch()}
 			>
-				{loading ? "正在加载" : "加载任务完成申请"}
+				{completionReviews.isFetching ? "正在加载" : "加载任务完成申请"}
 			</button>
 			{message ? <p role="status">{message}</p> : null}
 			<div className="marketplace-task-grid">

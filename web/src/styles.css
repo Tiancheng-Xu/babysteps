@@ -1,30 +1,58 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
 :root {
-	font-family:
+	--font-family-body:
 		"Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
-	color: #173b4d;
-	background: #fffaf0;
+	--font-family-display: "Noto Serif SC", Georgia, serif;
+	--color-text-primary: #173b4d;
+	--color-text-secondary: #34576a;
+	--color-text-muted: #526875;
+	--color-surface-canvas: #fffaf0;
+	--color-surface-raised: #fffdf7;
+	--color-surface-subtle: #f7efe0;
+	--color-surface-accent: #f8dfc6;
+	--color-action-primary: #a94c22;
+	--color-action-primary-text: #fffdf7;
+	--color-border-subtle: #c4ced0;
+	--color-border-strong: #173b4d;
+	--color-state-success-text: #285d42;
+	--color-state-success-surface: #dfead4;
+	--color-state-warning-text: #7b3f1c;
+	--color-state-warning-surface: #f8dfc6;
+	--color-state-danger-text: #87372f;
+	--color-state-danger-surface: #f6ddd7;
+	--color-state-info-text: #514286;
+	--color-state-info-surface: #ebe5f7;
+	--radius-card: 30px;
+	--radius-control: 18px;
+	--shadow-elevated: 6px 7px 0 rgba(23, 59, 77, 0.92);
+	--shadow-soft: 0 14px 36px rgba(23, 59, 77, 0.12);
+	--space-section: 24px;
+	font-family: var(--font-family-body);
+	color: var(--color-text-primary);
+	background: var(--color-surface-canvas);
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
-	--ink: #173b4d;
-	--ink-soft: #34576a;
-	--paper: #fffaf0;
-	--paper-strong: #fffdf7;
-	--paper-deep: #f7efe0;
-	--sage: #3f7659;
-	--sage-soft: #dfead4;
-	--apricot: #d9773f;
-	--apricot-soft: #f8dfc6;
-	--purple: #6f5ca8;
-	--purple-soft: #ebe5f7;
-	--danger: #a34338;
-	--danger-soft: #f6ddd7;
+	--ink: var(--color-text-primary);
+	--ink-soft: var(--color-text-secondary);
+	--paper: var(--color-surface-canvas);
+	--paper-strong: var(--color-surface-raised);
+	--paper-deep: var(--color-surface-subtle);
+	--cream: var(--color-surface-raised);
+	--teal: #155f61;
+	--sage: var(--color-state-success-text);
+	--sage-soft: var(--color-state-success-surface);
+	--apricot: var(--color-action-primary);
+	--apricot-soft: var(--color-state-warning-surface);
+	--purple: var(--color-state-info-text);
+	--purple-soft: var(--color-state-info-surface);
+	--danger: var(--color-state-danger-text);
+	--danger-soft: var(--color-state-danger-surface);
 	--line: rgba(23, 59, 77, 0.18);
-	--shadow: 8px 9px 0 rgba(23, 59, 77, 0.96);
-	--card-radius: 30px;
-	--control-radius: 18px;
-	--section-gap: 24px;
+	--shadow: var(--shadow-elevated);
+	--card-radius: var(--radius-card);
+	--control-radius: var(--radius-control);
+	--section-gap: var(--space-section);
 }
 
 * {
@@ -85,6 +113,7 @@ body::after {
 
 button,
 input,
+select,
 textarea {
 	font: inherit;
 }
@@ -92,14 +121,34 @@ textarea {
 button,
 a {
 	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
 }
 
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
 textarea:focus-visible {
 	outline: 4px solid rgba(111, 92, 168, 0.34);
 	outline-offset: 3px;
+}
+
+select {
+	background-color: var(--color-surface-raised);
+	color: var(--color-text-primary);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+	cursor: not-allowed;
+	opacity: 0.62;
+}
+
+::placeholder {
+	color: var(--color-text-muted);
+	opacity: 1;
 }
 
 a {
@@ -114,6 +163,24 @@ h4 {
 	margin: 0;
 }
 
+h1,
+h2,
+h3 {
+	text-wrap: balance;
+}
+
+h1[id],
+h2[id],
+h3[id] {
+	scroll-margin-top: 112px;
+}
+
+p,
+li,
+figcaption {
+	text-wrap: pretty;
+}
+
 ul,
 ol,
 dl {
@@ -123,6 +190,10 @@ dl {
 
 li {
 	list-style: none;
+}
+
+table {
+	font-variant-numeric: tabular-nums;
 }
 
 .page-shell {
@@ -163,7 +234,7 @@ li {
 .story-card h3,
 .course-evidence h2,
 .hero-panel h1 {
-	font-family: "Noto Serif SC", Georgia, serif;
+	font-family: var(--font-family-display);
 }
 
 .story-card h2 {
@@ -216,6 +287,10 @@ li {
 	transform: translateY(-1px);
 }
 
+.button:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
 .button:disabled {
 	cursor: not-allowed;
 	border-color: rgba(23, 59, 77, 0.24);
@@ -225,8 +300,8 @@ li {
 }
 
 .button--primary {
-	background: var(--apricot);
-	color: var(--paper-strong);
+	background: var(--color-action-primary);
+	color: var(--color-action-primary-text);
 }
 
 .button--secondary {
@@ -264,23 +339,23 @@ li {
 }
 
 .status-pill--success {
-	background: var(--sage-soft);
-	color: var(--sage);
+	background: var(--color-state-success-surface);
+	color: var(--color-state-success-text);
 }
 
 .status-pill--warning {
-	background: var(--apricot-soft);
-	color: var(--apricot);
+	background: var(--color-state-warning-surface);
+	color: var(--color-state-warning-text);
 }
 
 .status-pill--danger {
-	background: var(--danger-soft);
-	color: var(--danger);
+	background: var(--color-state-danger-surface);
+	color: var(--color-state-danger-text);
 }
 
 .status-pill--web3 {
-	background: var(--purple-soft);
-	color: var(--purple);
+	background: var(--color-state-info-surface);
+	color: var(--color-state-info-text);
 }
 
 .status-pill--neutral {
@@ -2088,9 +2163,9 @@ textarea[aria-invalid="true"] {
 	gap: 8px;
 	min-height: 210px;
 	padding: 24px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 25px;
-	box-shadow: 5px 6px 0 rgba(23, 59, 77, 0.86);
+	box-shadow: var(--shadow-soft);
 }
 
 .marketplace-rule-card--apricot {
@@ -2121,7 +2196,7 @@ textarea[aria-invalid="true"] {
 .provider-form-card h2,
 .provider-lifecycle h2,
 .contract-evidence h2 {
-	font-family: "Noto Serif SC", Georgia, serif;
+	font-family: var(--font-family-display);
 }
 
 .marketplace-rule-card p {
@@ -2146,10 +2221,10 @@ textarea[aria-invalid="true"] {
 	display: grid;
 	gap: 14px;
 	padding: 24px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 25px;
-	background: rgba(255, 253, 247, 0.9);
-	box-shadow: 5px 6px 0 rgba(23, 59, 77, 0.86);
+	background: var(--color-surface-raised);
+	box-shadow: var(--shadow-soft);
 }
 
 .marketplace-task-card__heading {
@@ -2312,20 +2387,20 @@ textarea[aria-invalid="true"] {
 .architecture-figure,
 .contract-evidence {
 	padding: 28px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 26px;
-	background: rgba(255, 253, 247, 0.88);
-	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+	background: rgba(255, 253, 247, 0.94);
+	box-shadow: var(--shadow-soft);
 }
 
 .identity-card {
 	display: grid;
 	gap: 16px;
 	padding: 28px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 26px;
-	background: rgba(255, 253, 247, 0.9);
-	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+	background: var(--color-surface-raised);
+	box-shadow: var(--shadow-soft);
 }
 
 .identity-card label {
@@ -2538,10 +2613,10 @@ textarea[aria-invalid="true"] {
 	min-width: 0;
 	gap: 18px;
 	padding: 28px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 26px;
-	background: rgba(255, 253, 247, 0.9);
-	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+	background: var(--color-surface-raised);
+	box-shadow: var(--shadow-soft);
 }
 
 .evidence-diagram-card__header {
@@ -2643,14 +2718,14 @@ textarea[aria-invalid="true"] {
 	gap: 20px;
 	margin-bottom: 28px;
 	padding: 28px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 26px;
 	background: linear-gradient(
 		135deg,
 		rgba(255, 247, 223, 0.96),
 		rgba(238, 232, 251, 0.86)
 	);
-	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+	box-shadow: var(--shadow-soft);
 }
 
 .evidence-feature-proof__header {
@@ -2673,7 +2748,7 @@ textarea[aria-invalid="true"] {
 	gap: 18px;
 	margin-bottom: 28px;
 	padding: 28px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 26px;
 	background:
 		linear-gradient(
@@ -2682,7 +2757,7 @@ textarea[aria-invalid="true"] {
 			rgba(229, 248, 245, 0.86)
 		),
 		radial-gradient(circle at 92% 8%, rgba(255, 213, 90, 0.28), transparent 32%);
-	box-shadow: 6px 7px 0 rgba(23, 59, 77, 0.88);
+	box-shadow: var(--shadow-soft);
 }
 
 .evidence-role-ledger__header {
@@ -3227,13 +3302,13 @@ textarea[aria-invalid="true"] {
 	display: grid;
 	gap: 8px;
 	padding: 18px;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 18px;
-	box-shadow: 3px 4px 0 rgba(23, 59, 77, 0.78);
+	box-shadow: var(--shadow-soft);
 }
 
 .keepsake-probability strong {
-	font-family: "Noto Serif SC", Georgia, serif;
+	font-family: var(--font-family-display);
 	font-size: 1.25rem;
 }
 
@@ -3277,9 +3352,9 @@ textarea[aria-invalid="true"] {
 	gap: 14px;
 	padding: 16px;
 	overflow: hidden;
-	border: 2px solid var(--ink);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 24px;
-	box-shadow: 5px 6px 0 rgba(23, 59, 77, 0.78);
+	box-shadow: var(--shadow-soft);
 	transform-style: preserve-3d;
 	transition:
 		transform 180ms ease,

@@ -1,18 +1,54 @@
 {
   "schemaVersion": 1,
-  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
-  "feature": "performance-sampling-coverage-semantics",
-  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
+  "runId": "c81f8b1b-1ff0-4171-b749-f92ea9f7b5c7",
+  "feature": "babysteps-design-system-modernization",
+  "contractHash": "5c52084af1481b488287e7251bbb48fd2ed36d19364585241dc10b700bc98506",
   "node": "N7",
-  "tasks": {
-    "T-001": "pass",
-    "T-002": "pass",
-    "T-003": "pass",
-    "T-004": "pass"
+  "eventHistory": ".tc-flow/events.jsonl",
+  "inputSummary": "Frozen design-system modernization contract on exact origin/main with bounded dependency decisions, nine-route accessibility, responsive visual, delivery, performance, privacy, and release gates.",
+  "repository": {
+    "path": ".",
+    "branch": "tc/babysteps-design-system-5c52084a",
+    "baseHead": "230b24df3909d3ee2c7081897052f1610bd65f20"
   },
-  "featureQa": "pass",
-  "repositoryPolicy": "ci-pass",
-  "headBeforeProcessRecords": "55fac7c9ab84097ba55ac4547dc218a521ee0efb",
+  "task": null,
+  "completedTasks": [
+    "T-001",
+    "T-002",
+    "T-003",
+    "T-004",
+    "T-005"
+  ],
+  "reviews": [
+    {
+      "scope": "standards",
+      "result": "pass",
+      "mode": "single-agent-dual-axis",
+      "note": "No Critical or Important finding remained after targeted diff review."
+    },
+    {
+      "scope": "frozen-specification",
+      "result": "pass",
+      "mode": "single-agent-dual-axis",
+      "note": "Local acceptance criteria pass; remote PR, preview, merge, and production checks remain T-006."
+    }
+  ],
+  "verification": [
+    "pnpm test: 130 validator, 108 contract, 309 web, 62 worker, 4 subgraph tests passed; AWS suite passed",
+    "pnpm typecheck passed",
+    "pnpm check passed with zero errors and eight pre-existing CSS warnings",
+    "pnpm build passed; total JavaScript gzip delta against exact base was +129 bytes",
+    "pnpm validate:rendering-runtime passed 4/4",
+    "pnpm visual:layout passed 9 routes at 375/390/430/1440 with zero root overflow and pageerror",
+    "pnpm visual:test passed 36/36",
+    "controlled-browser cold load and representative interaction evidence recorded with n=3 low-confidence provenance"
+  ],
+  "retries": 0,
+  "toolRequests": [],
+  "humanInterventions": [
+    "User explicitly authorized push and production publication earlier in this Feature.",
+    "User explicitly prohibited subagents because of token budget; review is single-agent and not represented as independent."
+  ],
   "blockers": [],
-  "release": "branch-push-authorized"
+  "next": "N7-commit-push-pr-preview-production"
 }
