@@ -1,10 +1,12 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
 	cleanup,
 	fireEvent,
-	render,
 	screen,
+	render as testingLibraryRender,
 	within,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import type { Address, Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -93,6 +95,23 @@ let growthState: Record<string, unknown>;
 let babyCoinGrowthState: Record<string, unknown>;
 let notebookState: Record<string, unknown>;
 let transferState: Record<string, unknown>;
+
+function render(ui: ReactElement) {
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: {
+				gcTime: Number.POSITIVE_INFINITY,
+				retry: false,
+			},
+		},
+	});
+
+	return testingLibraryRender(ui, {
+		wrapper: ({ children }: { children: ReactNode }) => (
+			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+		),
+	});
+}
 
 describe("BabySteps App", () => {
 	afterEach(cleanup);

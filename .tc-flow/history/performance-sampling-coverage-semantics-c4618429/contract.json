@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
+  "feature": "performance-sampling-coverage-semantics",
+  "version": 4,
+  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
+  "goal": "Make the controlled BabySteps performance journey cover every safe deterministic scenario while reporting healthy zero, conditional, unavailable, success, and failure states truthfully before any AWS resources are created.",
+  "nonGoals": [
+    "Manufacturing layout shifts, JavaScript errors, promise rejections, long tasks, wallet signatures, token approvals, swaps, or chain transactions merely to fill the dashboard",
+    "Treating controlled-browser observations as real-user production monitoring",
+    "Starting AWS Runtime before the complete local coverage gate passes",
+    "Changing shared VPC, NAT, RDS, OIDC, IAM foundation, Cloudflare production, or AWS Free-plan status",
+    "Publishing secrets, raw wallet addresses, tokens, cookies, signatures, request bodies, or personal data"
+  ],
+  "repositories": [
+    "Tiancheng-Xu/babysteps"
+  ],
+  "allowedWritePaths": [
+    ".github/workflows/aws-performance.yml",
+    "aws/src/performance/handlers.ts",
+    "aws/src/performance/pipeline.ts",
+    "aws/test/performanceHandlers.test.ts",
+    "aws/test/performancePipeline.test.ts",
+    "scripts/",
+    "web/src/features/exchange/",
+    "web/src/performance/",
+    "web/src/pages/PerformanceDashboardPage.tsx",
+    "web/src/pages/EvidencePage.tsx",
+    "web/src/styles.css",
+    "docs/evidence/",
+    ".tc-flow/"
+  ],
+  "networkScope": [
+    "Read-only GitHub and official documentation during local implementation",
+    "No AWS Runtime or Cloudflare write until local N6 gates pass and the release phase is explicitly entered"
+  ],
+  "acceptanceCriteria": [
+    "The controlled-browser coverage gate runs before any CloudFormation, ECR, ECS, SQS, Lambda, database schema, or other AWS project resource creation",
+    "Required deterministic metrics have real accepted samples and valid units plus p50, p75, and p95 readback",
+    "Healthy runs may report zero long tasks, JavaScript errors, promise rejections, hydration recovery, and CSR fallback without manufacturing failures",
+    "Wallet, identity, signing, approval, receipt, and swap metrics remain conditional unless the prerequisite is safely and explicitly available",
+    "DNS, TCP, TLS, cache-reuse, and similar environment-dependent metrics distinguish unavailable or observed-zero from missing instrumentation",
+    "The safe Sepolia quote scenario proves a settled success or a settled sanitized failure and never lets an error suffix masquerade as a successful base metric",
+    "Transaction instrumentation records failure when approve, swap, or receipt fails instead of swallowing the error as success",
+    "Resource probes are self-contained in Git and work from a clean checkout",
+    "All routes and 375, 390, 430, and 1440 pixel views have no pageerror or root horizontal overflow, and reviewed visual baselines are not blindly updated",
+    "Evidence records provenance, route, environment, build, window, device conditions, sample counts, percentiles, freshness, limitations, and zero-residue status without overstating completion"
+  ],
+  "production": "manual-pending-after-local-and-remote-gates"
+}

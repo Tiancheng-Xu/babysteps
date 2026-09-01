@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "archivedAt": "2026-09-01T11:04:07Z",
+  "reason": "A new independently contracted Feature started from origin/main; preserve the unfinished N7 performance run instead of treating it as resumable design-system state.",
+  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
+  "feature": "performance-sampling-coverage-semantics",
+  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
+  "lastNode": "N7",
+  "lastStatus": "pre_push_gates_passed",
+  "releaseState": "branch-push-authorized-not-finalized",
+  "eventHistory": ".tc-flow/events.jsonl lines 17-27",
+  "featureMemory": ".tc-flow/memory/performance-sampling-coverage-semantics-502998ee.md",
+  "localQa": ".tc-flow/history/performance-sampling-coverage-semantics-502998ee/local-qa.md"
+}

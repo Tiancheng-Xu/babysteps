@@ -1,50 +1,81 @@
 {
-  "schemaVersion": 1,
-  "runId": "d82afde8-7c77-40a2-bd0d-1a9bfd867f39",
-  "feature": "performance-sampling-coverage-semantics",
-  "version": 4,
-  "contractHash": "c4618429937b3d5d5caac62be997987d7ea389efe43c2d864235571db1a78459",
-  "goal": "Make the controlled BabySteps performance journey cover every safe deterministic scenario while reporting healthy zero, conditional, unavailable, success, and failure states truthfully before any AWS resources are created.",
-  "nonGoals": [
-    "Manufacturing layout shifts, JavaScript errors, promise rejections, long tasks, wallet signatures, token approvals, swaps, or chain transactions merely to fill the dashboard",
-    "Treating controlled-browser observations as real-user production monitoring",
-    "Starting AWS Runtime before the complete local coverage gate passes",
-    "Changing shared VPC, NAT, RDS, OIDC, IAM foundation, Cloudflare production, or AWS Free-plan status",
-    "Publishing secrets, raw wallet addresses, tokens, cookies, signatures, request bodies, or personal data"
-  ],
-  "repositories": [
-    "Tiancheng-Xu/babysteps"
-  ],
-  "allowedWritePaths": [
-    ".github/workflows/aws-performance.yml",
-    "aws/src/performance/handlers.ts",
-    "aws/src/performance/pipeline.ts",
-    "aws/test/performanceHandlers.test.ts",
-    "aws/test/performancePipeline.test.ts",
-    "scripts/",
-    "web/src/features/exchange/",
-    "web/src/performance/",
-    "web/src/pages/PerformanceDashboardPage.tsx",
-    "web/src/pages/EvidencePage.tsx",
-    "web/src/styles.css",
-    "docs/evidence/",
-    ".tc-flow/"
-  ],
-  "networkScope": [
-    "Read-only GitHub and official documentation during local implementation",
-    "No AWS Runtime or Cloudflare write until local N6 gates pass and the release phase is explicitly entered"
+  "goal": "Modernize the BabySteps design system with a reviewable DESIGN.md, bounded dependency adoption, shared design tokens and primitives, consistent accessible states across all nine routes, deterministic visual coverage at 375, 390, 430, and 1440 pixels, and bundle and Core Web Vitals non-regression evidence.",
+  "context": {
+    "schemaVersion": 1,
+    "runId": "c81f8b1b-1ff0-4171-b749-f92ea9f7b5c7",
+    "feature": "babysteps-design-system-modernization",
+    "version": 1,
+    "repository": "Tiancheng-Xu/babysteps",
+    "base": "origin/main@230b24df3909d3ee2c7081897052f1610bd65f20",
+    "branch": "tc/babysteps-design-system-5c52084a",
+    "worktree": ".",
+    "renderingMode": "edge-ssr",
+    "difficulty": "high",
+    "strategy": "goal-hook-with-isolated-task-review",
+    "specification": "DESIGN.md",
+    "dependencyDecisions": {
+      "adopt": [
+        "Use the existing @tanstack/react-query dependency for one bounded HTTP server-state slice in OwnerCompletionReviewPanel."
+      ],
+      "reject": [
+        "Do not add react-hook-form or @hookform/resolvers for the current small controlled forms.",
+        "Do not add Motion or Framer Motion; retain accessible CSS motion with reduced-motion behavior.",
+        "Do not add a chart library without a demonstrated product requirement."
+      ]
+    },
+    "nonGoals": [
+      "AWS Runtime or AWS resource changes",
+      "Performance metric or data-contract changes",
+      "Blockchain behavior, contract calls, transaction semantics, or chain-state ownership changes",
+      "Evidence factual-claim changes",
+      "Dashboard product work",
+      "Agent Market work",
+      "Production deployment or merge"
+    ],
+    "allowedWritePaths": [
+      "DESIGN.md",
+      "docs/superpowers/plans/2026-09-01-babysteps-design-system-modernization.md",
+      "docs/superpowers/specs/2026-09-01-babysteps-design-system-modernization-design.md",
+      "web/src/",
+      "web/scripts/",
+      "scripts/",
+      "backstop.json",
+      "backstop_data/",
+      "docs/qa/",
+      ".tc-flow/"
+    ],
+    "dataAndNetworkScope": [
+      "Use repository fixtures and sanitized local evidence only.",
+      "Official read-only documentation may be consulted when thresholds or APIs require verification.",
+      "No production writes, AWS mutation, blockchain write, push, PR creation, or preview deployment before all gates pass and release is explicitly authorized."
+    ],
+    "release": "PR and preview only after every deterministic gate passes; merge and production remain manual."
+  },
+  "allowedTools": [
+    "apply_patch",
+    "rg",
+    "git-read-only",
+    "pnpm-test",
+    "pnpm-typecheck",
+    "pnpm-build",
+    "node-validators",
+    "BackstopJS",
+    "Playwright-controlled-browser",
+    "Chrome-DevTools-performance",
+    "repository-policy-audit"
   ],
   "acceptanceCriteria": [
-    "The controlled-browser coverage gate runs before any CloudFormation, ECR, ECS, SQS, Lambda, database schema, or other AWS project resource creation",
-    "Required deterministic metrics have real accepted samples and valid units plus p50, p75, and p95 readback",
-    "Healthy runs may report zero long tasks, JavaScript errors, promise rejections, hydration recovery, and CSR fallback without manufacturing failures",
-    "Wallet, identity, signing, approval, receipt, and swap metrics remain conditional unless the prerequisite is safely and explicitly available",
-    "DNS, TCP, TLS, cache-reuse, and similar environment-dependent metrics distinguish unavailable or observed-zero from missing instrumentation",
-    "The safe Sepolia quote scenario proves a settled success or a settled sanitized failure and never lets an error suffix masquerade as a successful base metric",
-    "Transaction instrumentation records failure when approve, swap, or receipt fails instead of swallowing the error as success",
-    "Resource probes are self-contained in Git and work from a clean checkout",
-    "All routes and 375, 390, 430, and 1440 pixel views have no pageerror or root horizontal overflow, and reviewed visual baselines are not blindly updated",
-    "Evidence records provenance, route, environment, build, window, device conditions, sample counts, percentiles, freshness, limitations, and zero-residue status without overstating completion"
+    "DESIGN.md defines the visual language, tokens, primitives, responsive rules, accessible interaction states, dependency decisions, ownership boundaries, and verification contract in Chinese or with an adjacent complete Chinese explanation.",
+    "The existing TanStack Query installation is used for exactly one initial HTTP server-state vertical slice without changing Wagmi-owned blockchain cache or transaction behavior.",
+    "Shared typed tokens and reusable primitives replace duplicated presentation rules without creating a second component tree for mobile.",
+    "All nine routes remain reachable and render coherent loading, empty, error, disabled, focus, reduced-motion, and success states where applicable.",
+    "Functional tests are written test-first for changed behavior and all focused and regression suites pass.",
+    "Type checking, production build, edge-SSR execution, GET and HEAD route semantics, asset/API passthrough, and unknown-document 404 gates pass.",
+    "BackstopJS uses reviewed deterministic baselines for 375, 390, 430, and 1440 pixel viewports; every scenario has no root horizontal overflow and no uncaught pageerror.",
+    "Accessibility checks cover keyboard operation, visible focus, semantic labels, status and alert announcements, contrast, reduced motion, and touch targets of at least 44 pixels.",
+    "Candidate route chunks and controlled-browser Core Web Vitals do not materially regress against a comparable frozen baseline; provenance, conditions, sample count, and confidence are recorded.",
+    "Secret, PII, private-path, public-content, link, and repository-policy scans pass before release.",
+    "An isolated review, Feature QA, Stop Hook ALLOW, local and remote repository policy, PR checks, and preview smoke verification are required before delivery is claimed; production release remains manual."
   ],
-  "production": "manual-pending-after-local-and-remote-gates"
+  "contractHash": "5c52084af1481b488287e7251bbb48fd2ed36d19364585241dc10b700bc98506"
 }
