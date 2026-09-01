@@ -134,6 +134,8 @@ test("preflight is read-only and reuses the exact zero-residue gate", async () =
 	const residue = stepByName(steps, "Verify zero project residue");
 	assert.match(residue.if, /action == 'preflight'/);
 	assert.match(residue.run, /aws sts get-caller-identity/);
+	assert.match(residue.run, /aws_assert_exact_lambda_absent/);
+	assert.doesNotMatch(residue.run, /aws lambda get-function/);
 
 	for (const name of [
 		"Mark persistent cleanup state running",

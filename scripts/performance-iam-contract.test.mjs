@@ -37,6 +37,7 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"scripts/aws-performance-control-state.sh",
 		"utf8",
 	);
+	const controlSources = `${workflow}\n${classifier}`;
 	const policy = JSON.parse(
 		await readFile("aws/iam/performance-control-readback-policy.json", "utf8"),
 	);
@@ -52,7 +53,7 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"ecs describe-clusters",
 		"ecr describe-repositories",
 		"sqs get-queue-url",
-		"lambda get-function",
+		"lambda list-functions",
 		"logs describe-log-groups",
 		"secretsmanager describe-secret",
 		"resourcegroupstaggingapi get-resources",
@@ -61,7 +62,7 @@ test("preflight readback policy covers every zero-residue AWS read and no mutati
 		"ecs list-tasks",
 		"iam get-role",
 	]) {
-		assert.match(workflow, new RegExp(command.replaceAll("-", "\\-")));
+		assert.match(controlSources, new RegExp(command.replaceAll("-", "\\-")));
 	}
 	for (const action of actions) {
 		assert.doesNotMatch(

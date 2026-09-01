@@ -57,6 +57,33 @@ aws_classify_to_file() {
   return 1
 }
 
+# Prove that one fixed Lambda name is absent without relying on GetFunction.
+# Some OIDC sessions can list the regional inventory while a missing exact
+# function still returns AccessDenied from GetFunction. List once, retain only
+# the exact matching name as sanitized evidence, and fail closed unless the
+# filtered result is an empty array.
+aws_assert_exact_lambda_absent() {
+  local function_name="$1"
+  local output_file="$2"
+  local inventory_file count
+  inventory_file="$(mktemp)"
+
+  if ! aws lambda list-functions --region "${AWS_REGION:?AWS_REGION is required}" --output json >"$inventory_file"; then
+    rm -f "$inventory_file"
+    return 1
+  fi
+  if ! jq --arg exact "$function_name" \
+    '[.Functions[]? | select(.FunctionName == $exact) | {FunctionName}]' \
+    "$inventory_file" >"$output_file"; then
+    rm -f "$inventory_file"
+    return 1
+  fi
+  rm -f "$inventory_file"
+
+  count="$(jq 'length' "$output_file")" || return 1
+  test "$count" = 0
+}
+
 # Sign one immutable delivery and retry the same body, delivery id, timestamp,
 # and signature for every attempt in this HTTP delivery.
 performance_post_callback() {

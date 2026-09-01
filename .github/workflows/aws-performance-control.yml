@@ -535,7 +535,7 @@ jobs:
             assert_absent sqs-queue "residue-$queue.json" aws sqs get-queue-url --queue-name "$queue"
           done
           for function in babysteps-performance-ingest-control babysteps-performance-query-control; do
-            assert_absent lambda-function "residue-$function.json" aws lambda get-function --function-name "$function"
+            aws_assert_exact_lambda_absent "$function" "residue-$function.json"
           done
           log_group_count=0
           for log_group in /babysteps/performance/control /aws/lambda/babysteps-performance-ingest-control /aws/lambda/babysteps-performance-query-control; do
