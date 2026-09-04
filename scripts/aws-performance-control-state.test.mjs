@@ -66,6 +66,85 @@ printf 'status=%s attempts=%s\n' "$status" "$(cat "$attempt_file")"
 	}
 });
 
+test("Lambda absence uses regional inventory and exact name filtering", async () => {
+	const directory = await mkdtemp(path.join(tmpdir(), "lambda-inventory-"));
+	const awsPath = path.join(directory, "aws");
+	const argvPath = path.join(directory, "aws-argv.txt");
+	const outputPath = path.join(directory, "lambda-result.json");
+	await writeFile(
+		awsPath,
+		"#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" > \"$FAKE_AWS_ARGV\"\nprintf '%s\\n' '{\"Functions\":[]}'\n",
+	);
+	await chmod(awsPath, 0o755);
+
+	const result = spawnSync(
+		"bash",
+		[
+			"-c",
+			`source ${HELPER}\naws_assert_exact_lambda_absent babysteps-performance-query-control \"$LAMBDA_RESULT\"`,
+		],
+		{
+			cwd: process.cwd(),
+			encoding: "utf8",
+			env: {
+				...process.env,
+				PATH: directory + ":" + process.env.PATH,
+				AWS_REGION: "us-east-1",
+				FAKE_AWS_ARGV: argvPath,
+				LAMBDA_RESULT: outputPath,
+			},
+		},
+	);
+
+	try {
+		assert.equal(result.status, 0, result.stderr);
+		assert.equal(await readFile(outputPath, "utf8"), "[]\n");
+		const argv = await readFile(argvPath, "utf8");
+		assert.match(argv, /^lambda list-functions /);
+		assert.doesNotMatch(argv, /get-function/);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+test("Lambda inventory fails closed when the exact function is present", async () => {
+	const directory = await mkdtemp(path.join(tmpdir(), "lambda-inventory-"));
+	const awsPath = path.join(directory, "aws");
+	const outputPath = path.join(directory, "lambda-result.json");
+	await writeFile(
+		awsPath,
+		"#!/usr/bin/env bash\nprintf '%s\\n' '{\"Functions\":[{\"FunctionName\":\"babysteps-performance-query-control\"},{\"FunctionName\":\"unrelated\"}]}'\n",
+	);
+	await chmod(awsPath, 0o755);
+
+	const result = spawnSync(
+		"bash",
+		[
+			"-c",
+			`source ${HELPER}\naws_assert_exact_lambda_absent babysteps-performance-query-control \"$LAMBDA_RESULT\"`,
+		],
+		{
+			cwd: process.cwd(),
+			encoding: "utf8",
+			env: {
+				...process.env,
+				PATH: directory + ":" + process.env.PATH,
+				AWS_REGION: "us-east-1",
+				LAMBDA_RESULT: outputPath,
+			},
+		},
+	);
+
+	try {
+		assert.equal(result.status, 1);
+		assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), [
+			{ FunctionName: "babysteps-performance-query-control" },
+		]);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
 test("callback retries preserve body, delivery, timestamp, and signature bytes", async () => {
 	const directory = await mkdtemp(path.join(tmpdir(), "performance-callback-"));
 	const curlPath = path.join(directory, "curl");
