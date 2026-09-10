@@ -52,6 +52,17 @@
     "requiredAwsState": "stopped-and-zero-residue",
     "cloudReadback": "pending"
   },
+  "nonAwsExecutionContract": {
+    "status": "local-verified",
+    "scope": "non-aws",
+    "journeyCount": 30,
+    "excludedJourneys": [
+      { "journeyId": "PERF-01", "reason": "AWS_SCOPE_EXCLUDED" }
+    ],
+    "telemetry": "not-collected",
+    "preflightScope": "sepolia",
+    "recordingStageAfterLiveProof": "sepolia-verified"
+  },
   "controlPlaneBootstrap": {
     "status": "local-verified-cloud-not-dispatched",
     "source": "babysteps-performance-control-bootstrap-v1",
@@ -73,6 +84,7 @@
   ],
   "limitations": [
     "This checkpoint proves deterministic local contracts and UI coverage only.",
+    "The non-AWS path is locally verified as a 30-journey execution contract; it blocks performance ingestion and records PERF-01 as explicitly excluded rather than silently skipping it.",
     "Sepolia transactions, visible wallet confirmations, AWS Live aggregation, final recording, cleanup and production readback remain pending Task 7.",
     "The stopped safety bootstrap is locally verified but has not been dispatched and has not created a production D1 row."
   ]

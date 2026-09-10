@@ -112,6 +112,85 @@ test("implemented feature journeys are exact, bounded, and privacy safe", async 
 			journey.journeyId,
 		);
 	}
+	assert.deepEqual(
+		journeys
+			.filter(({ requiredSystems }) => requiredSystems?.includes("aws"))
+			.map(({ journeyId }) => journeyId),
+		["PERF-01"],
+	);
+});
+
+test("non-AWS journey selection excludes only the declared AWS journey", async () => {
+	const {
+		assertImplementedFeaturePreflightScope,
+		implementedFeatureRecordingStage,
+		nonAwsPerformanceRoutePattern,
+		selectImplementedFeatureJourneys,
+	} = await import("./run-implemented-feature-journey.mjs");
+	const selection = selectImplementedFeatureJourneys("non-aws");
+
+	assert.equal(selection.journeys.length, 30);
+	assert.equal(
+		selection.journeys.some(({ journeyId }) => journeyId === "PERF-01"),
+		false,
+	);
+	assert.deepEqual(selection.excludedJourneys, [
+		{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" },
+	]);
+	assert.equal(nonAwsPerformanceRoutePattern, "**/api/performance/**");
+	assert.equal(
+		implementedFeatureRecordingStage("non-aws", { valid: true }),
+		"sepolia-verified",
+	);
+	assert.equal(
+		implementedFeatureRecordingStage("non-aws", { valid: false }),
+		"blocked",
+	);
+
+	const dryRun = spawnSync(
+		process.execPath,
+		[
+			"scripts/run-implemented-feature-journey.mjs",
+			"--dry-run",
+			"--scope",
+			"non-aws",
+		],
+		{ encoding: "utf8" },
+	);
+	assert.equal(dryRun.status, 0, dryRun.stderr);
+	assert.deepEqual(JSON.parse(dryRun.stdout), {
+		schemaVersion: 1,
+		scope: "non-aws",
+		excludedJourneys: [{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" }],
+		journeys: selection.journeys.map(({ journeyId, route, roleAlias }) => ({
+			journeyId,
+			route,
+			roleAlias,
+		})),
+	});
+
+	assert.doesNotThrow(() =>
+		assertImplementedFeaturePreflightScope("non-aws", {
+			ready: true,
+			scope: "sepolia",
+		}),
+	);
+	assert.throws(
+		() =>
+			assertImplementedFeaturePreflightScope("non-aws", {
+				ready: true,
+				scope: "full",
+			}),
+		/PREFLIGHT_SCOPE_MISMATCH/,
+	);
+	assert.throws(
+		() =>
+			assertImplementedFeaturePreflightScope("full", {
+				ready: true,
+				scope: "sepolia",
+			}),
+		/PREFLIGHT_SCOPE_MISMATCH/,
+	);
 });
 
 test("implemented feature preflight fails closed and returns only aliases", async () => {
@@ -215,6 +294,65 @@ test("implemented feature live preflight rejects stale evidence and a running AW
 	]);
 });
 
+test("Sepolia preflight stays independent from the paused AWS runtime", async () => {
+	const { evaluateImplementedFeaturePreflight } = await import(
+		"./run-implemented-feature-preflight.mjs"
+	);
+	const snapshot = {
+		provenance: "live-readonly",
+		collectedAt: "2026-09-09T12:00:00.000Z",
+		sources: {
+			sepolia: "public-rpc-readonly",
+			product: "production-ui-readonly",
+		},
+		chainId: 11155111,
+		contractsConfigured: true,
+		roles: {
+			"parent-a": true,
+			"recipient-b": true,
+			"provider-c": true,
+			"owner-relayer-d": true,
+		},
+		balances: { gasReady: true, babyReady: true, growthReady: true },
+		marketplace: { activeTaskCount: 1, allowanceReady: true },
+		keepsakes: {
+			vrfReady: true,
+			fusionSetCount: 1,
+			recoverableRequestCount: 1,
+		},
+		identity: { privyReady: true, workerOriginReady: true },
+	};
+
+	assert.deepEqual(
+		evaluateImplementedFeaturePreflight(snapshot, {
+			scope: "sepolia",
+			now: Date.parse("2026-09-09T12:01:00.000Z"),
+		}),
+		{
+			schemaVersion: 1,
+			scope: "sepolia",
+			ready: true,
+			chain: "sepolia",
+			roleAliases: {
+				"parent-a": true,
+				"recipient-b": true,
+				"provider-c": true,
+				"owner-relayer-d": true,
+			},
+			checks: {
+				freshness: true,
+				contracts: true,
+				balances: true,
+				marketplace: true,
+				keepsakes: true,
+				identity: true,
+				awsRuntime: "not-evaluated",
+			},
+			blockers: [],
+		},
+	);
+});
+
 test("implemented feature result separates execution proof from compensation closure", async () => {
 	const {
 		validateImplementedFeatureClosure,
@@ -235,6 +373,33 @@ test("implemented feature result separates execution proof from compensation clo
 	};
 
 	assert.equal(validateImplementedFeatureResult(valid).valid, true);
+	const withoutAwsTelemetry = {
+		...valid,
+		telemetryAccepted: undefined,
+		acceptedEventIds: undefined,
+		telemetry: { status: "not-collected", reason: "AWS_SCOPE_EXCLUDED" },
+	};
+	assert.equal(
+		validateImplementedFeatureResult(withoutAwsTelemetry, {
+			requireTelemetry: false,
+		}).valid,
+		true,
+	);
+	assert.match(
+		validateImplementedFeatureResult(withoutAwsTelemetry).errors.join(" "),
+		/TELEMETRY_NOT_ACCEPTED/,
+	);
+	assert.match(
+		validateImplementedFeatureResult(
+			{
+				...withoutAwsTelemetry,
+				telemetryAccepted: true,
+				acceptedEventIds: ["unexpected-event"],
+			},
+			{ requireTelemetry: false },
+		).errors.join(" "),
+		/TELEMETRY_SCOPE_CONTAMINATED/,
+	);
 	assert.equal(validateImplementedFeatureClosure([valid]).valid, true);
 	assert.deepEqual(
 		validateImplementedFeatureResult({ ...valid, productReadback: false })
@@ -1180,6 +1345,65 @@ test("implemented-feature recording requires all 31 real chapters and reviewed m
 		validateImplementedFeatureRecording(recording, { results }),
 		{ valid: true, errors: [] },
 	);
+	assert.deepEqual(
+		validateImplementedFeatureRecording(
+			{
+				...recording,
+				scope: "full",
+				stage: "aws-live-verified",
+				excludedJourneys: [],
+			},
+			{ scope: "full", results },
+		),
+		{ valid: true, errors: [] },
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{ ...recording, scope: "unknown" },
+			{ scope: "unknown", results },
+		).errors.join(" "),
+		/RECORDING_SCOPE_INVALID/,
+	);
+	const nonAwsResults = results
+		.filter(({ journeyId }) => journeyId !== "PERF-01")
+		.map((entry) => {
+			const result = { ...entry };
+			delete result.telemetryAccepted;
+			delete result.acceptedEventIds;
+			result.telemetry = {
+				status: "not-collected",
+				reason: "AWS_SCOPE_EXCLUDED",
+			};
+			return result;
+		});
+	const nonAwsRecording = {
+		...recording,
+		scope: "non-aws",
+		stage: "sepolia-verified",
+		excludedJourneys: [{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" }],
+		chapters: recording.chapters.filter(
+			({ journeyId }) => journeyId !== "PERF-01",
+		),
+	};
+	assert.deepEqual(
+		validateImplementedFeatureRecording(nonAwsRecording, {
+			scope: "non-aws",
+			results: nonAwsResults,
+		}),
+		{ valid: true, errors: [] },
+	);
+	assert.match(
+		validateImplementedFeatureRecording(
+			{
+				...nonAwsRecording,
+				excludedJourneys: [
+					{ journeyId: "SWAP-01", reason: "AWS_SCOPE_EXCLUDED" },
+				],
+			},
+			{ scope: "non-aws", results: nonAwsResults },
+		).errors.join(" "),
+		/RECORDING_SCOPE_COVERAGE_INVALID/,
+	);
 	assert.match(
 		validateImplementedFeatureRecording(
 			{ ...recording, chapters: recording.chapters.slice(1) },
@@ -1224,6 +1448,26 @@ test("implemented-feature recording requires all 31 real chapters and reviewed m
 		/JSON\.stringify\(\{[^}]*recordingOutput:\s*resolve/u,
 		"recording stdout must not expose an absolute output path",
 	);
+});
+
+test("implemented-feature evidence records the non-AWS execution contract without upgrading live status", async () => {
+	const evidence = JSON.parse(
+		await readFile(
+			"docs/evidence/deployment/2026-08-30-implemented-feature-live-journey.json",
+			"utf8",
+		),
+	);
+
+	assert.equal(evidence.stage, "local-verified");
+	assert.deepEqual(evidence.nonAwsExecutionContract, {
+		status: "local-verified",
+		scope: "non-aws",
+		journeyCount: 30,
+		excludedJourneys: [{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" }],
+		telemetry: "not-collected",
+		preflightScope: "sepolia",
+		recordingStageAfterLiveProof: "sepolia-verified",
+	});
 });
 
 test("the Chromium journey reconciles a transient transport failure by event id", async () => {
@@ -1974,7 +2218,10 @@ test("a manual OIDC recovery gate can remove only an exact failed performance st
 	const inventory = stepByName("Verify exact prefix and tag inventory is zero");
 	assert.match(inventory.if, /steps\.validate-target\.outcome == 'success'/);
 	assert.match(inventory.if, /outputs\.stack_state == 'absent'/);
-	assert.match(inventory.run, /test "\$target_stack_status" = "DELETE_COMPLETE"/);
+	assert.match(
+		inventory.run,
+		/test "\$target_stack_status" = "DELETE_COMPLETE"/,
+	);
 	assert.match(
 		inventory.run,
 		/describe-stacks --stack-name "\$STACK_NAME"[^\n]*same-name-stack-error\.txt/,

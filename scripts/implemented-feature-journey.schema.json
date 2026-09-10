@@ -25,6 +25,12 @@
       "roleAlias": { "enum": ["public", "parent-a", "recipient-b", "provider-c", "owner-relayer-d"] },
       "operation": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$" },
       "businessMetric": { "type": "string", "pattern": "^business\\.[a-z0-9_.]+$" },
+      "requiredSystems": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": { "enum": ["aws"] }
+      },
       "transaction": { "enum": ["none", "sepolia-read", "sepolia-write", "worker"] },
       "manualSignature": { "type": "boolean" },
       "inputRefs": {

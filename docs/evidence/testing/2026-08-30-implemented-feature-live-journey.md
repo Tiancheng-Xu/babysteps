@@ -6,6 +6,10 @@
 
 状态层级固定为：`local-verified` → `sepolia-verified` → `aws-live-verified` → `production-verified`；任一 Gate 失败使用 `blocked`，不得跨级。
 
+## 非 AWS 独立执行路径
+
+AWS 暂停期间可使用 `--scope non-aws` 执行 30 个 Sepolia、产品 UI、Worker/D1 与 Privy Journey。该路径只排除 `PERF-01`，并把原因写为 `AWS_SCOPE_EXCLUDED`；受控浏览器会阻断 `/api/performance/*`，每个结果显式记录 telemetry 未采集。它不会改变完整 31 项路径的 AWS fail-closed 规则，也不会在真实钱包旅程和媒体审阅完成前升级本证据状态。详细合同见 `docs/evidence/testing/2026-09-09-non-aws-journey-scope.md`。
+
 ## 要求 → 实现 → 证据 → 状态
 
 | 要求 | 实现 | 代码位置 | 验证证据 | 当前状态 |

@@ -12,6 +12,47 @@ export const implementedFeatureManifest = JSON.parse(
 	),
 ).implementedFeatureJourneys;
 
+export const nonAwsPerformanceRoutePattern = "**/api/performance/**";
+
+export function selectImplementedFeatureJourneys(scope = "full") {
+	if (scope !== "full" && scope !== "non-aws") {
+		throw new Error("JOURNEY_SCOPE_INVALID");
+	}
+
+	const excludedJourneys =
+		scope === "non-aws"
+			? implementedFeatureManifest
+					.filter(({ requiredSystems }) => requiredSystems?.includes("aws"))
+					.map(({ journeyId }) => ({
+						journeyId,
+						reason: "AWS_SCOPE_EXCLUDED",
+					}))
+			: [];
+	const excludedIds = new Set(
+		excludedJourneys.map(({ journeyId }) => journeyId),
+	);
+
+	return {
+		journeys: implementedFeatureManifest.filter(
+			({ journeyId }) => !excludedIds.has(journeyId),
+		),
+		excludedJourneys,
+	};
+}
+
+export function assertImplementedFeaturePreflightScope(scope, preflight) {
+	if (preflight?.ready !== true) throw new Error("PREFLIGHT_NOT_READY");
+	const expectedScope = scope === "non-aws" ? "sepolia" : "full";
+	if (preflight?.scope !== expectedScope) {
+		throw new Error("PREFLIGHT_SCOPE_MISMATCH");
+	}
+}
+
+export function implementedFeatureRecordingStage(scope, closure) {
+	if (closure?.valid !== true) return "blocked";
+	return scope === "non-aws" ? "sepolia-verified" : "aws-live-verified";
+}
+
 const routeHeadings = new Map([
 	["/", "BabySteps · 成长星球"],
 	["/tasks", "成长任务市集"],
@@ -155,7 +196,10 @@ async function runResponsiveChecks(page, origin, pageErrors) {
 	return { checks, rootOverflow };
 }
 
-export function validateImplementedFeatureResult(result) {
+export function validateImplementedFeatureResult(
+	result,
+	{ requireTelemetry = true } = {},
+) {
 	const errors = [];
 	const compensationStatuses = new Set([
 		"not-required",
@@ -167,9 +211,22 @@ export function validateImplementedFeatureResult(result) {
 	if (result?.outcome !== "success") errors.push("OUTCOME_NOT_SUCCESS");
 	if (result?.uiFinalState !== true) errors.push("UI_FINAL_STATE_MISSING");
 	if (result?.productReadback !== true) errors.push("PRODUCT_READBACK_MISSING");
-	if (result?.telemetryAccepted !== true) errors.push("TELEMETRY_NOT_ACCEPTED");
-	if (!(result?.acceptedEventIds?.length > 0)) {
-		errors.push("ACCEPTED_EVENT_ID_MISSING");
+	if (requireTelemetry) {
+		if (result?.telemetryAccepted !== true)
+			errors.push("TELEMETRY_NOT_ACCEPTED");
+		if (!(result?.acceptedEventIds?.length > 0)) {
+			errors.push("ACCEPTED_EVENT_ID_MISSING");
+		}
+	} else if (
+		result?.telemetry?.status !== "not-collected" ||
+		result?.telemetry?.reason !== "AWS_SCOPE_EXCLUDED"
+	) {
+		errors.push("TELEMETRY_SCOPE_MARKER_MISSING");
+	} else if (
+		result?.telemetryAccepted !== undefined ||
+		result?.acceptedEventIds !== undefined
+	) {
+		errors.push("TELEMETRY_SCOPE_CONTAMINATED");
 	}
 	if (
 		typeof result?.compensation?.kind !== "string" ||
@@ -499,6 +556,18 @@ async function installTelemetryObserver(page) {
 	return accepted;
 }
 
+async function installTelemetryExclusion(page) {
+	await page.route(nonAwsPerformanceRoutePattern, async (route) => {
+		await route.fulfill({
+			status: 503,
+			contentType: "application/json",
+			body: JSON.stringify({
+				error: "AWS_SCOPE_EXCLUDED",
+			}),
+		});
+	});
+}
+
 async function waitForAcceptedTelemetry(accepted, baselineIds, journey) {
 	const deadline = Date.now() + 30_000;
 	while (Date.now() < deadline) {
@@ -518,6 +587,8 @@ async function waitForAcceptedTelemetry(accepted, baselineIds, journey) {
 }
 
 async function run() {
+	const scope = option("--scope") ?? "full";
+	const selection = selectImplementedFeatureJourneys(scope);
 	const origin = option("--origin");
 	const inputPath = option("--inputs");
 	const preflightPath = option("--preflight");
@@ -529,7 +600,7 @@ async function run() {
 	const version = option("--version");
 	if (process.argv.includes("--dry-run")) {
 		process.stdout.write(
-			`${JSON.stringify({ schemaVersion: 1, journeys: implementedFeatureManifest.map(({ journeyId, route, roleAlias }) => ({ journeyId, route, roleAlias })) })}\n`,
+			`${JSON.stringify({ schemaVersion: 1, scope, excludedJourneys: selection.excludedJourneys, journeys: selection.journeys.map(({ journeyId, route, roleAlias }) => ({ journeyId, route, roleAlias })) })}\n`,
 		);
 		return;
 	}
@@ -548,7 +619,7 @@ async function run() {
 		await mkdir(resolve(sessionDir), { recursive: true });
 	}
 	const preflight = JSON.parse(await readFile(preflightPath, "utf8"));
-	if (preflight.ready !== true) throw new Error("PREFLIGHT_NOT_READY");
+	assertImplementedFeaturePreflightScope(scope, preflight);
 	const inputs = JSON.parse(await readFile(inputPath, "utf8"));
 	assertCredentialBoundary(inputs);
 	const { chromium } = await import("playwright");
@@ -575,13 +646,18 @@ async function run() {
 	const recordingVideo = recordingOutput ? page.video() : undefined;
 	const pageErrors = [];
 	page.on("pageerror", (error) => pageErrors.push(error.message));
-	const accepted = await installTelemetryObserver(page);
+	let accepted = new Map();
+	if (scope === "full") {
+		accepted = await installTelemetryObserver(page);
+	} else {
+		await installTelemetryExclusion(page);
+	}
 	const results = [];
 	let responsiveChecks = [];
 	let rootOverflow = 0;
 	let currentRole;
 	try {
-		for (const journey of implementedFeatureManifest) {
+		for (const journey of selection.journeys) {
 			if (journey.roleAlias !== currentRole) {
 				await waitForRoleConfirmation(journey.roleAlias);
 				currentRole = journey.roleAlias;
@@ -607,11 +683,10 @@ async function run() {
 				);
 			}
 			await waitForUiFinalState(page, journey);
-			const acceptedEventIds = await waitForAcceptedTelemetry(
-				accepted,
-				baselineIds,
-				journey,
-			);
+			const acceptedEventIds =
+				scope === "full"
+					? await waitForAcceptedTelemetry(accepted, baselineIds, journey)
+					: undefined;
 			const transaction = redactedTransactionLink(
 				await page
 					.getByRole("link", { name: /查看.*交易/u })
@@ -629,12 +704,20 @@ async function run() {
 				outcome: "success",
 				uiFinalState: true,
 				productReadback: true,
-				telemetryAccepted: true,
-				acceptedEventIds,
+				...(scope === "full"
+					? { telemetryAccepted: true, acceptedEventIds }
+					: {
+							telemetry: {
+								status: "not-collected",
+								reason: "AWS_SCOPE_EXCLUDED",
+							},
+						}),
 				compensation,
 				...(transaction ? { transaction } : {}),
 			};
-			const validation = validateImplementedFeatureResult(result);
+			const validation = validateImplementedFeatureResult(result, {
+				requireTelemetry: scope === "full",
+			});
 			if (!validation.valid) throw new Error(validation.errors[0]);
 			results.push(result);
 			process.stdout.write(
@@ -651,10 +734,11 @@ async function run() {
 	} finally {
 		if (!browser) await context.close().catch(() => undefined);
 	}
+	const closure = validateImplementedFeatureClosure(results);
 	await mkdir(dirname(outputPath), { recursive: true });
 	await writeFile(
 		outputPath,
-		`${JSON.stringify({ schemaVersion: 1, provenance: "visible-ui-controlled-browser", closure: validateImplementedFeatureClosure(results), results }, null, 2)}\n`,
+		`${JSON.stringify({ schemaVersion: 1, provenance: "visible-ui-controlled-browser", scope, excludedJourneys: selection.excludedJourneys, closure, results }, null, 2)}\n`,
 		{ mode: 0o600 },
 	);
 	if (recordingOutput) {
@@ -687,6 +771,9 @@ async function run() {
 				{
 					schemaVersion: 1,
 					provenance: "visible-ui-controlled-browser",
+					scope,
+					stage: implementedFeatureRecordingStage(scope, closure),
+					excludedJourneys: selection.excludedJourneys,
 					version,
 					media: {
 						file: basename(resolve(recordingOutput)),
@@ -719,7 +806,6 @@ async function run() {
 			`${JSON.stringify({ recording: basename(resolve(recordingOutput)), chapters: results.length })}\n`,
 		);
 	}
-	const closure = validateImplementedFeatureClosure(results);
 	if (!closure.valid) {
 		process.stderr.write("IMPLEMENTED_FEATURE_COMPENSATION_PENDING\n");
 		process.exitCode = 2;

@@ -8,7 +8,7 @@ const roleChecks = [
 	["owner-relayer-d", "ROLE_OWNER_RELAYER_D_UNAVAILABLE"],
 ];
 
-const booleanChecks = [
+const sepoliaBooleanChecks = [
 	["contractsConfigured", "CONTRACTS_NOT_CONFIGURED"],
 	["balances.gasReady", "SEPOLIA_GAS_UNAVAILABLE"],
 	["balances.babyReady", "BABY_BALANCE_UNAVAILABLE"],
@@ -17,12 +17,18 @@ const booleanChecks = [
 	["keepsakes.vrfReady", "VRF_UNAVAILABLE"],
 	["identity.privyReady", "PRIVY_UNAVAILABLE"],
 	["identity.workerOriginReady", "WORKER_ORIGIN_UNAVAILABLE"],
+];
+
+const awsBooleanChecks = [
 	["awsRuntime.budgetGuardPassed", "AWS_BUDGET_GUARD_NOT_PASSED"],
 ];
 
-const sourceChecks = {
+const sepoliaSourceChecks = {
 	sepolia: "public-rpc-readonly",
 	product: "production-ui-readonly",
+};
+
+const awsSourceChecks = {
 	aws: "oidc-readonly-inventory",
 };
 
@@ -58,10 +64,17 @@ function assertSafeSnapshot(value, path = "snapshot") {
 
 export function evaluateImplementedFeaturePreflight(
 	snapshot,
-	{ now = Date.now(), maxAgeMs = MAX_SNAPSHOT_AGE_MS } = {},
+	{ now = Date.now(), maxAgeMs = MAX_SNAPSHOT_AGE_MS, scope = "full" } = {},
 ) {
+	if (scope !== "full" && scope !== "sepolia") {
+		throw new Error("PREFLIGHT_SCOPE_INVALID");
+	}
 	assertSafeSnapshot(snapshot);
 	const blockers = [];
+	const sourceChecks =
+		scope === "sepolia"
+			? sepoliaSourceChecks
+			: { ...sepoliaSourceChecks, ...awsSourceChecks };
 	if (
 		snapshot?.provenance !== "live-readonly" ||
 		Object.entries(sourceChecks).some(
@@ -79,8 +92,13 @@ export function evaluateImplementedFeaturePreflight(
 		blockers.push("PREFLIGHT_SNAPSHOT_STALE");
 	}
 	if (snapshot?.chainId !== 11155111) blockers.push("CHAIN_ID_NOT_SEPOLIA");
-	for (const [path, code] of booleanChecks) {
+	for (const [path, code] of sepoliaBooleanChecks) {
 		if (valueAt(snapshot, path) !== true) blockers.push(code);
+	}
+	if (scope === "full") {
+		for (const [path, code] of awsBooleanChecks) {
+			if (valueAt(snapshot, path) !== true) blockers.push(code);
+		}
 	}
 	for (const [alias, code] of roleChecks) {
 		if (snapshot?.roles?.[alias] !== true) blockers.push(code);
@@ -94,15 +112,16 @@ export function evaluateImplementedFeaturePreflight(
 	if (!(snapshot?.keepsakes?.recoverableRequestCount >= 1)) {
 		blockers.push("RECOVERABLE_REQUEST_UNAVAILABLE");
 	}
-	if (snapshot?.awsRuntime?.zeroResidueVerified !== true) {
+	if (scope === "full" && snapshot?.awsRuntime?.zeroResidueVerified !== true) {
 		blockers.push("AWS_ZERO_RESIDUE_UNVERIFIED");
 	}
-	if (snapshot?.awsRuntime?.state !== "stopped") {
+	if (scope === "full" && snapshot?.awsRuntime?.state !== "stopped") {
 		blockers.push("AWS_RUNTIME_NOT_STOPPED");
 	}
 
 	return {
 		schemaVersion: 1,
+		scope,
 		ready: blockers.length === 0,
 		chain: snapshot?.chainId === 11155111 ? "sepolia" : "unavailable",
 		roleAliases: Object.fromEntries(
@@ -129,9 +148,11 @@ export function evaluateImplementedFeaturePreflight(
 				snapshot?.identity?.privyReady === true &&
 				snapshot?.identity?.workerOriginReady === true,
 			awsRuntime:
-				snapshot?.awsRuntime?.state === "stopped" &&
-				snapshot?.awsRuntime?.budgetGuardPassed === true &&
-				snapshot?.awsRuntime?.zeroResidueVerified === true,
+				scope === "sepolia"
+					? "not-evaluated"
+					: snapshot?.awsRuntime?.state === "stopped" &&
+						snapshot?.awsRuntime?.budgetGuardPassed === true &&
+						snapshot?.awsRuntime?.zeroResidueVerified === true,
 		},
 		blockers,
 	};
@@ -155,9 +176,15 @@ async function main() {
 	}
 	const snapshotPath = option("--snapshot");
 	const outputPath = option("--output");
+	const requestedScope = option("--scope") ?? "full";
+	if (requestedScope !== "full" && requestedScope !== "non-aws") {
+		throw new Error("PREFLIGHT_SCOPE_INVALID");
+	}
 	if (!snapshotPath) throw new Error("PREFLIGHT_SNAPSHOT_REQUIRED");
 	const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
-	const result = evaluateImplementedFeaturePreflight(snapshot);
+	const result = evaluateImplementedFeaturePreflight(snapshot, {
+		scope: requestedScope === "non-aws" ? "sepolia" : "full",
+	});
 	if (outputPath) {
 		await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`, {
 			mode: 0o600,
