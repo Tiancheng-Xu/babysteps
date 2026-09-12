@@ -10,6 +10,8 @@
 
 AWS 暂停期间可使用 `--scope non-aws` 执行 30 个 Sepolia、产品 UI、Worker/D1 与 Privy Journey。该路径只排除 `PERF-01`，并把原因写为 `AWS_SCOPE_EXCLUDED`；受控浏览器会阻断 `/api/performance/*`，每个结果显式记录 telemetry 未采集。它不会改变完整 31 项路径的 AWS fail-closed 规则，也不会在真实钱包旅程和媒体审阅完成前升级本证据状态。详细合同见 `docs/evidence/testing/2026-09-09-non-aws-journey-scope.md`。
 
+本地执行器还完成了可恢复状态收尾：Swap receipt 后重新读取 allowance，非零时必须由用户在独立钱包确认中执行 `approve(router, 0)` 并以链上零值回读闭环；pending 状态锁定输入和重复点击。任务购买、登录会话与最终钱包断开均有显式补偿关系；不可逆的 Sepolia 历史只标记为公开测试记录，不伪造回滚。
+
 ## 要求 → 实现 → 证据 → 状态
 
 | 要求 | 实现 | 代码位置 | 验证证据 | 当前状态 |
@@ -18,6 +20,7 @@ AWS 暂停期间可使用 `--scope non-aws` 执行 30 个 Sepolia、产品 UI、
 | 只走可见 UI | Playwright 只点击页面、等待可见状态和人工钱包确认 | `scripts/run-implemented-feature-journey.mjs` | 执行器合同与 fail-closed 补偿 Gate | local-verified |
 | 业务阶段性能 | 20 个低基数业务指标覆盖请求、receipt 与最终回读 | `web/src/performance/businessOperations.ts` | Web/AWS Schema 与聚合测试 | local-verified |
 | 录屏与隐私 | 31 章、媒体哈希、时长、无声、响应式和隐私扫描 | `scripts/validate-implemented-feature-recording.mjs` | 媒体合同测试；真实媒体待 Task 7 | local-verified |
+| 写操作收尾 | Swap 后读取剩余 allowance、独立清零确认、pending 防重与 Journey 补偿图 | `web/src/features/exchange/useUniswapSwap.ts` · `scripts/run-implemented-feature-journey.mjs` | Hook/UI/执行器合同测试；真实钱包签名待 Task 7 | local-verified |
 | 全页面视觉 | 9 路由 × 4 视口，确定性未配置状态与人工审核基线 | `backstop.config.cjs` | BackstopJS 36/36；HTTP、overflow、pageerror 36/36 | local-verified |
 | 云端闭环 | Sepolia 可见交易与临时 AWS 性能栈 | 固定 Journey 与 AWS workflow | 尚未运行本轮 Live | blocked |
 
@@ -37,7 +40,7 @@ AWS 暂停期间可使用 `--scope non-aws` 执行 30 个 Sepolia、产品 UI、
 ## 本地验证结果
 
 - Journey Manifest：31/31。
-- Validator：106/106。
+- Validator：138/138。
 - 页面语义：9 路由 × 375/390/430/1440，共 36/36；根级横向溢出 0，pageerror 0。
 - BackstopJS：人工审核新基线后候选 36/36。
 - 生产构建、性能管线合同、公开内容与既有 Evidence 合同：通过。

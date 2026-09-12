@@ -38,7 +38,7 @@
   ],
   "gates": {
     "manifestContract": "31/31",
-    "validatorTests": "106/106",
+    "validatorTests": "138/138",
     "responsiveRoutes": "36/36",
     "visualRegression": "36/36",
     "productionBuild": "passed",
@@ -61,6 +61,19 @@
     ],
     "telemetry": "not-collected",
     "preflightScope": "sepolia",
+    "allowanceCleanup": {
+      "status": "local-verified",
+      "postSwapReadback": "required",
+      "zeroApproval": "separate-visible-wallet-confirmation-required",
+      "completionCondition": "router-allowance-equals-zero",
+      "duplicateSubmissionGuard": "verified"
+    },
+    "journeyCompensation": {
+      "status": "local-verified",
+      "dependentActions": "reconciled",
+      "finalVisibleWalletDisconnect": "required",
+      "immutableSepoliaHistory": "retained-as-public-test-history"
+    },
     "recordingStageAfterLiveProof": "sepolia-verified"
   },
   "controlPlaneBootstrap": {

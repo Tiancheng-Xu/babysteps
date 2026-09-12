@@ -34,6 +34,7 @@ type ExchangePhase =
 	| "wrapping"
 	| "approving"
 	| "swapping"
+	| "revoking"
 	| "success"
 	| "error";
 
@@ -53,6 +54,9 @@ export function useUniswapSwap() {
 	const [phase, setPhase] = useState<ExchangePhase>("idle");
 	const [message, setMessage] = useState<string>();
 	const [transactionHash, setTransactionHash] = useState<Hash>();
+	const [revokeTransactionHash, setRevokeTransactionHash] = useState<Hash>();
+	const [remainingAllowance, setRemainingAllowance] = useState<bigint>();
+	const [swapConfirmed, setSwapConfirmed] = useState(false);
 	const pendingRef = useRef(false);
 
 	const walletState = deriveWalletState({
@@ -71,6 +75,13 @@ export function useUniswapSwap() {
 	}, [amount, selected.decimals]);
 	const configured = Boolean(babyCoinAddress);
 	const formattedQuote = formatBabyCoinAmount(quotedAmountOut);
+	const isPending =
+		phase === "quoting" ||
+		phase === "wrapping" ||
+		phase === "approving" ||
+		phase === "swapping" ||
+		phase === "revoking";
+	const needsAllowanceCleanup = swapConfirmed && remainingAllowance !== 0n;
 
 	const quote = useCallback(() => {
 		const targetToken = babyCoinAddress;
@@ -134,8 +145,12 @@ export function useUniswapSwap() {
 		}
 		return measureBusinessPerformance("business.exchange.swap", () =>
 			measurePerformance("web3.uniswap.swap", async () => {
+				let swapReceiptConfirmed = false;
 				pendingRef.current = true;
 				setTransactionHash(undefined);
+				setRevokeTransactionHash(undefined);
+				setRemainingAllowance(undefined);
+				setSwapConfirmed(false);
 				try {
 					if (asset === "ETH") {
 						const wethBalance = await readContract(wagmiConfig, {
@@ -226,12 +241,30 @@ export function useUniswapSwap() {
 							chainId: sepolia.id,
 						}),
 					);
+					swapReceiptConfirmed = true;
 					setTransactionHash(hash);
+					setSwapConfirmed(true);
+					const allowanceAfterSwap = await readContract(wagmiConfig, {
+						address: selected.address,
+						abi: exchangeErc20Abi,
+						functionName: "allowance",
+						args: [address, uniswapV3Sepolia.swapRouter02],
+						chainId: sepolia.id,
+					});
+					setRemainingAllowance(allowanceAfterSwap);
 					setPhase("success");
-					setMessage("兑换已在 Sepolia 确认；测试资产没有真实价值。");
+					setMessage(
+						allowanceAfterSwap === 0n
+							? "兑换已在 Sepolia 确认；本次有限授权已全部使用。"
+							: "兑换已在 Sepolia 确认；检测到剩余授权，请继续清除。",
+					);
 				} catch (error) {
 					setPhase("error");
-					setMessage(toWalletMessage(error));
+					setMessage(
+						swapReceiptConfirmed
+							? "兑换已确认，但授权读回失败；请继续清除剩余授权。"
+							: toWalletMessage(error),
+					);
 					throw error;
 				} finally {
 					pendingRef.current = false;
@@ -249,9 +282,71 @@ export function useUniswapSwap() {
 		writeContractAsync,
 	]);
 
+	const revokeAllowance = useCallback(() => {
+		if (
+			pendingRef.current ||
+			!swapConfirmed ||
+			!address ||
+			walletState !== "ready" ||
+			remainingAllowance === 0n
+		) {
+			return Promise.resolve();
+		}
+		return (async () => {
+			pendingRef.current = true;
+			setPhase("revoking");
+			setMessage("请确认将 SwapRouter02 的剩余授权清零。");
+			try {
+				const hash = await measurePerformance("approve.submit", () =>
+					measurePerformance("contract.write", () =>
+						writeContractAsync({
+							address: selected.address,
+							abi: exchangeErc20Abi,
+							functionName: "approve",
+							args: [uniswapV3Sepolia.swapRouter02, 0n],
+							chainId: sepolia.id,
+						}),
+					),
+				);
+				await measurePerformance("approve.receipt", () =>
+					waitForTransactionReceipt(wagmiConfig, {
+						hash,
+						chainId: sepolia.id,
+					}),
+				);
+				const allowance = await readContract(wagmiConfig, {
+					address: selected.address,
+					abi: exchangeErc20Abi,
+					functionName: "allowance",
+					args: [address, uniswapV3Sepolia.swapRouter02],
+					chainId: sepolia.id,
+				});
+				if (allowance !== 0n) throw new Error("授权清理后链上读回仍不为零。");
+				setRevokeTransactionHash(hash);
+				setRemainingAllowance(0n);
+				setPhase("success");
+				setMessage("剩余授权已清除，并已从链上确认归零。");
+			} catch (error) {
+				setPhase("error");
+				setMessage(toWalletMessage(error));
+				throw error;
+			} finally {
+				pendingRef.current = false;
+			}
+		})().catch(() => undefined);
+	}, [
+		address,
+		remainingAllowance,
+		selected.address,
+		swapConfirmed,
+		walletState,
+		writeContractAsync,
+	]);
+
 	return {
 		asset,
 		setAsset: (value: ExchangeAsset) => {
+			if (pendingRef.current || needsAllowanceCleanup) return;
 			setAsset(value);
 			setQuotedAmountOut(undefined);
 			setQuotedInput(undefined);
@@ -260,6 +355,7 @@ export function useUniswapSwap() {
 		},
 		amount,
 		setAmount: (value: string) => {
+			if (pendingRef.current || needsAllowanceCleanup) return;
 			setAmount(value);
 			setQuotedAmountOut(undefined);
 			setQuotedInput(undefined);
@@ -275,11 +371,22 @@ export function useUniswapSwap() {
 		phase,
 		message,
 		transactionHash,
+		revokeTransactionHash,
+		remainingAllowance,
+		needsAllowanceCleanup,
+		isPending,
 		quote,
 		execute,
-		canQuote: configured && Boolean(amountIn && amountIn > 0n),
+		revokeAllowance,
+		canQuote:
+			configured &&
+			!isPending &&
+			!needsAllowanceCleanup &&
+			Boolean(amountIn && amountIn > 0n),
 		canExecute:
 			walletState === "ready" && phase === "quoted" && quotedInput === amountIn,
+		canRevokeAllowance:
+			walletState === "ready" && !isPending && needsAllowanceCleanup,
 		switchToSepolia: () => switchChainAsync({ chainId: sepolia.id }),
 	};
 }

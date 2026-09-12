@@ -433,6 +433,121 @@ test("implemented feature result separates execution proof from compensation clo
 	);
 });
 
+test("implemented feature closure resolves dependent cleanup from later visible journeys", async () => {
+	const {
+		reconcileImplementedFeatureCompensations,
+		resolveDeferredWalletDisconnect,
+	} = await import("./run-implemented-feature-journey.mjs");
+	const result = (journeyId, kind, status = "pending-dependent-proof") => ({
+		journeyId,
+		outcome: "success",
+		compensation: { kind, status },
+	});
+	const reconciled = reconcileImplementedFeatureCompensations([
+		result("MARKET-APPROVE-01", "consume-or-revoke-allowance"),
+		result(
+			"MARKET-BUY-01",
+			"persistent-test-history",
+			"verified-non-reversible",
+		),
+		result("CONTENT-01", "logout"),
+		result("IDENTITY-LOGIN-01", "logout"),
+		result("IDENTITY-SESSION-01", "logout"),
+		result("PROFILE-01", "neutralize-profile-and-logout", "verified-action"),
+	]);
+
+	assert.deepEqual(
+		reconciled
+			.filter(({ compensation }) => compensation.kind === "logout")
+			.map(({ compensation }) => compensation),
+		[
+			{ kind: "logout", status: "verified-action", resolvedBy: "PROFILE-01" },
+			{ kind: "logout", status: "verified-action", resolvedBy: "PROFILE-01" },
+			{ kind: "logout", status: "verified-action", resolvedBy: "PROFILE-01" },
+		],
+	);
+	assert.deepEqual(reconciled[0].compensation, {
+		kind: "consume-or-revoke-allowance",
+		status: "verified-action",
+		resolvedBy: "MARKET-BUY-01",
+	});
+	const walletPending = [result("WALLET-01", "disconnect-wallet")];
+	assert.equal(
+		resolveDeferredWalletDisconnect(walletPending, false)[0].compensation
+			.status,
+		"pending-dependent-proof",
+	);
+	assert.deepEqual(
+		resolveDeferredWalletDisconnect(walletPending, true)[0].compensation,
+		{
+			kind: "disconnect-wallet",
+			status: "verified-action",
+			resolvedBy: "FINAL-WALLET-DISCONNECT",
+		},
+	);
+});
+
+test("implemented feature runner performs the deferred visible wallet disconnect", async () => {
+	const { disconnectWalletAfterJourneys } = await import(
+		"./run-implemented-feature-journey.mjs"
+	);
+	let disconnected = false;
+	const page = {
+		goto: async () => ({ ok: () => true }),
+		getByRole: (_role, { name }) => {
+			if (name === "断开连接") {
+				return {
+					isVisible: async () => true,
+					click: async () => {
+						disconnected = true;
+					},
+				};
+			}
+			return {
+				waitFor: async () => {
+					assert.equal(disconnected, true);
+				},
+			};
+		},
+	};
+	const results = [
+		{
+			journeyId: "WALLET-01",
+			compensation: {
+				kind: "disconnect-wallet",
+				status: "pending-dependent-proof",
+			},
+		},
+	];
+
+	const resolved = await disconnectWalletAfterJourneys(
+		page,
+		"http://127.0.0.1:4173",
+		results,
+	);
+
+	assert.equal(disconnected, true);
+	assert.equal(resolved[0].compensation.status, "verified-action");
+});
+
+test("immutable Sepolia outcomes are retained as public test history instead of pending cleanup", async () => {
+	const { staticCompensationFor } = await import(
+		"./run-implemented-feature-journey.mjs"
+	);
+	for (const kind of [
+		"optional-return-transfer",
+		"approve-or-reject-task",
+		"use-task-in-purchase",
+	]) {
+		assert.deepEqual(staticCompensationFor(kind), {
+			kind,
+			status: "verified-non-reversible",
+			retainedAs: "public-sepolia-test-history",
+		});
+	}
+	assert.equal(staticCompensationFor("logout"), undefined);
+});
+
 test("the AWS unit suite owns the executable performance event contract", async () => {
 	const source = await readFile("aws/test/performancePipeline.test.ts", "utf8");
 
@@ -1436,6 +1551,11 @@ test("implemented-feature recording requires all 31 real chapters and reviewed m
 		/engineOptions:\s*\{\s*gotoParameters:\s*\{\s*waitUntil:\s*"domcontentloaded"/u,
 		"BackstopJS must pass navigation readiness through scenario.engineOptions",
 	);
+	assert.match(
+		backstopSource,
+		/gotoParameters:\s*\{[^}]*timeout:\s*15_000/u,
+		"BackstopJS navigation must not fall back to the flaky 8 second engine timeout",
+	);
 	const visualGateSource = await readFile(
 		"scripts/run-visual-gate.mjs",
 		"utf8",
@@ -1443,6 +1563,12 @@ test("implemented-feature recording requires all 31 real chapters and reviewed m
 	assert.match(visualGateSource, /deterministicVisualEnvironment/);
 	assert.match(visualGateSource, /VITE_PRIVY_APP_ID:\s*""/);
 	assert.match(visualGateSource, /VITE_TASK_MARKETPLACE_V2_ADDRESS:\s*""/);
+	assert.match(visualGateSource, /from "node:http"/u);
+	assert.doesNotMatch(
+		visualGateSource,
+		/await fetch\(dashboardUrl\)/u,
+		"visual server readiness must avoid the Node 24 Undici socket TOS crash",
+	);
 	assert.doesNotMatch(
 		runnerSource,
 		/JSON\.stringify\(\{[^}]*recordingOutput:\s*resolve/u,
@@ -1466,6 +1592,19 @@ test("implemented-feature evidence records the non-AWS execution contract withou
 		excludedJourneys: [{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" }],
 		telemetry: "not-collected",
 		preflightScope: "sepolia",
+		allowanceCleanup: {
+			status: "local-verified",
+			postSwapReadback: "required",
+			zeroApproval: "separate-visible-wallet-confirmation-required",
+			completionCondition: "router-allowance-equals-zero",
+			duplicateSubmissionGuard: "verified",
+		},
+		journeyCompensation: {
+			status: "local-verified",
+			dependentActions: "reconciled",
+			finalVisibleWalletDisconnect: "required",
+			immutableSepoliaHistory: "retained-as-public-test-history",
+		},
 		recordingStageAfterLiveProof: "sepolia-verified",
 	});
 });

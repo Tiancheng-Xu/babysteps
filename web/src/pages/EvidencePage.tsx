@@ -294,7 +294,7 @@ export function EvidencePage() {
 					<article>
 						<strong>当前确定性 Gate</strong>
 						<span>
-							Validator 106/106 · 页面语义 36/36 · BackstopJS 36/36 ·
+							Validator 138/138 · 页面语义 36/36 · BackstopJS 36/36 ·
 							生产构建通过
 						</span>
 					</article>

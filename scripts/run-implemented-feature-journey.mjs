@@ -246,6 +246,84 @@ export function validateImplementedFeatureClosure(results) {
 	return { valid: errors.length === 0, errors };
 }
 
+export function reconcileImplementedFeatureCompensations(results) {
+	const completed = new Set(
+		results
+			.filter(({ outcome }) => outcome === "success")
+			.map(({ journeyId }) => journeyId),
+	);
+	const profileLogoutVerified = results.some(
+		({ journeyId, compensation }) =>
+			journeyId === "PROFILE-01" && compensation?.status === "verified-action",
+	);
+
+	return results.map((result) => {
+		if (
+			result.compensation?.kind === "consume-or-revoke-allowance" &&
+			completed.has("MARKET-BUY-01")
+		) {
+			return {
+				...result,
+				compensation: {
+					kind: result.compensation.kind,
+					status: "verified-action",
+					resolvedBy: "MARKET-BUY-01",
+				},
+			};
+		}
+		if (result.compensation?.kind === "logout" && profileLogoutVerified) {
+			return {
+				...result,
+				compensation: {
+					kind: result.compensation.kind,
+					status: "verified-action",
+					resolvedBy: "PROFILE-01",
+				},
+			};
+		}
+		return result;
+	});
+}
+
+export function resolveDeferredWalletDisconnect(results, disconnected) {
+	if (!disconnected) return results;
+	return results.map((result) =>
+		result.compensation?.kind === "disconnect-wallet"
+			? {
+					...result,
+					compensation: {
+						kind: result.compensation.kind,
+						status: "verified-action",
+						resolvedBy: "FINAL-WALLET-DISCONNECT",
+					},
+				}
+			: result,
+	);
+}
+
+export async function disconnectWalletAfterJourneys(page, origin, results) {
+	if (
+		!results.some(
+			({ compensation }) =>
+				compensation?.kind === "disconnect-wallet" &&
+				compensation.status === "pending-dependent-proof",
+		)
+	) {
+		return results;
+	}
+	const response = await page.goto(new URL("/", origin).toString(), {
+		waitUntil: "domcontentloaded",
+	});
+	if (!response?.ok()) return resolveDeferredWalletDisconnect(results, false);
+	const disconnectButton = page.getByRole("button", { name: "断开连接" });
+	if (!(await disconnectButton.isVisible().catch(() => false))) {
+		return resolveDeferredWalletDisconnect(results, false);
+	}
+	await disconnectButton.click();
+	await page.getByRole("button", { name: "连接 MetaMask" }).waitFor();
+	return resolveDeferredWalletDisconnect(results, true);
+}
+
 function redactedTransactionLink(href) {
 	if (typeof href !== "string") return undefined;
 	const match = href.match(
@@ -499,6 +577,21 @@ async function waitForUiFinalState(page, journey) {
 	await page.getByText(pattern).first().waitFor({ timeout: 180_000 });
 }
 
+export function staticCompensationFor(kind) {
+	if (
+		kind === "optional-return-transfer" ||
+		kind === "approve-or-reject-task" ||
+		kind === "use-task-in-purchase"
+	) {
+		return {
+			kind,
+			status: "verified-non-reversible",
+			retainedAs: "public-sepolia-test-history",
+		};
+	}
+	return undefined;
+}
+
 async function compensate(page, journey) {
 	if (journey.compensation === "clear-note") {
 		await page.getByRole("button", { name: "清空当前便签" }).click();
@@ -510,6 +603,29 @@ async function compensate(page, journey) {
 	if (journey.compensation === "neutralize-profile-and-logout") {
 		await page.getByRole("button", { name: "退出登录" }).click();
 		await page.getByRole("button", { name: "使用 Privy 登录" }).waitFor();
+		return { kind: journey.compensation, status: "verified-action" };
+	}
+	if (journey.compensation === "revoke-allowance") {
+		const zeroReadback = page.getByText(
+			/SwapRouter02 授权已从链上确认归零|剩余授权已清除/u,
+		);
+		if (
+			await zeroReadback
+				.first()
+				.isVisible()
+				.catch(() => false)
+		) {
+			return { kind: journey.compensation, status: "verified-action" };
+		}
+		const revokeButton = page.getByRole("button", { name: "清除剩余授权" });
+		if (!(await revokeButton.isVisible().catch(() => false))) {
+			return { kind: journey.compensation, status: "pending-dependent-proof" };
+		}
+		process.stdout.write("WAITING_FOR_USER_PARENT_A_REVOKE_ALLOWANCE\n");
+		await revokeButton.click();
+		await page
+			.getByText(/剩余授权已清除，并已从链上确认归零/u)
+			.waitFor({ timeout: 180_000 });
 		return { kind: journey.compensation, status: "verified-action" };
 	}
 	if (journey.compensation === "none") {
@@ -527,6 +643,8 @@ async function compensate(page, journey) {
 	if (journey.compensation === "clear-query-and-clean-aws") {
 		return { kind: journey.compensation, status: "pending-external-proof" };
 	}
+	const staticCompensation = staticCompensationFor(journey.compensation);
+	if (staticCompensation) return staticCompensation;
 	return { kind: journey.compensation, status: "pending-dependent-proof" };
 }
 
@@ -652,7 +770,7 @@ async function run() {
 	} else {
 		await installTelemetryExclusion(page);
 	}
-	const results = [];
+	let results = [];
 	let responsiveChecks = [];
 	let rootOverflow = 0;
 	let currentRole;
@@ -724,6 +842,8 @@ async function run() {
 				`JOURNEY_OK_${journey.journeyId.replaceAll("-", "_")}\n`,
 			);
 		}
+		results = reconcileImplementedFeatureCompensations(results);
+		results = await disconnectWalletAfterJourneys(page, origin, results);
 		if (recordingOutput) {
 			const responsive = await runResponsiveChecks(page, origin, pageErrors);
 			responsiveChecks = responsive.checks;
