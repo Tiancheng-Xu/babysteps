@@ -1659,6 +1659,13 @@ test("full feature mock recording covers every non-AWS journey without impersona
 	assert.match(source, /awsWrites:\s*0/u);
 	assert.match(source, /isEditable\(\)/u);
 	assert.doesNotMatch(source, /eth_sendTransaction|writeContract/u);
+
+	const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+	assert.equal(
+		packageJson.scripts["validate:implemented-feature-mock-recording"],
+		"node scripts/validate-implemented-feature-mock-recording.mjs --manifest docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm.json",
+		"the public validator command must validate the committed walkthrough without requiring an undocumented environment value",
+	);
 });
 
 test("implemented-feature evidence records the non-AWS execution contract without upgrading live status", async () => {
