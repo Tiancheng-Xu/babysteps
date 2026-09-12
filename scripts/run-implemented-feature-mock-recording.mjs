@@ -187,7 +187,7 @@ async function seedVisibleInputs(page, operation) {
 	};
 	for (const [selector, value] of values[operation] ?? []) {
 		const input = page.locator(selector).first();
-		if (await input.isVisible().catch(() => false)) await input.fill(value);
+		if (await input.isEditable().catch(() => false)) await input.fill(value);
 	}
 }
 

@@ -1657,6 +1657,7 @@ test("full feature mock recording covers every non-AWS journey without impersona
 	assert.match(source, /fullJourneyProof:\s*false/u);
 	assert.match(source, /chainTransactions:\s*0/u);
 	assert.match(source, /awsWrites:\s*0/u);
+	assert.match(source, /isEditable\(\)/u);
 	assert.doesNotMatch(source, /eth_sendTransaction|writeContract/u);
 });
 
