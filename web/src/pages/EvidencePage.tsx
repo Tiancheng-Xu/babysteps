@@ -13,6 +13,8 @@ import performanceFinalEvidenceUrl from "../../../docs/evidence/deployment/2026-
 import prdFullWalkthroughVideo from "../../../docs/evidence/recordings/2026-08-30-prd-full-walkthrough/babysteps-prd-full-walkthrough.webm";
 import performanceJourneyVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/browser-journey.webm";
 import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm";
+import implementedFeatureWalkthroughVideo from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm";
+import implementedFeatureWalkthroughPoster from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/poster.png";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
@@ -270,19 +272,44 @@ export function EvidencePage() {
 			>
 				<header className="evidence-feature-proof__header">
 					<div>
-						<p className="section-kicker">VISIBLE UI · REAL JOURNEY GATE</p>
-						<h2 id="implemented-feature-journey-title">已实现功能真实全旅程</h2>
+						<p className="section-kicker">
+							VISIBLE UI · COMPLETE PRODUCT WALKTHROUGH
+						</p>
+						<h2 id="implemented-feature-journey-title">已实现功能完整走读</h2>
 					</div>
 					<span className="evidence-diagram-card__status">
-						local-verified · 31 个 Journey
+						30 个非 AWS Journey · pageerror 0
 					</span>
 				</header>
 				<p className="evidence-feature-proof__lead">
-					本地已锁定 31 个可见产品 Journey、20 个低基数业务性能指标、31
-					章录屏合同，以及 9 条路由 × 4 个视口的浏览器与 BackstopJS Gate。旧
-					34.4 秒录屏仍只证明 UI 走读；最终录屏、Sepolia 本轮交易、AWS Live
-					与生产回读必须在同一最终提交上完成后才能升级状态。
+					功能目录共 31 个 Journey；35.92 秒无声受控浏览器录屏按固定顺序走过 30
+					个已实现的非 AWS 产品 Journey，覆盖 9 条路由与关键完成状态；375、
+					390、430 与 1440 四档视口均无根级横向溢出，浏览器 pageerror 为 0。
 				</p>
+				<p>
+					画面用于完整展示产品流程和结果状态；本轮链上交易或 AWS 写入均为
+					0。Sepolia、身份会话与云端性能事实仍以各自独立机器 Evidence
+					为准，不由这段录屏替代。
+				</p>
+				<figure className="evidence-video-proof">
+					<video
+						aria-label="BabySteps 已实现功能完整走读录屏"
+						controls
+						muted
+						playsInline
+						preload="metadata"
+						poster={implementedFeatureWalkthroughPoster}
+					>
+						<source
+							src={implementedFeatureWalkthroughVideo}
+							type="video/webm"
+						/>
+						当前浏览器不支持 WebM 视频播放。
+					</video>
+					<figcaption>
+						30 章 · commit 5b343ad · SHA-256 7368947b…d2972f4。
+					</figcaption>
+				</figure>
 				<div className="evidence-runtime-grid">
 					<article>
 						<strong>状态层级</strong>
@@ -292,9 +319,9 @@ export function EvidencePage() {
 						</span>
 					</article>
 					<article>
-						<strong>当前确定性 Gate</strong>
+						<strong>当前质量 Gate</strong>
 						<span>
-							Validator 138/138 · 页面语义 36/36 · BackstopJS 36/36 ·
+							Validator 139/139 · 页面语义 36/36 · BackstopJS 36/36 ·
 							生产构建通过
 						</span>
 					</article>

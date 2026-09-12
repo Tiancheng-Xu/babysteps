@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import journeyManifest from "./performance-journey.manifest.json" with {
+import roleBoundaryInventory from "../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json" with {
 	type: "json",
 };
-import roleBoundaryInventory from "../docs/evidence/deployment/2026-08-30-role-boundary-inventory.json" with {
+import journeyManifest from "./performance-journey.manifest.json" with {
 	type: "json",
 };
 import {
@@ -34,9 +34,13 @@ test("role boundary inventory rejects a missing current role and duplicate ident
 		"全角色与权限边界 babysteps-role-boundaries.html 2026-08-30-role-boundary-inventory.json sandbox=allow-scripts allow-downloads",
 	);
 	assert.ok(
-		errors.includes("role boundary inventory is missing: marketplace-v2-provider"),
+		errors.includes(
+			"role boundary inventory is missing: marketplace-v2-provider",
+		),
 	);
-	assert.ok(errors.includes("role boundary inventory has duplicate id: public-visitor"));
+	assert.ok(
+		errors.includes("role boundary inventory has duplicate id: public-visitor"),
+	);
 });
 
 const validArchitecture = `
@@ -1042,9 +1046,26 @@ test("implemented-feature Evidence requires the exact 31-journey catalog and hon
 			"Hidden backend-only capabilities",
 			"Agent Market arbitration and Cocos",
 		],
+		completeFeatureWalkthrough: {
+			status: "mock-coverage-verified",
+			scope: "non-aws",
+			journeyCount: 30,
+			provenance: "controlled-browser-local-production-build-mock-data",
+			media:
+				"docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm",
+			manifest:
+				"docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm.json",
+			mockData: true,
+			chainTransactions: 0,
+			awsWrites: 0,
+			fullJourneyProof: false,
+			pageErrors: 0,
+			rootOverflow: 0,
+			viewports: [375, 390, 430, 1440],
+		},
 	};
 	const page =
-		"31 个 Journey · 当前实现边界 · local-verified · sepolia-verified · aws-live-verified · production-verified · blocked · 2026-08-30-implemented-feature-live-journey.json · 2026-08-30-implemented-feature-live-journey.md";
+		"31 个 Journey · 当前实现边界 · local-verified · sepolia-verified · aws-live-verified · production-verified · blocked · 2026-08-30-implemented-feature-live-journey.json · 2026-08-30-implemented-feature-live-journey.md · implemented-feature-full-walkthrough.webm";
 
 	assert.deepEqual(
 		validateImplementedFeatureJourneyEvidence(evidence, page),
@@ -1061,5 +1082,13 @@ test("implemented-feature Evidence requires the exact 31-journey catalog and hon
 	assert.match(
 		validateImplementedFeatureJourneyEvidence(falseClaim, page).join("\n"),
 		/production stage requires final run proof/,
+	);
+	const missingWalkthrough = structuredClone(evidence);
+	delete missingWalkthrough.completeFeatureWalkthrough;
+	assert.match(
+		validateImplementedFeatureJourneyEvidence(missingWalkthrough, page).join(
+			"\n",
+		),
+		/complete feature walkthrough boundary is invalid/,
 	);
 });

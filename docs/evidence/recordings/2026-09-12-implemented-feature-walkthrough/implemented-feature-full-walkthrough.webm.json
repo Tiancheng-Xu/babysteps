@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "provenance": "controlled-browser-local-production-build-mock-data",
+  "scope": "non-aws",
+  "stage": "mock-coverage-verified",
+  "version": "5b343adf6a6028e429eb6464ce4e044142a7f06e",
+  "fullJourneyProof": false,
+  "mockData": true,
+  "chainTransactions": 0,
+  "awsWrites": 0,
+  "excludedJourneys": [
+    {
+      "journeyId": "PERF-01",
+      "reason": "AWS_SCOPE_EXCLUDED"
+    }
+  ],
+  "media": {
+    "file": "implemented-feature-full-walkthrough.webm",
+    "sha256": "7368947bd921ff47fe661897f35e0f9508fa7fd82882febbcb4469897d2972f4",
+    "bytes": 3821101,
+    "durationSeconds": 35.92,
+    "audio": false,
+		"contactSheetReviewed": true
+  },
+  "viewports": [
+    375,
+    390,
+    430,
+    1440
+  ],
+  "pageErrors": 0,
+  "rootOverflow": 0,
+  "chapters": [
+    {
+      "journeyId": "NAV-01",
+      "route": "*",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:24.524Z",
+      "finishedAt": "2026-09-12T09:51:26.307Z"
+    },
+    {
+      "journeyId": "WALLET-01",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:26.307Z",
+      "finishedAt": "2026-09-12T09:51:27.390Z"
+    },
+    {
+      "journeyId": "GROWTH-01",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:27.390Z",
+      "finishedAt": "2026-09-12T09:51:28.472Z"
+    },
+    {
+      "journeyId": "GROWTH-02",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:28.472Z",
+      "finishedAt": "2026-09-12T09:51:29.557Z"
+    },
+    {
+      "journeyId": "GROWTH-03",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:29.557Z",
+      "finishedAt": "2026-09-12T09:51:30.639Z"
+    },
+    {
+      "journeyId": "TRANSFER-01",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:30.639Z",
+      "finishedAt": "2026-09-12T09:51:31.738Z"
+    },
+    {
+      "journeyId": "NOTE-01",
+      "route": "/",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:31.738Z",
+      "finishedAt": "2026-09-12T09:51:32.825Z"
+    },
+    {
+      "journeyId": "BABY-01",
+      "route": "/parent",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:32.825Z",
+      "finishedAt": "2026-09-12T09:51:33.957Z"
+    },
+    {
+      "journeyId": "BABY-02",
+      "route": "/parent",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:33.957Z",
+      "finishedAt": "2026-09-12T09:51:35.010Z"
+    },
+    {
+      "journeyId": "BABY-03",
+      "route": "/parent",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:35.010Z",
+      "finishedAt": "2026-09-12T09:51:36.065Z"
+    },
+    {
+      "journeyId": "PARENT-READ-01",
+      "route": "/parent",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:36.065Z",
+      "finishedAt": "2026-09-12T09:51:37.156Z"
+    },
+    {
+      "journeyId": "MARKET-READ-01",
+      "route": "/tasks",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:37.156Z",
+      "finishedAt": "2026-09-12T09:51:38.289Z"
+    },
+    {
+      "journeyId": "MARKET-APPROVE-01",
+      "route": "/tasks",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:38.289Z",
+      "finishedAt": "2026-09-12T09:51:39.344Z"
+    },
+    {
+      "journeyId": "MARKET-BUY-01",
+      "route": "/tasks",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:39.344Z",
+      "finishedAt": "2026-09-12T09:51:40.423Z"
+    },
+    {
+      "journeyId": "CONTENT-01",
+      "route": "/tasks",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:40.423Z",
+      "finishedAt": "2026-09-12T09:51:41.490Z"
+    },
+    {
+      "journeyId": "COMPLETE-SUBMIT-01",
+      "route": "/tasks",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:41.490Z",
+      "finishedAt": "2026-09-12T09:51:42.557Z"
+    },
+    {
+      "journeyId": "PROVIDER-CREATE-01",
+      "route": "/provider",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:42.557Z",
+      "finishedAt": "2026-09-12T09:51:44.447Z"
+    },
+    {
+      "journeyId": "OWNER-APPROVE-01",
+      "route": "/provider",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:44.447Z",
+      "finishedAt": "2026-09-12T09:51:45.524Z"
+    },
+    {
+      "journeyId": "OWNER-REJECT-01",
+      "route": "/provider",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:45.524Z",
+      "finishedAt": "2026-09-12T09:51:46.588Z"
+    },
+    {
+      "journeyId": "COMPLETION-LOAD-01",
+      "route": "/provider",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:46.588Z",
+      "finishedAt": "2026-09-12T09:51:47.656Z"
+    },
+    {
+      "journeyId": "COMPLETION-CONFIRM-01",
+      "route": "/provider",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:47.656Z",
+      "finishedAt": "2026-09-12T09:51:48.722Z"
+    },
+    {
+      "journeyId": "KEEPSAKE-DRAW-01",
+      "route": "/keepsakes",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:48.722Z",
+      "finishedAt": "2026-09-12T09:51:49.841Z"
+    },
+    {
+      "journeyId": "KEEPSAKE-FUSE-01",
+      "route": "/keepsakes",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:49.841Z",
+      "finishedAt": "2026-09-12T09:51:50.906Z"
+    },
+    {
+      "journeyId": "KEEPSAKE-RECOVER-01",
+      "route": "/keepsakes",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:50.906Z",
+      "finishedAt": "2026-09-12T09:51:51.971Z"
+    },
+    {
+      "journeyId": "QUOTE-01",
+      "route": "/exchange",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:51.971Z",
+      "finishedAt": "2026-09-12T09:51:53.403Z"
+    },
+    {
+      "journeyId": "SWAP-01",
+      "route": "/exchange",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:53.403Z",
+      "finishedAt": "2026-09-12T09:51:54.474Z"
+    },
+    {
+      "journeyId": "IDENTITY-LOGIN-01",
+      "route": "/profile",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:54.474Z",
+      "finishedAt": "2026-09-12T09:51:55.577Z"
+    },
+    {
+      "journeyId": "IDENTITY-SESSION-01",
+      "route": "/profile",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:55.577Z",
+      "finishedAt": "2026-09-12T09:51:56.655Z"
+    },
+    {
+      "journeyId": "PROFILE-01",
+      "route": "/profile",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:56.656Z",
+      "finishedAt": "2026-09-12T09:51:57.721Z"
+    },
+    {
+      "journeyId": "EVIDENCE-01",
+      "route": "/evidence",
+      "outcome": "simulated-success",
+      "startedAt": "2026-09-12T09:51:57.721Z",
+      "finishedAt": "2026-09-12T09:51:58.872Z"
+    }
+  ]
+}

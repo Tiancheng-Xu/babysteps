@@ -1,104 +1,123 @@
 {
-  "schemaVersion": 1,
-  "stage": "local-verified",
-  "provenance": "local-deterministic-gates",
-  "catalogSize": 31,
-  "journeys": [
-    { "journeyId": "NAV-01", "status": "local-verified" },
-    { "journeyId": "WALLET-01", "status": "local-verified" },
-    { "journeyId": "GROWTH-01", "status": "local-verified" },
-    { "journeyId": "GROWTH-02", "status": "local-verified" },
-    { "journeyId": "GROWTH-03", "status": "local-verified" },
-    { "journeyId": "TRANSFER-01", "status": "local-verified" },
-    { "journeyId": "NOTE-01", "status": "local-verified" },
-    { "journeyId": "BABY-01", "status": "local-verified" },
-    { "journeyId": "BABY-02", "status": "local-verified" },
-    { "journeyId": "BABY-03", "status": "local-verified" },
-    { "journeyId": "PARENT-READ-01", "status": "local-verified" },
-    { "journeyId": "MARKET-READ-01", "status": "local-verified" },
-    { "journeyId": "MARKET-APPROVE-01", "status": "local-verified" },
-    { "journeyId": "MARKET-BUY-01", "status": "local-verified" },
-    { "journeyId": "CONTENT-01", "status": "local-verified" },
-    { "journeyId": "COMPLETE-SUBMIT-01", "status": "local-verified" },
-    { "journeyId": "PROVIDER-CREATE-01", "status": "local-verified" },
-    { "journeyId": "OWNER-APPROVE-01", "status": "local-verified" },
-    { "journeyId": "OWNER-REJECT-01", "status": "local-verified" },
-    { "journeyId": "COMPLETION-LOAD-01", "status": "local-verified" },
-    { "journeyId": "COMPLETION-CONFIRM-01", "status": "local-verified" },
-    { "journeyId": "KEEPSAKE-DRAW-01", "status": "local-verified" },
-    { "journeyId": "KEEPSAKE-FUSE-01", "status": "local-verified" },
-    { "journeyId": "KEEPSAKE-RECOVER-01", "status": "local-verified" },
-    { "journeyId": "QUOTE-01", "status": "local-verified" },
-    { "journeyId": "SWAP-01", "status": "local-verified" },
-    { "journeyId": "IDENTITY-LOGIN-01", "status": "local-verified" },
-    { "journeyId": "IDENTITY-SESSION-01", "status": "local-verified" },
-    { "journeyId": "PROFILE-01", "status": "local-verified" },
-    { "journeyId": "PERF-01", "status": "local-verified" },
-    { "journeyId": "EVIDENCE-01", "status": "local-verified" }
-  ],
-  "gates": {
-    "manifestContract": "31/31",
-    "validatorTests": "138/138",
-    "responsiveRoutes": "36/36",
-    "visualRegression": "36/36",
-    "productionBuild": "passed",
-    "publicContent": "passed",
-    "deliveryEvidence": "passed"
-  },
-  "preflightContract": {
-    "status": "local-verified",
-    "provenance": "fresh-live-readonly-snapshot-required",
-    "maxSnapshotAgeSeconds": 300,
-    "requiredAwsState": "stopped-and-zero-residue",
-    "cloudReadback": "pending"
-  },
-  "nonAwsExecutionContract": {
-    "status": "local-verified",
-    "scope": "non-aws",
-    "journeyCount": 30,
-    "excludedJourneys": [
-      { "journeyId": "PERF-01", "reason": "AWS_SCOPE_EXCLUDED" }
-    ],
-    "telemetry": "not-collected",
-    "preflightScope": "sepolia",
-    "allowanceCleanup": {
-      "status": "local-verified",
-      "postSwapReadback": "required",
-      "zeroApproval": "separate-visible-wallet-confirmation-required",
-      "completionCondition": "router-allowance-equals-zero",
-      "duplicateSubmissionGuard": "verified"
-    },
-    "journeyCompensation": {
-      "status": "local-verified",
-      "dependentActions": "reconciled",
-      "finalVisibleWalletDisconnect": "required",
-      "immutableSepoliaHistory": "retained-as-public-test-history"
-    },
-    "recordingStageAfterLiveProof": "sepolia-verified"
-  },
-  "controlPlaneBootstrap": {
-    "status": "local-verified-cloud-not-dispatched",
-    "source": "babysteps-performance-control-bootstrap-v1",
-    "operation": "bootstrap-stopped-state",
-    "generation": 1,
-    "firstInsertOnly": true,
-    "authority": "github-actions-artifact+aws-zero-residue-readback",
-    "evidence": "docs/evidence/testing/2026-08-30-performance-control-stopped-bootstrap.md"
-  },
-  "finalRun": null,
-  "exclusions": [
-    "Provider D1 draft editing",
-    "Owner role administration",
-    "Task detail comments",
-    "Parent purchase overview",
-    "Automatic swap purchase drawer",
-    "Hidden backend-only capabilities",
-    "Agent Market arbitration and Cocos"
-  ],
-  "limitations": [
-    "This checkpoint proves deterministic local contracts and UI coverage only.",
-    "The non-AWS path is locally verified as a 30-journey execution contract; it blocks performance ingestion and records PERF-01 as explicitly excluded rather than silently skipping it.",
-    "Sepolia transactions, visible wallet confirmations, AWS Live aggregation, final recording, cleanup and production readback remain pending Task 7.",
-    "The stopped safety bootstrap is locally verified but has not been dispatched and has not created a production D1 row."
-  ]
+	"schemaVersion": 1,
+	"stage": "local-verified",
+	"provenance": "local-deterministic-gates",
+	"catalogSize": 31,
+	"journeys": [
+		{ "journeyId": "NAV-01", "status": "local-verified" },
+		{ "journeyId": "WALLET-01", "status": "local-verified" },
+		{ "journeyId": "GROWTH-01", "status": "local-verified" },
+		{ "journeyId": "GROWTH-02", "status": "local-verified" },
+		{ "journeyId": "GROWTH-03", "status": "local-verified" },
+		{ "journeyId": "TRANSFER-01", "status": "local-verified" },
+		{ "journeyId": "NOTE-01", "status": "local-verified" },
+		{ "journeyId": "BABY-01", "status": "local-verified" },
+		{ "journeyId": "BABY-02", "status": "local-verified" },
+		{ "journeyId": "BABY-03", "status": "local-verified" },
+		{ "journeyId": "PARENT-READ-01", "status": "local-verified" },
+		{ "journeyId": "MARKET-READ-01", "status": "local-verified" },
+		{ "journeyId": "MARKET-APPROVE-01", "status": "local-verified" },
+		{ "journeyId": "MARKET-BUY-01", "status": "local-verified" },
+		{ "journeyId": "CONTENT-01", "status": "local-verified" },
+		{ "journeyId": "COMPLETE-SUBMIT-01", "status": "local-verified" },
+		{ "journeyId": "PROVIDER-CREATE-01", "status": "local-verified" },
+		{ "journeyId": "OWNER-APPROVE-01", "status": "local-verified" },
+		{ "journeyId": "OWNER-REJECT-01", "status": "local-verified" },
+		{ "journeyId": "COMPLETION-LOAD-01", "status": "local-verified" },
+		{ "journeyId": "COMPLETION-CONFIRM-01", "status": "local-verified" },
+		{ "journeyId": "KEEPSAKE-DRAW-01", "status": "local-verified" },
+		{ "journeyId": "KEEPSAKE-FUSE-01", "status": "local-verified" },
+		{ "journeyId": "KEEPSAKE-RECOVER-01", "status": "local-verified" },
+		{ "journeyId": "QUOTE-01", "status": "local-verified" },
+		{ "journeyId": "SWAP-01", "status": "local-verified" },
+		{ "journeyId": "IDENTITY-LOGIN-01", "status": "local-verified" },
+		{ "journeyId": "IDENTITY-SESSION-01", "status": "local-verified" },
+		{ "journeyId": "PROFILE-01", "status": "local-verified" },
+		{ "journeyId": "PERF-01", "status": "local-verified" },
+		{ "journeyId": "EVIDENCE-01", "status": "local-verified" }
+	],
+	"gates": {
+		"manifestContract": "31/31",
+		"validatorTests": "139/139",
+		"responsiveRoutes": "36/36",
+		"visualRegression": "36/36",
+		"productionBuild": "passed",
+		"publicContent": "passed",
+		"deliveryEvidence": "passed"
+	},
+	"preflightContract": {
+		"status": "local-verified",
+		"provenance": "fresh-live-readonly-snapshot-required",
+		"maxSnapshotAgeSeconds": 300,
+		"requiredAwsState": "stopped-and-zero-residue",
+		"cloudReadback": "pending"
+	},
+	"nonAwsExecutionContract": {
+		"status": "local-verified",
+		"scope": "non-aws",
+		"journeyCount": 30,
+		"excludedJourneys": [
+			{ "journeyId": "PERF-01", "reason": "AWS_SCOPE_EXCLUDED" }
+		],
+		"telemetry": "not-collected",
+		"preflightScope": "sepolia",
+		"allowanceCleanup": {
+			"status": "local-verified",
+			"postSwapReadback": "required",
+			"zeroApproval": "separate-visible-wallet-confirmation-required",
+			"completionCondition": "router-allowance-equals-zero",
+			"duplicateSubmissionGuard": "verified"
+		},
+		"journeyCompensation": {
+			"status": "local-verified",
+			"dependentActions": "reconciled",
+			"finalVisibleWalletDisconnect": "required",
+			"immutableSepoliaHistory": "retained-as-public-test-history"
+		},
+		"recordingStageAfterLiveProof": "sepolia-verified"
+	},
+	"completeFeatureWalkthrough": {
+		"status": "mock-coverage-verified",
+		"scope": "non-aws",
+		"journeyCount": 30,
+		"provenance": "controlled-browser-local-production-build-mock-data",
+		"media": "docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm",
+		"manifest": "docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm.json",
+		"contactSheet": "docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/contact-sheet.png",
+		"sha256": "7368947bd921ff47fe661897f35e0f9508fa7fd82882febbcb4469897d2972f4",
+		"durationSeconds": 35.92,
+		"pageErrors": 0,
+		"rootOverflow": 0,
+		"viewports": [375, 390, 430, 1440],
+		"mockData": true,
+		"chainTransactions": 0,
+		"awsWrites": 0,
+		"fullJourneyProof": false
+	},
+	"controlPlaneBootstrap": {
+		"status": "local-verified-cloud-not-dispatched",
+		"source": "babysteps-performance-control-bootstrap-v1",
+		"operation": "bootstrap-stopped-state",
+		"generation": 1,
+		"firstInsertOnly": true,
+		"authority": "github-actions-artifact+aws-zero-residue-readback",
+		"evidence": "docs/evidence/testing/2026-08-30-performance-control-stopped-bootstrap.md"
+	},
+	"finalRun": null,
+	"exclusions": [
+		"Provider D1 draft editing",
+		"Owner role administration",
+		"Task detail comments",
+		"Parent purchase overview",
+		"Automatic swap purchase drawer",
+		"Hidden backend-only capabilities",
+		"Agent Market arbitration and Cocos"
+	],
+	"limitations": [
+		"This checkpoint proves deterministic local contracts and UI coverage only.",
+		"The non-AWS path is locally verified as a 30-journey execution contract; it blocks performance ingestion and records PERF-01 as explicitly excluded rather than silently skipping it.",
+		"The complete feature walkthrough uses controlled local product data and cannot satisfy the real Sepolia journey validator; it records chainTransactions=0, awsWrites=0 and fullJourneyProof=false.",
+		"Fresh Sepolia transactions, visible wallet confirmations, AWS Live aggregation, cleanup and production readback remain pending Task 7.",
+		"The stopped safety bootstrap is locally verified but has not been dispatched and has not created a production D1 row."
+	]
 }
