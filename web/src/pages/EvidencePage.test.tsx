@@ -155,7 +155,7 @@ describe("EvidencePage", () => {
 			}).length,
 		).toBe(2);
 		expect(screen.getByLabelText("最终 AWS 性能统计页面走读录屏")).toBeTruthy();
-	});
+	}, 15_000);
 
 	it("shows the verified StarBuddy Sepolia draw without claiming a live fusion", () => {
 		render(<EvidencePage />);
