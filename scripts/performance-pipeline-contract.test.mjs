@@ -1576,6 +1576,90 @@ test("implemented-feature recording requires all 31 real chapters and reviewed m
 	);
 });
 
+test("full feature mock recording covers every non-AWS journey without impersonating live proof", async () => {
+	const { validateImplementedFeatureMockRecording } = await import(
+		"./validate-implemented-feature-mock-recording.mjs"
+	);
+	const manifest = JSON.parse(
+		await readFile("scripts/performance-journey.manifest.json", "utf8"),
+	);
+	const nonAwsJourneys = manifest.implementedFeatureJourneys.filter(
+		({ journeyId }) => journeyId !== "PERF-01",
+	);
+	const chapters = nonAwsJourneys.map(({ journeyId, route }) => ({
+		journeyId,
+		route,
+		outcome: "simulated-success",
+		startedAt: "2026-09-12T09:00:00.000Z",
+		finishedAt: "2026-09-12T09:00:01.000Z",
+	}));
+	const recording = {
+		schemaVersion: 1,
+		provenance: "controlled-browser-local-production-build-mock-data",
+		scope: "non-aws",
+		stage: "mock-coverage-verified",
+		version: "a".repeat(40),
+		fullJourneyProof: false,
+		mockData: true,
+		chainTransactions: 0,
+		awsWrites: 0,
+		excludedJourneys: [{ journeyId: "PERF-01", reason: "AWS_SCOPE_EXCLUDED" }],
+		media: {
+			file: "implemented-feature-mock.webm",
+			sha256: "b".repeat(64),
+			bytes: 1024,
+			durationSeconds: 120,
+			audio: false,
+			contactSheetReviewed: true,
+		},
+		viewports: [375, 390, 430, 1440],
+		pageErrors: 0,
+		rootOverflow: 0,
+		chapters,
+	};
+
+	assert.deepEqual(validateImplementedFeatureMockRecording(recording), {
+		valid: true,
+		errors: [],
+	});
+	assert.match(
+		validateImplementedFeatureMockRecording({
+			...recording,
+			provenance: "visible-ui-controlled-browser",
+		}).errors.join(" "),
+		/MOCK_PROVENANCE_INVALID/,
+	);
+	assert.match(
+		validateImplementedFeatureMockRecording({
+			...recording,
+			fullJourneyProof: true,
+		}).errors.join(" "),
+		/MOCK_BOUNDARY_INVALID/,
+	);
+	const { validateImplementedFeatureRecording } = await import(
+		"./validate-implemented-feature-recording.mjs"
+	);
+	assert.match(
+		validateImplementedFeatureRecording(recording, {
+			scope: "non-aws",
+			results: [],
+		}).errors.join(" "),
+		/PROVENANCE_INVALID/,
+		"mock media must never satisfy the real Sepolia journey validator",
+	);
+
+	const source = await readFile(
+		"scripts/run-implemented-feature-mock-recording.mjs",
+		"utf8",
+	);
+	assert.match(source, /selectImplementedFeatureJourneys\("non-aws"\)/u);
+	assert.match(source, /controlled-browser-local-production-build-mock-data/u);
+	assert.match(source, /fullJourneyProof:\s*false/u);
+	assert.match(source, /chainTransactions:\s*0/u);
+	assert.match(source, /awsWrites:\s*0/u);
+	assert.doesNotMatch(source, /eth_sendTransaction|writeContract/u);
+});
+
 test("implemented-feature evidence records the non-AWS execution contract without upgrading live status", async () => {
 	const evidence = JSON.parse(
 		await readFile(
