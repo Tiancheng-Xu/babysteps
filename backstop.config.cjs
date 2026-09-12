@@ -29,7 +29,7 @@ const routeScenarios = productRoutes.map(([label, route]) => ({
 	misMatchThreshold: 0.1,
 	requireSameDimensions: true,
 	engineOptions: {
-		gotoParameters: { waitUntil: "domcontentloaded" },
+		gotoParameters: { waitUntil: "domcontentloaded", timeout: 15_000 },
 	},
 }));
 
@@ -57,6 +57,7 @@ module.exports = {
 			engineOptions: {
 				gotoParameters: {
 					waitUntil: "domcontentloaded",
+					timeout: 15_000,
 				},
 			},
 		},

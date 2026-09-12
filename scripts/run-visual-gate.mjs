@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
+import { get } from "node:http";
 import { resolve } from "node:path";
 
 const command = process.argv[2];
@@ -81,14 +82,29 @@ const server = spawn(
 	},
 );
 
+const serverResponds = () =>
+	new Promise((resolvePromise) => {
+		let settled = false;
+		const finish = (ready) => {
+			if (settled) return;
+			settled = true;
+			resolvePromise(ready);
+		};
+		const request = get(dashboardUrl, (response) => {
+			response.resume();
+			const status = response.statusCode ?? 0;
+			finish(status >= 200 && status < 400);
+		});
+		request.setTimeout(1_000, () => {
+			request.destroy();
+			finish(false);
+		});
+		request.once("error", () => finish(false));
+	});
+
 const waitForServer = async () => {
 	for (let attempt = 0; attempt < 50; attempt += 1) {
-		try {
-			const response = await fetch(dashboardUrl);
-			if (response.ok) return;
-		} catch {
-			// The local server is still starting.
-		}
+		if (await serverResponds()) return;
 		await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
 	}
 	throw new Error(`visual test server did not start: ${dashboardUrl}`);

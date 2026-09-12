@@ -5,6 +5,8 @@ export function ExchangePage() {
 	const exactQuoteLabel = exchange.quotedBabyExact
 		? `完整链上报价 ${exchange.quotedBabyExact} BABY`
 		: undefined;
+	const showAllowanceCleanup =
+		exchange.phase === "revoking" || exchange.needsAllowanceCleanup;
 	return (
 		<section className="product-page exchange-page">
 			<header className="product-page__hero product-page__hero--exchange">
@@ -27,6 +29,7 @@ export function ExchangePage() {
 					<select
 						id="exchange-asset"
 						value={exchange.asset}
+						disabled={exchange.isPending || exchange.needsAllowanceCleanup}
 						onChange={(event) =>
 							exchange.setAsset(event.target.value as "USDC" | "ETH")
 						}
@@ -39,6 +42,7 @@ export function ExchangePage() {
 						id="exchange-amount"
 						inputMode="decimal"
 						value={exchange.amount}
+						disabled={exchange.isPending || exchange.needsAllowanceCleanup}
 						onChange={(event) => exchange.setAmount(event.target.value)}
 					/>
 					<div className="exchange-quote">
@@ -89,6 +93,26 @@ export function ExchangePage() {
 							</button>
 						)}
 					</div>
+					{showAllowanceCleanup ? (
+						<div className="exchange-allowance-cleanup">
+							<p>
+								检测到 SwapRouter02 仍有剩余授权。清零需要一次单独的 Sepolia
+								钱包确认。
+							</p>
+							<button
+								className="button button--secondary"
+								type="button"
+								onClick={() => void exchange.revokeAllowance()}
+								disabled={!exchange.canRevokeAllowance}
+							>
+								{exchange.phase === "revoking" ? "清除授权中…" : "清除剩余授权"}
+							</button>
+						</div>
+					) : exchange.remainingAllowance === 0n ? (
+						<p className="identity-message" role="status">
+							SwapRouter02 授权已从链上确认归零。
+						</p>
+					) : null}
 					{exchange.message ? (
 						<p className="identity-message" role="status">
 							{exchange.message}
@@ -101,6 +125,15 @@ export function ExchangePage() {
 							rel="noreferrer"
 						>
 							查看兑换交易
+						</a>
+					) : null}
+					{exchange.revokeTransactionHash ? (
+						<a
+							href={`https://sepolia.etherscan.io/tx/${exchange.revokeTransactionHash}`}
+							target="_blank"
+							rel="noreferrer"
+						>
+							查看授权清理交易
 						</a>
 					) : null}
 				</section>

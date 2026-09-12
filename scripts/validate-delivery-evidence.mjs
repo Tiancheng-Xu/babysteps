@@ -604,6 +604,7 @@ function validateFinalPerformanceEvidence(machineEvidence, assetFacts) {
 export function validateImplementedFeatureJourneyEvidence(evidence, pageText) {
 	const errors = [];
 	const journeys = Array.isArray(evidence?.journeys) ? evidence.journeys : [];
+	const walkthrough = evidence?.completeFeatureWalkthrough;
 	const journeyIds = journeys.map(({ journeyId }) => journeyId);
 	if (
 		evidence?.schemaVersion !== 1 ||
@@ -643,12 +644,34 @@ export function validateImplementedFeatureJourneyEvidence(evidence, pageText) {
 	) {
 		errors.push("production stage requires final run proof");
 	}
+	if (
+		walkthrough?.status !== "mock-coverage-verified" ||
+		walkthrough?.scope !== "non-aws" ||
+		walkthrough?.journeyCount !== 30 ||
+		walkthrough?.provenance !==
+			"controlled-browser-local-production-build-mock-data" ||
+		walkthrough?.mockData !== true ||
+		walkthrough?.chainTransactions !== 0 ||
+		walkthrough?.awsWrites !== 0 ||
+		walkthrough?.fullJourneyProof !== false ||
+		walkthrough?.pageErrors !== 0 ||
+		walkthrough?.rootOverflow !== 0 ||
+		JSON.stringify(walkthrough?.viewports) !==
+			JSON.stringify([375, 390, 430, 1440]) ||
+		walkthrough?.media !==
+			"docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm" ||
+		walkthrough?.manifest !==
+			"docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm.json"
+	) {
+		errors.push("complete feature walkthrough boundary is invalid");
+	}
 	for (const marker of [
 		"31 个 Journey",
 		"当前实现边界",
 		...allowedJourneyStages,
 		"2026-08-30-implemented-feature-live-journey.json",
 		"2026-08-30-implemented-feature-live-journey.md",
+		"implemented-feature-full-walkthrough.webm",
 	]) {
 		if (!pageText.includes(marker)) {
 			errors.push(

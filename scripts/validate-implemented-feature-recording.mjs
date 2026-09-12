@@ -13,6 +13,12 @@ import {
 const expectedJourneyIds = implementedFeatureManifest.map(
 	({ journeyId }) => journeyId,
 );
+const expectedNonAwsJourneyIds = implementedFeatureManifest
+	.filter(({ requiredSystems }) => !requiredSystems?.includes("aws"))
+	.map(({ journeyId }) => journeyId);
+const expectedAwsExcludedJourneys = implementedFeatureManifest
+	.filter(({ requiredSystems }) => requiredSystems?.includes("aws"))
+	.map(({ journeyId }) => ({ journeyId, reason: "AWS_SCOPE_EXCLUDED" }));
 const forbiddenKey =
 	/(?:private.?key|mnemonic|secret|password|cookie|token|email|signature)/iu;
 const forbiddenValue =
@@ -44,6 +50,11 @@ function addPrivacyErrors(value, errors, path = "recording") {
 
 export function validateImplementedFeatureRecording(recording, journeyOutput) {
 	const errors = [];
+	const recordingScope = recording?.scope;
+	const nonAwsScope = recording?.scope === "non-aws";
+	const expectedRecordedJourneyIds = nonAwsScope
+		? expectedNonAwsJourneyIds
+		: expectedJourneyIds;
 	const results = Array.isArray(journeyOutput?.results)
 		? journeyOutput.results
 		: [];
@@ -55,17 +66,48 @@ export function validateImplementedFeatureRecording(recording, journeyOutput) {
 	if (recording?.provenance !== "visible-ui-controlled-browser") {
 		errors.push("PROVENANCE_INVALID");
 	}
+	if (
+		recordingScope !== undefined &&
+		recordingScope !== "full" &&
+		recordingScope !== "non-aws"
+	) {
+		errors.push("RECORDING_SCOPE_INVALID");
+	}
+	if (
+		nonAwsScope &&
+		(recording?.stage !== "sepolia-verified" ||
+			journeyOutput?.scope !== "non-aws")
+	) {
+		errors.push("RECORDING_SCOPE_INVALID");
+	}
+	if (
+		recordingScope === "full" &&
+		(recording?.stage !== "aws-live-verified" ||
+			journeyOutput?.scope !== "full" ||
+			JSON.stringify(recording?.excludedJourneys) !== JSON.stringify([]))
+	) {
+		errors.push("RECORDING_SCOPE_INVALID");
+	}
 	if (!/^[0-9a-f]{40}$/u.test(recording?.version ?? "")) {
 		errors.push("VERSION_INVALID");
 	}
 	if (
-		JSON.stringify(resultIds) !== JSON.stringify(expectedJourneyIds) ||
-		JSON.stringify(chapterIds) !== JSON.stringify(expectedJourneyIds)
+		JSON.stringify(resultIds) !== JSON.stringify(expectedRecordedJourneyIds) ||
+		JSON.stringify(chapterIds) !== JSON.stringify(expectedRecordedJourneyIds)
 	) {
 		errors.push("RECORDING_CHAPTERS_NOT_EXACT");
 	}
+	if (
+		nonAwsScope &&
+		JSON.stringify(recording?.excludedJourneys) !==
+			JSON.stringify(expectedAwsExcludedJourneys)
+	) {
+		errors.push("RECORDING_SCOPE_COVERAGE_INVALID");
+	}
 	for (const result of results) {
-		const validation = validateImplementedFeatureResult(result);
+		const validation = validateImplementedFeatureResult(result, {
+			requireTelemetry: !nonAwsScope,
+		});
 		if (!validation.valid) {
 			errors.push(`JOURNEY_RESULT_INVALID_${result?.journeyId ?? "UNKNOWN"}`);
 		}

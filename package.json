@@ -27,7 +27,8 @@
 		"visual:layout": "TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs layout",
 		"visual:reference": "pnpm test:visual-readiness && TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs reference",
 		"visual:test": "pnpm test:visual-readiness && TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs test",
-		"visual:approve": "TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs approve"
+		"visual:approve": "TZ=UTC LANG=zh_CN.UTF-8 node scripts/run-visual-gate.mjs approve",
+		"validate:implemented-feature-mock-recording": "node scripts/validate-implemented-feature-mock-recording.mjs --manifest docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm.json"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",

@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	retryBabyCoinRead: vi.fn(),
 	retryGrowthRead: vi.fn(),
 	retryNotebookRead: vi.fn(),
+	revokeAllowance: vi.fn(),
 	save: vi.fn(),
 	setDraft: vi.fn(),
 	setTransferAmount: vi.fn(),
@@ -260,10 +261,16 @@ describe("BabySteps App", () => {
 			phase: "idle",
 			message: undefined,
 			transactionHash: undefined,
+			revokeTransactionHash: undefined,
+			remainingAllowance: 7n,
+			needsAllowanceCleanup: true,
+			isPending: false,
 			quote: vi.fn(),
 			execute: vi.fn(),
+			revokeAllowance: mocks.revokeAllowance,
 			canQuote: true,
 			canExecute: false,
+			canRevokeAllowance: true,
 			switchToSepolia: vi.fn(),
 		});
 	});
@@ -454,6 +461,11 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByText("完整链上报价 10.650166471630484868 BABY"),
 		).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "清除剩余授权" }));
+		expect(mocks.revokeAllowance).toHaveBeenCalledOnce();
+		expect(
+			(screen.getByLabelText("支付资产") as HTMLSelectElement).disabled,
+		).toBe(true);
 
 		expect(
 			within(navigation)

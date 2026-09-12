@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Address, Hash } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -98,5 +98,133 @@ describe("useUniswapSwap business operations", () => {
 		);
 		expect(mocks.waitForTransactionReceipt).toHaveBeenCalled();
 		expect(result.current.phase).toBe("success");
+	});
+
+	it("lets the user clear a remaining router allowance and verifies it is zero", async () => {
+		mocks.readContract
+			.mockResolvedValueOnce(10_000_000n)
+			.mockResolvedValueOnce(7n)
+			.mockResolvedValueOnce(0n);
+		const { result } = renderHook(() => useUniswapSwap());
+		await act(async () => result.current.quote());
+		await act(async () => result.current.execute());
+
+		expect(result.current.remainingAllowance).toBe(7n);
+		expect(result.current.canRevokeAllowance).toBe(true);
+		act(() => result.current.setAsset("ETH"));
+		expect(result.current.asset).toBe("USDC");
+
+		await act(async () => result.current.revokeAllowance());
+
+		expect(mocks.writeContractAsync).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				functionName: "approve",
+				args: [expect.any(String), 0n],
+			}),
+		);
+		expect(result.current.remainingAllowance).toBe(0n);
+		expect(result.current.canRevokeAllowance).toBe(false);
+		expect(result.current.message).toBe("剩余授权已清除，并已从链上确认归零。");
+	});
+
+	it("keeps the revoke action locked while the wallet request is pending", async () => {
+		mocks.readContract
+			.mockResolvedValueOnce(10_000_000n)
+			.mockResolvedValueOnce(7n)
+			.mockResolvedValueOnce(0n);
+		const { result } = renderHook(() => useUniswapSwap());
+		await act(async () => result.current.quote());
+		await act(async () => result.current.execute());
+
+		let resolveApproval: ((hash: Hash) => void) | undefined;
+		mocks.writeContractAsync.mockImplementationOnce(
+			() =>
+				new Promise<Hash>((resolve) => {
+					resolveApproval = resolve;
+				}),
+		);
+		let firstRevoke: Promise<void> | undefined;
+		act(() => {
+			firstRevoke = result.current.revokeAllowance();
+			void result.current.revokeAllowance();
+		});
+
+		expect(result.current.phase).toBe("revoking");
+		expect(result.current.canRevokeAllowance).toBe(false);
+		expect(mocks.writeContractAsync).toHaveBeenCalledTimes(2);
+
+		resolveApproval?.(`0x${"b".repeat(64)}` as Hash);
+		await act(async () => firstRevoke);
+		expect(result.current.remainingAllowance).toBe(0n);
+	});
+
+	it("locks quote inputs while a swap is waiting for confirmation", async () => {
+		let resolveReceipt: (() => void) | undefined;
+		mocks.waitForTransactionReceipt.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveReceipt = () => resolve({ status: "success" });
+				}),
+		);
+		const { result } = renderHook(() => useUniswapSwap());
+		await act(async () => result.current.quote());
+		let swap: Promise<void> | undefined;
+		act(() => {
+			swap = result.current.execute();
+		});
+		await waitFor(() => expect(result.current.phase).toBe("swapping"));
+
+		expect(result.current.isPending).toBe(true);
+		expect(result.current.canQuote).toBe(false);
+		act(() => result.current.setAmount("2"));
+		expect(result.current.amount).toBe("1");
+
+		resolveReceipt?.();
+		await act(async () => swap);
+	});
+
+	it("shows the fail-closed cleanup gate but locks it until allowance readback resolves", async () => {
+		let resolveAllowance: ((value: bigint) => void) | undefined;
+		mocks.readContract
+			.mockResolvedValueOnce(10_000_000n)
+			.mockImplementationOnce(
+				() =>
+					new Promise<bigint>((resolve) => {
+						resolveAllowance = resolve;
+					}),
+			);
+		const { result } = renderHook(() => useUniswapSwap());
+		await act(async () => result.current.quote());
+		let swap: Promise<void> | undefined;
+		act(() => {
+			swap = result.current.execute();
+		});
+		await waitFor(() => expect(result.current.transactionHash).toBeDefined());
+
+		expect(result.current.needsAllowanceCleanup).toBe(true);
+		expect(result.current.canRevokeAllowance).toBe(false);
+
+		resolveAllowance?.(7n);
+		await act(async () => swap);
+		expect(result.current.needsAllowanceCleanup).toBe(true);
+		expect(result.current.canRevokeAllowance).toBe(true);
+	});
+
+	it("fails closed when the swap is confirmed but allowance readback fails", async () => {
+		mocks.readContract
+			.mockResolvedValueOnce(10_000_000n)
+			.mockRejectedValueOnce(new Error("rpc unavailable"));
+		const { result } = renderHook(() => useUniswapSwap());
+		await act(async () => result.current.quote());
+
+		await act(async () => result.current.execute());
+
+		expect(result.current.transactionHash).toBeDefined();
+		expect(result.current.remainingAllowance).toBeUndefined();
+		expect(result.current.needsAllowanceCleanup).toBe(true);
+		expect(result.current.canRevokeAllowance).toBe(true);
+		expect(result.current.message).toBe(
+			"兑换已确认，但授权读回失败；请继续清除剩余授权。",
+		);
 	});
 });

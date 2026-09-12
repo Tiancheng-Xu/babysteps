@@ -2457,6 +2457,21 @@ textarea[aria-invalid="true"] {
 	color: var(--ink-soft);
 }
 
+.exchange-allowance-cleanup {
+	display: grid;
+	gap: 12px;
+	padding: 16px;
+	border: 2px solid #9a5a32;
+	border-radius: 16px;
+	background: #fff0dd;
+	color: #57321f;
+}
+
+.exchange-allowance-cleanup p {
+	margin: 0;
+	font-weight: 700;
+}
+
 .identity-status-grid {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
