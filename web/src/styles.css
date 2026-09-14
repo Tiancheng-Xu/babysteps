@@ -309,6 +309,12 @@ table {
 	color: var(--ink);
 }
 
+.button--quiet {
+	border-color: transparent;
+	background: rgba(23, 59, 77, 0.06);
+	color: var(--ink-soft);
+}
+
 .button--web3 {
 	background: var(--purple);
 	color: var(--paper-strong);
@@ -404,6 +410,8 @@ table {
 
 .explorer-link {
 	display: inline-flex;
+	min-height: 44px;
+	align-items: center;
 	margin-top: 18px;
 	color: var(--purple);
 	font-weight: 800;
@@ -489,6 +497,168 @@ table {
 	background: rgba(255, 253, 247, 0.78);
 	font-size: 0.95rem;
 	font-weight: 700;
+}
+
+.guest-experience {
+	display: grid;
+	grid-template-columns: minmax(0, 0.78fr) minmax(420px, 1.22fr);
+	gap: clamp(22px, 4vw, 46px);
+	align-items: center;
+	padding: clamp(24px, 4vw, 42px);
+	border: 2px solid var(--ink);
+	border-radius: var(--card-radius);
+	background: linear-gradient(135deg, #fffdf7 0%, #f7efe0 100%);
+	box-shadow: var(--shadow);
+}
+
+.guest-experience__intro h2 {
+	margin-top: 8px;
+	font-family: var(--font-family-display);
+	font-size: clamp(1.8rem, 4vw, 3rem);
+	line-height: 1.16;
+}
+
+.guest-experience__intro > p:last-child {
+	margin-top: 16px;
+	color: var(--ink-soft);
+	font-size: 1.04rem;
+	line-height: 1.75;
+}
+
+.guest-experience__form,
+.guest-task-card {
+	display: grid;
+	gap: 16px;
+	padding: clamp(20px, 3vw, 30px);
+	border: 1px solid var(--color-border-subtle);
+	border-radius: 24px;
+	background: var(--paper-strong);
+	box-shadow: var(--shadow-soft);
+}
+
+.guest-experience__form {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guest-experience__form label {
+	display: grid;
+	gap: 8px;
+	font-weight: 800;
+}
+
+.guest-experience__form select {
+	width: 100%;
+	min-height: 48px;
+	padding: 9px 38px 9px 12px;
+	border: 2px solid var(--line);
+	border-radius: 14px;
+	background: #fff;
+	color: var(--ink);
+}
+
+.guest-experience__form .button {
+	grid-column: 1 / -1;
+}
+
+.guest-task-card__heading,
+.guest-task-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.guest-task-card__heading span,
+.guest-task-card__heading strong {
+	display: inline-flex;
+	min-height: 36px;
+	align-items: center;
+	padding: 6px 11px;
+	border-radius: 999px;
+	background: var(--sage-soft);
+	font-size: 0.86rem;
+}
+
+.guest-task-card h3 {
+	font-family: var(--font-family-display);
+	font-size: clamp(1.6rem, 3vw, 2.3rem);
+}
+
+.guest-task-card > p,
+.guest-task-card li {
+	line-height: 1.65;
+}
+
+.guest-task-card ol {
+	display: grid;
+	gap: 8px;
+	padding-left: 24px;
+}
+
+.guest-task-card__status {
+	padding: 12px 14px;
+	border-left: 5px solid var(--sage);
+	border-radius: 10px;
+	background: var(--sage-soft);
+	font-weight: 800;
+}
+
+.advanced-experience {
+	border: 2px solid var(--ink);
+	border-radius: var(--card-radius);
+	background: rgba(255, 253, 247, 0.78);
+	box-shadow: var(--shadow-soft);
+}
+
+.advanced-experience > summary {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: 12px 18px;
+	align-items: center;
+	min-height: 92px;
+	padding: 20px 26px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.advanced-experience > summary::-webkit-details-marker {
+	display: none;
+}
+
+.advanced-experience > summary::after {
+	content: "+";
+	font-size: 1.8rem;
+	font-weight: 800;
+}
+
+.advanced-experience[open] > summary::after {
+	content: "−";
+}
+
+.advanced-experience > summary span {
+	padding: 7px 10px;
+	border-radius: 999px;
+	background: var(--purple-soft);
+	color: var(--purple);
+	font-size: 0.8rem;
+	font-weight: 800;
+}
+
+.advanced-experience > summary strong {
+	font-family: var(--font-family-display);
+	font-size: 1.18rem;
+}
+
+.advanced-experience__note {
+	grid-column: 2;
+	color: var(--ink-soft);
+}
+
+.advanced-experience__content {
+	display: grid;
+	gap: var(--section-gap);
+	padding: 0 20px 20px;
 }
 
 .hero-showcase {
@@ -1174,6 +1344,9 @@ textarea[aria-invalid="true"] {
 }
 
 .product-nav__item {
+	display: inline-flex;
+	gap: 7px;
+	align-items: center;
 	min-height: 48px;
 	padding: 10px 15px;
 	border: 2px solid transparent;
@@ -1183,6 +1356,18 @@ textarea[aria-invalid="true"] {
 	font-weight: 800;
 	white-space: nowrap;
 	cursor: pointer;
+}
+
+.product-nav__tag {
+	padding: 2px 5px;
+	border-radius: 999px;
+	background: rgba(23, 59, 77, 0.08);
+	font-size: 0.64rem;
+	letter-spacing: 0.04em;
+}
+
+.product-nav__item[aria-current="page"] .product-nav__tag {
+	background: rgba(255, 255, 255, 0.15);
 }
 
 .product-nav__item:hover {
@@ -2102,6 +2287,29 @@ textarea[aria-invalid="true"] {
 	font-size: 1.05rem;
 	line-height: 1.75;
 	color: var(--ink-soft);
+}
+
+.parent-onboarding-note {
+	display: flex;
+	gap: 24px;
+	align-items: center;
+	justify-content: space-between;
+	padding: 24px;
+	border: 1px solid var(--color-border-subtle);
+	border-radius: 22px;
+	background: var(--paper-strong);
+	box-shadow: var(--shadow-soft);
+}
+
+.parent-onboarding-note h2 {
+	margin-top: 6px;
+	font-family: var(--font-family-display);
+}
+
+.parent-onboarding-note p:last-child {
+	margin-top: 8px;
+	color: var(--ink-soft);
+	line-height: 1.65;
 }
 
 .marketplace-token-card {
@@ -3535,6 +3743,7 @@ textarea[aria-invalid="true"] {
 
 @media (max-width: 920px) {
 	.hero-panel,
+	.guest-experience,
 	.wallet-shell,
 	.transfer-shell,
 	.notebook-shell,
@@ -3546,6 +3755,10 @@ textarea[aria-invalid="true"] {
 	.identity-layout,
 	.exchange-layout {
 		grid-template-columns: 1fr;
+	}
+
+	.guest-experience__form {
+		grid-template-columns: 1fr 1fr;
 	}
 
 	.keepsake-action-grid,
@@ -3625,6 +3838,36 @@ textarea[aria-invalid="true"] {
 	.product-nav__items {
 		margin-inline: -4px;
 		padding: 2px 4px 4px;
+	}
+
+	.guest-experience,
+	.guest-experience__form {
+		grid-template-columns: 1fr;
+	}
+
+	.guest-experience__form .button {
+		grid-column: auto;
+	}
+
+	.guest-task-card__actions,
+	.parent-onboarding-note {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.guest-task-card__actions .button,
+	.parent-onboarding-note .button {
+		width: 100%;
+	}
+
+	.advanced-experience > summary {
+		grid-template-columns: 1fr auto;
+		padding: 18px 20px;
+	}
+
+	.advanced-experience > summary span,
+	.advanced-experience__note {
+		grid-column: 1;
 	}
 
 	.product-page__hero {

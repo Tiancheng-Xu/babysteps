@@ -138,11 +138,10 @@ export function PrivyIdentityPanel() {
 	return (
 		<div className="identity-layout">
 			<section className="identity-card" aria-labelledby="identity-login-title">
-				<p className="section-kicker">PRIVY IDENTITY</p>
-				<h2 id="identity-login-title">登录与钱包能力</h2>
+				<p className="section-kicker">LIGHTWEIGHT SIGN-IN</p>
+				<h2 id="identity-login-title">先用 Google 或邮箱保存</h2>
 				<p>
-					Google、邮箱和外部钱包是三种登录入口；Smart Wallet
-					是登录后的链上账户能力，不是第四种登录方式。
+					Google、邮箱是推荐入口；外部钱包仍可选。登录不会自动公开宝宝资料，也不会立即产生链上交易。
 				</p>
 				<div className="identity-status-grid">
 					<div>
@@ -174,7 +173,7 @@ export function PrivyIdentityPanel() {
 							onClick={beginPrivyLogin}
 							disabled={!ready}
 						>
-							使用 Privy 登录
+							使用 Google 或邮箱登录
 						</button>
 					) : (
 						<>

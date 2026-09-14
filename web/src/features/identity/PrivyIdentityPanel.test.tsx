@@ -90,7 +90,9 @@ describe("PrivyIdentityPanel business operations", () => {
 	it("measures the Privy login UI through its completed login promise", async () => {
 		render(<PrivyIdentityPanel />);
 
-		fireEvent.click(screen.getByRole("button", { name: "使用 Privy 登录" }));
+		fireEvent.click(
+			screen.getByRole("button", { name: "使用 Google 或邮箱登录" }),
+		);
 
 		await waitFor(() =>
 			expect(mocks.measureBusinessPerformance).toHaveBeenCalledWith(

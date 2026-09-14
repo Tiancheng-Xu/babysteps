@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { taskMarketplaceV2Address } from "../../contracts/web3Contracts";
 import { formatBabyCoinAmount } from "../babycoin/formatBabyCoinAmount";
 import type { MarketplaceTask } from "./marketplaceModel";
@@ -37,7 +38,11 @@ function actionFor(
 		purchase.walletState === "disconnected" ||
 		purchase.walletState === "missing"
 	) {
-		return { label: "先在家长中心连接钱包", disabled: true } as const;
+		return {
+			label: "登录后参与任务",
+			disabled: false,
+			href: "/profile",
+		} as const;
 	}
 	if (purchase.phase === "ready-to-approve") {
 		return {
@@ -82,6 +87,7 @@ export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 		: undefined;
 	const action = actionFor(task, purchase);
 	const actionHandler = "onClick" in action ? action.onClick : undefined;
+	const actionHref = "href" in action ? action.href : undefined;
 	const isError =
 		purchase.phase === "read-error" || purchase.phase === "write-error";
 	const hasPurchased =
@@ -124,16 +130,22 @@ export function MarketplaceTaskCard({ task }: { task: MarketplaceTask }) {
 					<dd>{task.metadataUri}</dd>
 				</div>
 			</dl>
-			<button
-				type="button"
-				className="button button--primary"
-				disabled={action.disabled || purchase.isPending}
-				onClick={() => {
-					if (actionHandler) void actionHandler();
-				}}
-			>
-				{action.label}
-			</button>
+			{actionHref ? (
+				<Link className="button button--primary" to={actionHref}>
+					{action.label}
+				</Link>
+			) : (
+				<button
+					type="button"
+					className="button button--primary"
+					disabled={action.disabled || purchase.isPending}
+					onClick={() => {
+						if (actionHandler) void actionHandler();
+					}}
+				>
+					{action.label}
+				</button>
+			)}
 			{purchase.message ? (
 				<div
 					className={

@@ -29,17 +29,16 @@ export function GrowthMarketplacePage() {
 		<section className="product-page" aria-labelledby="marketplace-heading">
 			<header className="product-page__hero product-page__hero--marketplace">
 				<div>
-					<p className="product-page__eyebrow">Sepolia · 成长任务</p>
+					<p className="product-page__eyebrow">家庭活动 · 公开浏览</p>
 					<h1 id="marketplace-heading">成长任务市集</h1>
 					<p>
-						学习机构和育婴师发布成长任务，Chainlink VRF 一次锁定所有家长看到的
-						BABY 价格与开放时长。
+						先浏览适合家庭的真实成长任务；登录只用于保存和参与，链上购买是可选的进阶能力。
 					</p>
 				</div>
 				<aside className="marketplace-token-card" aria-label="购买流程">
-					<span>BabyCoin</span>
-					<strong>approve → buy</strong>
-					<small>测试资产 · 无真实价值</small>
+					<span>进阶参与</span>
+					<strong>登录 → 确认 → 记录</strong>
+					<small>Sepolia 测试资产 · 无真实价值</small>
 				</aside>
 			</header>
 
