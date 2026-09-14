@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { Address, Hash } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -108,6 +109,25 @@ describe("MarketplaceTaskCard", () => {
 		expect(mocks.switchToSepolia).toHaveBeenCalledOnce();
 		expect(mocks.approve).not.toHaveBeenCalled();
 		expect(mocks.buy).not.toHaveBeenCalled();
+	});
+
+	it("offers a continue path instead of a disabled wallet dead end", () => {
+		mocks.useTaskPurchase.mockReturnValue({
+			...mocks.useTaskPurchase(),
+			walletState: "disconnected",
+			phase: "unavailable",
+			canApprove: false,
+		});
+		render(
+			<MemoryRouter>
+				<MarketplaceTaskCard task={task} />
+			</MemoryRouter>,
+		);
+
+		expect(
+			screen.getByRole("link", { name: "登录后参与任务" }).getAttribute("href"),
+		).toBe("/profile");
+		expect(screen.queryByText("先在家长中心连接钱包")).toBeNull();
 	});
 
 	it("shows the confirmed purchase hash as public evidence", () => {

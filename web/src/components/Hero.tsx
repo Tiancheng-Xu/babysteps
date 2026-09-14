@@ -14,21 +14,23 @@ export function Hero() {
 				<div className="brand-lockup">
 					<BrandMark />
 					<div>
-						<p className="hero-panel__eyebrow">Sepolia 产品原型 · 测试网</p>
+						<p className="hero-panel__eyebrow">
+							中国 + 日本 · 海外亲子社交构想
+						</p>
 						<h1 id="hero-heading">BabySteps · 成长星球</h1>
 					</div>
 				</div>
 				<p className="hero-panel__lead">
-					记录一件小小的陪伴，让原创虚拟伙伴“星宝”在测试链上慢慢长大。
+					从一次三分钟的亲子陪伴开始，记录成长，为未来连接同阶段家庭打下基础。
 				</p>
 				<p className="hero-panel__value">
-					成长星无价格，只用于 Sepolia
-					测试网体验；可在测试钱包间赠送，不可兑换。
+					访客无需注册即可体验；需要长期保存、家庭协作或领取权益时，再使用
+					Google 或邮箱登录。
 				</p>
-				<ul className="hero-panel__chips" aria-label="测试网体验边界">
-					<li>公开链上便签</li>
-					<li>双账本成长星</li>
-					<li>测试钱包间赠送</li>
+				<ul className="hero-panel__chips" aria-label="亲子体验价值">
+					<li>三分钟开始</li>
+					<li>低敏成长记录</li>
+					<li>中国 + 日本试点构想</li>
 				</ul>
 			</div>
 

@@ -6,11 +6,16 @@ export function ProfilePage() {
 		<section className="product-page identity-page">
 			<header className="product-page__hero product-page__hero--identity">
 				<div>
-					<p className="section-kicker">PERSONAL CENTER</p>
+					<p className="section-kicker">SAVE WHEN YOU ARE READY</p>
 					<h1>个人中心</h1>
-					<p>登录只是入口；钱包签名建立可信会话，链下资料保持可修改。</p>
+					<p>
+						推荐使用 Google
+						或邮箱保存长期记录，无需提前准备或理解钱包；签名与链上账户是进阶可信能力。
+					</p>
 				</div>
-				<div className="provider-role-badge">Privy + SIWE 风格签名校验</div>
+				<div className="provider-role-badge">
+					轻量登录 · 隐私最小化 · 可选链上能力
+				</div>
 			</header>
 
 			{publicAppConfig.privyAppId ? (

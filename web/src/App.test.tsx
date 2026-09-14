@@ -280,11 +280,10 @@ describe("BabySteps App", () => {
 		growthState.stage = "star";
 		render(<App />);
 
-		expect(screen.getByText("Sepolia 产品原型 · 测试网")).toBeTruthy();
+		expect(screen.getByText("中国 + 日本 · 海外亲子社交构想")).toBeTruthy();
+		expect(screen.getByText(/访客无需注册即可体验/u)).toBeTruthy();
 		expect(
-			screen.getByText(
-				"成长星无价格，只用于 Sepolia 测试网体验；可在测试钱包间赠送，不可兑换。",
-			),
+			screen.getByRole("heading", { name: "先陪伴三分钟，再决定是否加入" }),
 		).toBeTruthy();
 		expect(screen.getByText(/请只用专用测试钱包/)).toBeTruthy();
 		expect(screen.getByText(/成年照护者自报/)).toBeTruthy();
@@ -307,11 +306,8 @@ describe("BabySteps App", () => {
 		expect(
 			screen.getByRole("heading", { name: "BabySteps · 成长星球" }),
 		).toBeTruthy();
-		expect(
-			screen.getByText(
-				"记录一件小小的陪伴，让原创虚拟伙伴“星宝”在测试链上慢慢长大。",
-			),
-		).toBeTruthy();
+		expect(screen.getByText(/从一次三分钟的亲子陪伴开始/u)).toBeTruthy();
+		expect(screen.getByText("钱包、成长星与链上记录")).toBeTruthy();
 		expect(
 			screen.getByRole("heading", { name: "步骤 1 · 连接测试钱包" }),
 		).toBeTruthy();
