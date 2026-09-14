@@ -1,0 +1,45 @@
+{
+  "format": "webm",
+  "version": "193291e",
+  "origin": "http://127.0.0.1:5173",
+  "viewport": "1440x900",
+  "locale": "zh-CN",
+  "timezone": "Asia/Shanghai",
+  "pageErrors": [],
+  "overflow": 0,
+  "scenes": [
+    {
+      "name": "首页：选择阶段、市场与城市",
+      "route": "/"
+    },
+    {
+      "name": "访客开始三分钟亲子任务",
+      "route": "/"
+    },
+    {
+      "name": "访客完成任务并看到本地保存边界",
+      "route": "/"
+    },
+    {
+      "name": "进阶能力：钱包与链上记录保持可选",
+      "route": "/"
+    },
+    {
+      "name": "任务页：先看内容，登录后再参与",
+      "route": "/tasks"
+    },
+    {
+      "name": "家长中心：体验记录与长期保存说明",
+      "route": "/parent"
+    },
+    {
+      "name": "个人中心：Google 或邮箱登录",
+      "route": "/profile"
+    },
+    {
+      "name": "Evidence：实现边界与可复核证据",
+      "route": "/evidence/"
+    }
+  ],
+  "boundary": "可见产品流程录制；访客任务使用浏览器本地保存，钱包/链上写入未触发；不代表 AWS Live 或生产 Field RUM。"
+}

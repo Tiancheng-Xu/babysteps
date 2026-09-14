@@ -25,6 +25,10 @@ import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/202
 import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png";
 import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url&no-inline";
 import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
+import babycareDemoVideo from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/babycare-low-friction-walkthrough.webm";
+import babycareDemoPoster from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/poster.png";
+import babycareDemoVideoManifest from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/babycare-low-friction-walkthrough.webm.json?url&no-inline";
+import babycareDemoPdf from "../../../output/pdf/babysteps-babycare-product-demo-guide-zh.pdf?url&no-inline";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
@@ -100,6 +104,30 @@ export function EvidencePage() {
 				</div>
 				<span className="evidence-status">Sepolia V2 闭环已验证</span>
 			</header>
+
+			<section className="evidence-recorded-proof" aria-labelledby="babycare-demo-title">
+				<header className="evidence-recorded-proof__header">
+					<div>
+						<p className="section-kicker">BABYCARE DEMO · VISITOR-FIRST</p>
+						<h2 id="babycare-demo-title">中国 + 日本海外亲子社交演示</h2>
+					</div>
+					<span className="evidence-diagram-card__status">本地生产构建 · 8 场景 · pageerror 0</span>
+				</header>
+				<p>
+					演示从宝宝阶段、体验地区和城市开始，访客无需登录即可完成一次三分钟亲子陪伴任务；登录、家庭协作和钱包/链上能力按价值逐步升级，不把复杂能力作为入口门槛。
+				</p>
+				<p>
+					录屏覆盖首页选择、任务开始与完成、进阶能力边界、任务页、家长中心、个人中心与 Evidence。访客记录仅保存在浏览器本地；中国、日本社交与门店试点需由 Babycare 后续确认，不用夹具冒充真实社交数据。
+				</p>
+				<figure className="evidence-video-proof">
+					<video controls preload="metadata" poster={babycareDemoPoster} src={babycareDemoVideo} aria-label="Babycare 访客优先产品演示录屏" />
+					<figcaption>Babycare 访客优先流程录屏；来源：本地生产构建，commit 193291e；pageerror 0、根级横向溢出 0。</figcaption>
+				</figure>
+				<nav className="evidence-links" aria-label="Babycare 演示证据链接">
+					<a className="explorer-link" href={babycareDemoPdf}>下载中文产品说明 PDF</a>
+					<a className="explorer-link" href={babycareDemoVideoManifest}>查看录屏机器清单</a>
+				</nav>
+			</section>
 
 			<section
 				className="evidence-recorded-proof"
