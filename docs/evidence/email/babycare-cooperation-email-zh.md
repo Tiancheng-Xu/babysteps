@@ -31,13 +31,14 @@ GitHub：https://github.com/Tiancheng-Xu
 
 ## 附件
 
-1. 徐天成｜Babycare 合作与数字化产品岗位简历（中文 PDF）
-2. BabySteps｜中国 + 日本海外亲子社交商业化产品说明（中文 PDF）
-3. BabySteps｜访客优先产品流程录屏（WebM，8 个场景）
+1. 徐天成-Babycare合作与岗位简历.pdf
+2. BabySteps-海外亲子社交商业化产品需求文档.pdf
+3. BabySteps-中国日本海外亲子社交产品说明.pdf
+4. BabySteps-访客优先产品流程录屏.webm（8 个场景）
 
 ## 在线证据
 
 - BabySteps 产品：https://babysteps.baby2b.online/
 - 产品 Evidence：https://babysteps.baby2b.online/evidence/
-- 中文产品说明 PDF：https://babysteps.baby2b.online/assets/babysteps-babycare-product-demo-guide-zh-CNer6EQd.pdf
-- 录屏机器清单：https://babysteps.baby2b.online/assets/babycare-low-friction-walkthrough.webm-eWCTsK_j.json
+- 中文产品说明 PDF：请以生产 Evidence 页面当前下载链接为准（发布后由 Cloudflare 生成哈希文件名）
+- 录屏机器清单：请以生产 Evidence 页面当前下载链接为准（发布后由 Cloudflare 生成哈希文件名）
