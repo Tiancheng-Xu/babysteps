@@ -15,10 +15,10 @@ import performanceJourneyVideo from "../../../docs/evidence/recordings/2026-08-3
 import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-31-performance-final/performance-live.webm";
 import implementedFeatureWalkthroughVideo from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm";
 import implementedFeatureWalkthroughPoster from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/poster.png";
-import babycareDemoVideo from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/babycare-low-friction-walkthrough.webm";
-import babycareDemoVideoManifest from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/babycare-low-friction-walkthrough.webm.json?url&no-inline";
-import babycareDemoCaptions from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/captions.vtt?url";
-import babycareDemoPoster from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/poster.png";
+import babycareDemoVideo from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏.webm";
+import babycareDemoVideoManifest from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-机器清单.json?url&no-inline";
+import babycareDemoCaptions from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-字幕.vtt?url";
+import babycareDemoPoster from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-海报.png";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
 import keepsakeDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-starbuddy-sepolia/keepsake-gallery-sepolia-desktop-1440.png";
@@ -29,7 +29,7 @@ import performanceFinalDesktopImage from "../../../docs/evidence/screenshots/202
 import performanceFinalMobileImage from "../../../docs/evidence/screenshots/2026-08-31-performance-final/performance-live-mobile-390.png";
 import implementedJourneyRecordUrl from "../../../docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md?url&no-inline";
 import performanceCoverageSemanticsUrl from "../../../docs/evidence/testing/2026-08-30-performance-coverage-semantics.md?url";
-import babycareDemoPdf from "../../../output/pdf/babysteps-babycare-product-demo-guide-zh.pdf?url&no-inline";
+import babycareDemoPdf from "../../../output/pdf/BabySteps-中国日本海外亲子社交产品说明.pdf?url&no-inline";
 
 const CONTRACTS = [
 	["BabyCoin", "0x108a…5471b · ERC-20 余额与 lifetimeEarned 成长值分离"],
