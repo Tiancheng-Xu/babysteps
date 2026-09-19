@@ -3,9 +3,9 @@
     {
       "logical_id": "PerformanceCluster",
       "resource_type": "AWS::ECS::Cluster",
-      "approval_reference": "User approved the BabySteps temporary ECS performance-control exception through 2026-09-02 after confirming on 2026-08-26 that it does not upgrade the AWS Free Plan or invalidate Free Tier credits",
-      "reason": "Read-only inventory found no reusable ECS cluster. The assignment explicitly requires ECS cleaning; this cluster has no Service, runs only one controlled Fargate task, and is deleted with the exact project stack after verification.",
-      "expires_at": "2026-09-02"
+      "approval_reference": "User authorized continuation on 2026-09-19 after AWS recovery; one temporary ECS cluster, one controlled Fargate task, exact stack cleanup, and no shared-foundation changes.",
+      "reason": "Read-only inventory found no reusable ECS cluster. The assignment requires ECS cleaning; this cluster has no Service, runs only one controlled Fargate task, and is deleted with the exact project stack after verification.",
+      "expires_at": "2026-09-19"
     }
   ]
 }
