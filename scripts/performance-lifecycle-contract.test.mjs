@@ -67,13 +67,33 @@ test("parsed workflow exposes the exact v1 dispatch inputs plus scheduled safety
 	assert.equal(dispatch.inputs.generation.required, false);
 	assert.equal(dispatch.inputs.expires_at.required, false);
 	assert.equal(dispatch.inputs.estimated_cost_usd.required, false);
-	assert.ok(workflow.on.schedule.length > 0, "scheduled expiry must exist");
+	assert.deepEqual(workflow.on.schedule, [{ cron: "*/15 * * * *" }]);
 	assert.deepEqual(workflow.concurrency, {
 		group: "babysteps-performance-control",
 		"cancel-in-progress": false,
 	});
 	assert.equal(job.environment, "aws-performance");
 	assert.equal(job.permissions["id-token"], "write");
+});
+
+test("scheduled expiry stays lightweight and cannot be blocked by an expired start approval", async () => {
+	const { steps } = await loadWorkflow();
+	for (const name of [
+		"Set up pnpm for operator dispatch",
+		"Set up Node for operator dispatch",
+		"Install dependencies for operator dispatch",
+		"Validate untrusted control request",
+	]) {
+		assert.equal(
+			stepByName(steps, name).if,
+			"github.event_name == 'workflow_dispatch'",
+		);
+	}
+
+	const resolve = stepByName(steps, "Resolve fixed action and expiry");
+	assert.match(resolve.run, /EVENT_NAME" = "schedule"/);
+	assert.match(resolve.run, /action=noop/);
+	assert.match(resolve.run, /action=expiry/);
 });
 
 test("stopped bootstrap is read-only, generation one, and cannot impersonate a normal stop", async () => {
