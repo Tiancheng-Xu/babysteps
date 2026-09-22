@@ -24,10 +24,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 11.17.0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @babysteps/aws test
@@ -41,10 +41,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 11.17.0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
@@ -100,14 +100,14 @@ jobs:
       RUN_ID: ${{ github.run_id }}
       WEB_ORIGIN: http://127.0.0.1:4173
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 11.17.0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Configure short-lived AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
           aws-region: us-east-1
@@ -142,11 +142,11 @@ jobs:
           pnpm --filter @babysteps/aws build:performance:cleaner
           cp -R aws/migrations aws/dist/performance/migrations
       - name: Enable ARM64 container builds
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
       - name: Configure isolated BuildKit builder
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Deploy temporary project stack
         id: deploy
         run: |
@@ -495,7 +495,7 @@ jobs:
         if: always() && steps.delete-stack.outcome != 'success'
         run: |
           printf '{"cloudFormationStackAbsent":false,"remainingProjectResources":-1,"schemaCleanupCertain":false,"sharedFoundationProtected":true,"manualRetryRequired":true}\n' > evidence/cleanup-incomplete.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: babysteps-performance-evidence-${{ github.run_id }}

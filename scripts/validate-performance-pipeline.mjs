@@ -53,11 +53,11 @@ const required = [
 	[workflow, "workflow_dispatch:", "workflow must be manual"],
 	[workflow, "environment: aws-performance", "approval environment is missing"],
 	[workflow, "id-token: write", "OIDC permission is missing"],
-	[workflow, "docker/setup-qemu-action@v3", "ARM64 emulation setup is missing"],
+	[workflow, "docker/setup-qemu-action@v4", "Node 24 ARM64 emulation setup is missing"],
 	[
 		workflow,
-		"docker/setup-buildx-action@v3",
-		"multi-platform builder setup is missing",
+		"docker/setup-buildx-action@v4",
+		"Node 24 multi-platform builder setup is missing",
 	],
 	[
 		workflow,

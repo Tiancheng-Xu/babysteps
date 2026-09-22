@@ -6,7 +6,7 @@ import {
 } from "./validate-aws-readiness.mjs";
 
 const valid = {
-	workflow: `workflow_dispatch:\npermissions:\n  id-token: write\nenvironment: aws-readiness\naws-actions/configure-aws-credentials@v4\naws s3 cp source.zip\n--source-type-override S3\n--source-location-override\nALLOW_AWS_PAUSABLE_DEPLOYMENT\n`,
+	workflow: `workflow_dispatch:\npermissions:\n  id-token: write\nenvironment: aws-readiness\naws-actions/configure-aws-credentials@v6\naws s3 cp source.zip\n--source-type-override S3\n--source-location-override\nALLOW_AWS_PAUSABLE_DEPLOYMENT\n`,
 	bootstrap: `repo:Tiancheng-Xu/babysteps:environment:aws-readiness\nConcurrentBuildLimit: 1\nType: S3\nComputeType: BUILD_GENERAL1_SMALL\nALLOW_AWS_PAUSABLE_DEPLOYMENT\n`,
 	buildspec: `pnpm --filter @babysteps/aws test\npnpm --filter @babysteps/aws typecheck\nsam validate --template-file aws/pausable-template.yaml\nnode scripts/validate-aws-readiness.mjs --deploy\nsam deploy --template-file aws/pausable-template.yaml\n`,
 };

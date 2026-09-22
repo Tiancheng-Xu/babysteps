@@ -2,9 +2,33 @@
   "schemaVersion": 1,
   "profile": "compact",
   "status": "verified",
-  "dataMode": "live",
-  "summary": "The complete performance observability pipeline was verified with one controlled AWS event, an on-demand ECS cleaner, a real PostgreSQL aggregate readback, and exact project cleanup.",
+  "dataMode": "historical-verified-snapshot",
+  "summary": "The performance observability pipeline has verified historical AWS evidence. The temporary runtime is intentionally asleep with zero active project residue and must not be presented as continuously live.",
   "evidenceUrl": "https://babysteps.baby2b.online/evidence",
+  "latestVerifiedEvidence": {
+    "runId": 33370197607,
+    "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/33370197607",
+    "record": "docs/evidence/deployment/2026-08-31-performance-aws-final.json",
+    "status": "verified-drained-and-cleaned"
+  },
+  "currentBoundary": {
+    "observedAt": "2026-09-21",
+    "mode": "cost-sleep",
+    "runtimeActive": false,
+    "activePerformanceResourceCount": 0,
+    "natGatewayCount": 0,
+    "sharedDatabase": "blocked-terminal-inaccessible-encryption-credentials",
+    "awsWritePolicy": "blocked-unless-separately-cost-approved"
+  },
+  "remainingTodos": {
+    "zeroIncrementalCost": [
+      "keep Node 24 GitHub Action contracts and historical Evidence current"
+    ],
+    "blocked": [
+      "do not restore or replace the terminal shared RDS instance",
+      "do not dispatch an AWS performance start without separate cost approval"
+    ]
+  },
   "workflow": {
     "runId": 31765573258,
     "url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
@@ -72,6 +96,7 @@
   ],
   "limitations": [
     "The controlled single-event run proves correctness and cleanup, not sustained production volume.",
-    "The temporary AWS stack was intentionally removed after validation to avoid idle charges; the public dashboard does not pretend that the AWS source remains continuously available."
+    "The temporary AWS stack was intentionally removed after validation to avoid idle charges; the public dashboard does not pretend that the AWS source remains continuously available.",
+    "The 2026-09-21 inventory is a dated zero-residue boundary, not authorization to restore the terminal shared database or dispatch a new paid run."
   ]
 }
