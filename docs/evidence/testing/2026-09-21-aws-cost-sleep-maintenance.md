@@ -30,10 +30,12 @@ GitHub Actions 已在本地更新到 Node 24 兼容主版本：
 - [x] 保留 Run `33370197607` 作为历史验证，不把 `cost-sleep` 冒充 Live AWS。
 - [x] 保留 2026-09-21 的性能项目零活跃残留和 NAT=0 历史快照，不冒充当前 AWS 状态。
 - [x] commit / push / PR / Cloudflare deploy：PR #88 已合并为 main `5360c3e`；验证 Run `35810476221` 通过；生产部署 `d08d933c-412a-4400-96c4-604ab4d1bdb6` 与首页、Evidence、深链接回读通过。
-- [ ] 获取新鲜 AWS 只读资源快照；当前 AWS CLI 会话已过期，不把历史零残留快照当作现在的观测。
+- [x] 获取新鲜 AWS 只读资源快照：2026-09-23 已完成 17 个启用区域的 EC2/NAT/RDS/ECS 检查，并保存[盘点收据](../deployment/2026-09-23-aws-inventory-receipt.json)。2026-09-21 的 CLI 会话过期记录仍是当时的历史状态。
 - [ ] `BLOCKED`：恢复或替换共享 RDS；无法证明零增量成本且违反终止资源边界。
 - [ ] `BLOCKED`：触发 AWS Performance `start` 或创建付费 Runtime；即使有赠送额度，也不能把余额等同于零增量成本。安全过期 schedule 仅允许保持读检查/空操作与已授权运行的清理职责。
 
 ## 验证边界
 
-本地测试证明 YAML 结构、版本合同和已有生命周期合同没有回归；GitHub hosted runner 已通过 PR 与 main 验证。没有远程派发 AWS 性能运行，也没有新鲜 AWS 只读快照，因此不能宣称当前 AWS Runtime 或资源清理状态已重新验证。
+截至 2026-09-21 发布时，本地测试证明 YAML 结构、版本合同和已有生命周期合同没有回归；GitHub hosted runner 已通过 PR 与 main 验证。当时没有远程派发 AWS 性能运行，也没有新鲜 AWS 只读快照，因此不能用发布验证证明当时的 AWS Runtime 或资源清理状态。
+
+2026-09-23 补验：AWS 只读清单显示 BabySteps Performance 控制参数为 `cleanup_verified`，没有可停止的运行中 EC2、ECS 服务/任务或 NAT；共享 RDS 仍处于 `inaccessible-encryption-credentials`，不是 BabySteps 项目清理目标。本次补验没有启动性能 Runtime，也没有 AWS 写操作。详见上述盘点收据。
