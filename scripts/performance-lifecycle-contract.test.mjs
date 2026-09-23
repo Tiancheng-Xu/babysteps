@@ -172,6 +172,33 @@ test("preflight is read-only and reuses the exact zero-residue gate", async () =
 	}
 });
 
+test("the expiring infrastructure budget exception gates starts, not cleanup or read-only actions", async () => {
+	const { steps } = await loadWorkflow();
+	const validation = stepByName(steps, "Validate untrusted control request");
+	const startBudgetGate =
+		/if test "\$REQUESTED_ACTION" = "start"; then\s+node scripts\/validate-performance-budget\.mjs\s+fi/;
+	const startBudgetGateMatch = validation.run.match(startBudgetGate);
+	assert.ok(
+		startBudgetGateMatch,
+		"start must retain the full cost exception gate",
+	);
+
+	const samValidationIndex = validation.run.indexOf("sam validate --lint");
+	const contractTestIndex = validation.run.indexOf(
+		"node --test scripts/performance-lifecycle-contract.test.mjs",
+	);
+	assert.ok(
+		startBudgetGateMatch.index + startBudgetGateMatch[0].length <
+			samValidationIndex,
+	);
+	assert.ok(samValidationIndex < contractTestIndex);
+	assert.equal(
+		validation.run.match(/scripts\/validate-performance-budget\.mjs/g)?.length,
+		1,
+		"the expiring cost exception check must not block stop, bootstrap, or preflight",
+	);
+});
+
 test("parsed workflow fixes region, stack, TTL and cost outside caller inputs", async () => {
 	const { workflow, job, source } = await loadWorkflow();
 	assert.deepEqual(job.env, {

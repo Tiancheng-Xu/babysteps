@@ -116,7 +116,9 @@ jobs:
           if test "$EVENT_NAME" = "workflow_dispatch" && test "$REQUESTED_ACTION" != "preflight"; then
             [[ "$OPERATION_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$ ]]
           fi
-          node scripts/validate-performance-budget.mjs
+          if test "$REQUESTED_ACTION" = "start"; then
+            node scripts/validate-performance-budget.mjs
+          fi
           sam validate --lint --region us-east-1 --template-file aws/performance-template.yaml
           node --test scripts/performance-lifecycle-contract.test.mjs
       - name: Configure short-lived AWS credentials
