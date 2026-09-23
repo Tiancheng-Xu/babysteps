@@ -15,21 +15,43 @@ const node24Actions = new Map([
 	["docker/setup-buildx-action", "v4"],
 ]);
 
+const approvedReusableWorkflows = new Set([
+	"Tiancheng-Xu/.github/.github/workflows/verify-project.yml@main",
+	"Tiancheng-Xu/.github/.github/workflows/verify-repository-policy.yml@main",
+]);
+
+function isLocalOrDockerAction(uses) {
+	return uses.startsWith("./") || uses.startsWith("docker://");
+}
+
 function findStaleActions(workflows) {
 	const stale = [];
 	const observed = new Set();
 	for (const { name, source } of workflows) {
 		const jobs = parse(source)?.jobs ?? {};
 		for (const job of Object.values(jobs)) {
+			if (
+				typeof job?.uses === "string" &&
+				!approvedReusableWorkflows.has(job.uses)
+			) {
+				stale.push(`${name}: unapproved reusable workflow ${job.uses}`);
+			}
 			const steps = Array.isArray(job?.steps) ? job.steps : [];
 			for (const step of steps) {
 				if (typeof step?.uses !== "string") continue;
+				if (isLocalOrDockerAction(step.uses)) continue;
 				const separator = step.uses.lastIndexOf("@");
-				if (separator <= 0) continue;
+				if (separator <= 0) {
+					stale.push(`${name}: malformed remote step action ${step.uses}`);
+					continue;
+				}
 				const action = step.uses.slice(0, separator);
 				const reference = step.uses.slice(separator + 1);
 				const expected = node24Actions.get(action);
-				if (!expected) continue;
+				if (!expected) {
+					stale.push(`${name}: unapproved remote step action ${step.uses}`);
+					continue;
+				}
 				observed.add(action);
 				if (reference !== expected) {
 					stale.push(`${name}: ${action}@${reference} -> @${expected}`);
@@ -49,8 +71,11 @@ test("runtime contract rejects quoted stale majors and unverified SHA pins", () 
     steps:
       - uses: "actions/checkout@v4"
       - uses: actions/setup-node@0123456789abcdef0123456789abcdef01234567
+      - uses: actions/cache@v4
       - uses: ./local-composite-action
       - uses: docker://alpine:3.20
+  delegated:
+    uses: untrusted/example/.github/workflows/build.yml@main
 `,
 		},
 	]);
@@ -58,6 +83,8 @@ test("runtime contract rejects quoted stale majors and unverified SHA pins", () 
 	assert.deepEqual(stale, [
 		"fixture.yml: actions/checkout@v4 -> @v7",
 		"fixture.yml: actions/setup-node@0123456789abcdef0123456789abcdef01234567 -> @v7",
+		"fixture.yml: unapproved remote step action actions/cache@v4",
+		"fixture.yml: unapproved reusable workflow untrusted/example/.github/workflows/build.yml@main",
 	]);
 	assert.deepEqual([...observed].sort(), [
 		"actions/checkout",
@@ -91,28 +118,35 @@ test("performance Evidence stays historical while AWS remains in cost-sleep", as
 		await readFile("docs/evidence/performance-observability.json", "utf8"),
 	);
 
+	assert.equal(evidence.status, "local-verified-remote-pending");
 	assert.equal(evidence.dataMode, "historical-verified-snapshot");
+	assert.deepEqual(evidence.currentReleaseEvidence, {
+		status: "pending-remote-verification",
+		runId: null,
+		url: null,
+	});
 	assert.deepEqual(evidence.currentBoundary, {
-		observedAt: "2026-09-21",
+		observedAt: null,
 		mode: "cost-sleep",
-		runtimeActive: false,
-		activePerformanceResourceCount: 0,
-		natGatewayCount: 0,
-		sharedDatabase: "blocked-terminal-inaccessible-encryption-credentials",
+		verification: "pending-fresh-read-only-aws-snapshot",
+		verificationBlocker: "aws-cli-session-expired",
+		sharedDatabaseAction: "blocked-pending-fresh-readback",
 		awsWritePolicy: "blocked-unless-separately-cost-approved",
 	});
-	assert.equal(evidence.latestVerifiedEvidence.runId, 33370197607);
+	assert.equal(evidence.historicalEvidence.latest.runId, 33370197607);
 	assert.equal(evidence.workflow, undefined);
 	assert.equal(evidence.result, undefined);
+	assert.equal(evidence.proof, undefined);
 	assert.equal(
-		evidence.baselineEvidence.role,
+		evidence.historicalEvidence.baseline.role,
 		"first-controlled-closed-loop-proof",
 	);
-	assert.equal(evidence.baselineEvidence.workflow.runId, 31765573258);
+	assert.equal(evidence.historicalEvidence.baseline.workflow.runId, 31765573258);
 	assert.equal(
-		evidence.baselineEvidence.result.remainingProjectRuntimeResources,
+		evidence.historicalEvidence.baseline.result.remainingProjectRuntimeResources,
 		0,
 	);
+	assert.equal(evidence.historicalEvidence.baseline.proof.length, 6);
 	assert.deepEqual(evidence.remainingTodos.zeroIncrementalCost, [
 		"keep Node 24 GitHub Action contracts and historical Evidence current",
 	]);

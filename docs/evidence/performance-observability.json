@@ -1,23 +1,21 @@
 {
 	"schemaVersion": 1,
 	"profile": "compact",
-	"status": "verified",
+	"status": "local-verified-remote-pending",
 	"dataMode": "historical-verified-snapshot",
-	"summary": "The performance observability pipeline has verified historical AWS evidence. The temporary runtime is intentionally asleep with zero active project residue and must not be presented as continuously live.",
+	"summary": "The performance observability pipeline has verified historical AWS evidence. This release has not produced a remote verification run, and the current AWS boundary awaits a fresh read-only snapshot.",
 	"evidenceUrl": "https://babysteps.baby2b.online/evidence",
-	"latestVerifiedEvidence": {
-		"runId": 33370197607,
-		"url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/33370197607",
-		"record": "docs/evidence/deployment/2026-08-31-performance-aws-final.json",
-		"status": "verified-drained-and-cleaned"
+	"currentReleaseEvidence": {
+		"status": "pending-remote-verification",
+		"runId": null,
+		"url": null
 	},
 	"currentBoundary": {
-		"observedAt": "2026-09-21",
+		"observedAt": null,
 		"mode": "cost-sleep",
-		"runtimeActive": false,
-		"activePerformanceResourceCount": 0,
-		"natGatewayCount": 0,
-		"sharedDatabase": "blocked-terminal-inaccessible-encryption-credentials",
+		"verification": "pending-fresh-read-only-aws-snapshot",
+		"verificationBlocker": "aws-cli-session-expired",
+		"sharedDatabaseAction": "blocked-pending-fresh-readback",
 		"awsWritePolicy": "blocked-unless-separately-cost-approved"
 	},
 	"remainingTodos": {
@@ -29,25 +27,65 @@
 			"do not dispatch an AWS performance start without separate cost approval"
 		]
 	},
-	"baselineEvidence": {
-		"role": "first-controlled-closed-loop-proof",
-		"workflow": {
-			"runId": 31765573258,
-			"url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
-			"commit": "485999c99225a6211d6e967fd72f83cfe0ed6c17",
-			"region": "us-east-1"
+	"historicalEvidence": {
+		"latest": {
+			"runId": 33370197607,
+			"url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/33370197607",
+			"record": "docs/evidence/deployment/2026-08-31-performance-aws-final.json",
+			"status": "verified-drained-and-cleaned"
 		},
-		"result": {
-			"controlledEvent": "LCP=321ms",
-			"acceptedEvents": 1,
-			"cleanerExitCode": 0,
-			"sampleCount": 1,
-			"p50": 321,
-			"p75": 321,
-			"p95": 321,
-			"schemaDeleted": true,
-			"projectStackDeleted": true,
-			"remainingProjectRuntimeResources": 0
+		"baseline": {
+			"role": "first-controlled-closed-loop-proof",
+			"workflow": {
+				"runId": 31765573258,
+				"url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+				"commit": "485999c99225a6211d6e967fd72f83cfe0ed6c17",
+				"region": "us-east-1"
+			},
+			"result": {
+				"controlledEvent": "LCP=321ms",
+				"acceptedEvents": 1,
+				"cleanerExitCode": 0,
+				"sampleCount": 1,
+				"p50": 321,
+				"p75": 321,
+				"p95": 321,
+				"schemaDeleted": true,
+				"projectStackDeleted": true,
+				"remainingProjectRuntimeResources": 0
+			},
+			"proof": [
+				{
+					"kind": "live-event",
+					"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+					"proves": "A controlled LCP=321 event was accepted by the live AWS ingest path."
+				},
+				{
+					"kind": "queue",
+					"location": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
+					"proves": "The accepted event completed the SQS stage before the cleaner ran."
+				},
+				{
+					"kind": "ecs-cleaner",
+					"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+					"proves": "The on-demand ECS cleaner reached STOPPED with exitCode=0."
+				},
+				{
+					"kind": "aggregate",
+					"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
+					"proves": "PostgreSQL returned sampleCount=1 and exact p50=p75=p95=321."
+				},
+				{
+					"kind": "dashboard",
+					"location": "docs/evidence/screenshots/2026-08-13-performance-verified/manifest.json",
+					"proves": "The responsive Evidence and performance views publish real-source status without a mock fallback."
+				},
+				{
+					"kind": "failure-retry",
+					"location": "docs/evidence/testing/2026-08-13-performance-aws-implementation.md",
+					"proves": "Meaningful bundle and PostgreSQL failures were fixed, exact recovery removed failed stacks, and the final retry passed."
+				}
+			]
 		}
 	},
 	"metrics": ["LCP", "CLS", "INP", "FCP", "TTFB"],
@@ -89,41 +127,10 @@
 		"implementationRecord": "docs/evidence/testing/2026-08-30-implemented-feature-live-journey.md",
 		"boundary": "Sepolia writes, visible wallet confirmations, AWS Live, final recording and production readback remain pending."
 	},
-	"proof": [
-		{
-			"kind": "live-event",
-			"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
-			"proves": "A controlled LCP=321 event was accepted by the live AWS ingest path."
-		},
-		{
-			"kind": "queue",
-			"location": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/31765573258",
-			"proves": "The accepted event completed the SQS stage before the cleaner ran."
-		},
-		{
-			"kind": "ecs-cleaner",
-			"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
-			"proves": "The on-demand ECS cleaner reached STOPPED with exitCode=0."
-		},
-		{
-			"kind": "aggregate",
-			"location": "docs/evidence/deployment/2026-08-13-performance-aws-closed-loop.json",
-			"proves": "PostgreSQL returned sampleCount=1 and exact p50=p75=p95=321."
-		},
-		{
-			"kind": "dashboard",
-			"location": "docs/evidence/screenshots/2026-08-13-performance-verified/manifest.json",
-			"proves": "The responsive Evidence and performance views publish real-source status without a mock fallback."
-		},
-		{
-			"kind": "failure-retry",
-			"location": "docs/evidence/testing/2026-08-13-performance-aws-implementation.md",
-			"proves": "Meaningful bundle and PostgreSQL failures were fixed, exact recovery removed failed stacks, and the final retry passed."
-		}
-	],
 	"limitations": [
 		"The controlled single-event run proves correctness and cleanup, not sustained production volume.",
 		"The temporary AWS stack was intentionally removed after validation to avoid idle charges; the public dashboard does not pretend that the AWS source remains continuously available.",
-		"The 2026-09-21 inventory is a dated zero-residue boundary, not authorization to restore the terminal shared database or dispatch a new paid run."
+		"No fresh AWS inventory is claimed for this release because the read-only AWS CLI session expired before a current snapshot could be captured.",
+		"Restoring the shared database or dispatching a paid performance run remains blocked pending separate authorization."
 	]
 }
