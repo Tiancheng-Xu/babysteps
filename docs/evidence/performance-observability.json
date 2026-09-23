@@ -1,10 +1,11 @@
 {
 	"schemaVersion": 1,
 	"profile": "compact",
-	"status": "local-verified-remote-pending",
+	"status": "planned",
 	"dataMode": "historical-verified-snapshot",
-	"summary": "The performance observability pipeline has verified historical AWS evidence. This release has not produced a remote verification run, and the current AWS boundary awaits a fresh read-only snapshot.",
+	"summary": "This release's remote verification is planned. The performance observability pipeline has verified historical AWS evidence, while the current AWS boundary awaits a fresh read-only snapshot.",
 	"evidenceUrl": "https://babysteps.baby2b.online/evidence",
+	"nextStep": "Verify this release through the repository PR checks and production readback; capture a fresh read-only AWS snapshot before making a current AWS resource claim.",
 	"currentReleaseEvidence": {
 		"status": "pending-remote-verification",
 		"runId": null,

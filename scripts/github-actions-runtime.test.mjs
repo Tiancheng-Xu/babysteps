@@ -118,8 +118,9 @@ test("performance Evidence stays historical while AWS remains in cost-sleep", as
 		await readFile("docs/evidence/performance-observability.json", "utf8"),
 	);
 
-	assert.equal(evidence.status, "local-verified-remote-pending");
+	assert.equal(evidence.status, "planned");
 	assert.equal(evidence.dataMode, "historical-verified-snapshot");
+	assert.match(evidence.nextStep, /read-only AWS snapshot/);
 	assert.deepEqual(evidence.currentReleaseEvidence, {
 		status: "pending-remote-verification",
 		runId: null,
