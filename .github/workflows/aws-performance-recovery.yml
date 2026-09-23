@@ -46,7 +46,7 @@ jobs:
       DATABASE_STATE: ${{ inputs.database_state }}
     steps:
       - name: Configure short-lived AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
           aws-region: us-east-1
@@ -248,7 +248,7 @@ jobs:
           printf '{"status":"cleanup_required","schemaCleanupVerified":false,"exactStackRetainedForRecovery":true,"sharedFoundationProtected":true,"ttlJanitorRetryRequired":true}\n' > evidence/recovery-cleanup-required.json
       - name: Preserve sanitized JSON recovery proof
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: babysteps-performance-recovery-${{ github.run_id }}
           path: evidence/*.json
@@ -266,7 +266,7 @@ jobs:
       AWS_REGION: us-east-1
     steps:
       - name: Configure read-only expiry discovery credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_PERFORMANCE_ROLE_ARN }}
           aws-region: us-east-1

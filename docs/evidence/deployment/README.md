@@ -28,6 +28,8 @@ Cloudflare Pages PR preview 与 main production 均已对应真实 Git commit，
 
 2026-08-31 最终全覆盖性能观测 Run `33370197607` 以受控 Chromium、Vite Web 和本地 Worker 代理连接临时 AWS 后端，访问 9 条产品路由，并让 232 个唯一事件穿过 API Gateway/Lambda → SQS/DLQ → 一次性 ECS Cleaner → PostgreSQL → Live Dashboard 完整链路。LCP、CLS、INP、FCP、TTFB、导航、七类资源、Long Task、SSR shell、水合与只读 Sepolia RPC 均有真实受控样本；TLS 因连接复用标为 unavailable，健康零事件与 not-exercised 分开呈现。Cleaner 232/232 写入，队列和 DLQ 全量排空。取证后已验证 Schema 不存在、精确项目 Stack 不存在、12 类项目资源全部为 0；共享 VPC、NAT、PostgreSQL、OIDC 与 Foundation 保持受保护。机器证据见 [`2026-08-31-performance-aws-final.json`](2026-08-31-performance-aws-final.json)。2026-08-29 的 Run `33279132965` 保留为旧版五路由历史记录，但不再代表最新完成态。
 
+2026-09-21 只读复核确认性能 Runtime 继续处于 `cost-sleep`：BabySteps Performance 活跃项目资源为 0，账号 NAT Gateway 数量为 0；共享 RDS 已进入终止阻塞状态，不允许恢复或替换。Run `33370197607` 仍是最新真实历史证明，不能把当前页面描述为持续在线 AWS 监控。剩余零增量成本维护仅包括 GitHub Actions Node 24 兼容版本和 Evidence 合同更新；启动性能 Runtime、恢复数据库或创建任何付费 AWS 资源都必须另行获得费用授权。现有安全过期 schedule 保持读检查/空操作边界，用于发现并清理已授权运行遗留，不等同于启动 Runtime。详见 [`../testing/2026-09-21-aws-cost-sleep-maintenance.md`](../testing/2026-09-21-aws-cost-sleep-maintenance.md)。
+
 ## 后续业务闭环证据清单
 
 部署时必须逐项保存以下证据：

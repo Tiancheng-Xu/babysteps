@@ -16,7 +16,7 @@ export function validateAwsReadiness({ workflow, bootstrap, buildspec }) {
 		[workflow, "workflow_dispatch:", "workflow must be manual"],
 		[workflow, "id-token: write", "workflow must request OIDC"],
 		[workflow, "environment: aws-readiness", "workflow must use approval environment"],
-		[workflow, "aws-actions/configure-aws-credentials@v4", "workflow must use OIDC action"],
+		[workflow, "aws-actions/configure-aws-credentials@v6", "workflow must use the Node 24 OIDC action"],
 		[workflow, "aws s3 cp source.zip", "workflow must upload immutable source"],
 		[workflow, "--source-type-override S3", "workflow must override source with S3"],
 		[workflow, "ALLOW_AWS_PAUSABLE_DEPLOYMENT", "workflow must open only the pausable gate"],

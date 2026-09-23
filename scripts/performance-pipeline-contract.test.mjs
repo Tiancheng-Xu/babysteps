@@ -601,9 +601,9 @@ test("performance workflow is manual, OIDC-only, validated and self-cleaning", a
 	assert.match(source, /workflow_dispatch:/);
 	assert.match(source, /environment: aws-performance/);
 	assert.match(source, /id-token: write/);
-	assert.match(source, /docker\/setup-qemu-action@v3/);
+	assert.match(source, /docker\/setup-qemu-action@v4/);
 	assert.match(source, /platforms: arm64/);
-	assert.match(source, /docker\/setup-buildx-action@v3/);
+	assert.match(source, /docker\/setup-buildx-action@v4/);
 	assert.match(source, /timeout-minutes:\s*50/);
 	assert.match(source, /delete-stack/);
 	assert.match(source, /concurrency:/);
@@ -1868,7 +1868,7 @@ test("the real browser run boots production config and preserves visual Evidence
 	assert.doesNotMatch(controlPlaneReadback, /iam get-role/);
 	assert.match(controlPlaneReadback, /fs\.existsSync\(cleanerSummaryPath\)/);
 	const upload = steps.find(
-		(step) => step.uses === "actions/upload-artifact@v4",
+		(step) => step.uses === "actions/upload-artifact@v7",
 	);
 	assert.equal(upload.with.path, "evidence/");
 	assert.equal(upload.with["if-no-files-found"], "error");
