@@ -1,0 +1,66 @@
+{
+  "capturedAt": "2026-09-23T12:55:04Z",
+  "scope": "AWS inventory and reversible suspension eligibility",
+  "account": "redacted",
+  "regionsChecked": 17,
+  "regionalChecks": [
+    "running EC2 instances",
+    "available NAT gateways",
+    "RDS instances",
+    "ECS clusters"
+  ],
+  "globalServicesChecked": [
+    "S3",
+    "Route 53",
+    "CloudFront",
+    "IAM OIDC",
+    "ACM"
+  ],
+  "costSignal": {
+    "monthlyBudgetUsd": 40,
+    "actualSpendUsd": 21.535,
+    "forecastedSpendUsd": 29.013,
+    "health": "HEALTHY",
+    "budgetExcludesCreditsAndRefunds": true,
+    "costExplorerPeriod": "2026-09-01 to 2026-09-23 (exclusive)",
+    "costExplorerUnblendedUsd": -0.0000002601,
+    "costExplorerSeptemberEstimated": true,
+    "note": "Budget and Cost Explorer use different filters; these figures are not interchangeable."
+  },
+  "usEast1": {
+    "runningEc2": 0,
+    "availableNatGateways": 0,
+    "ecsRunningTasks": 0,
+    "ecsServices": 0,
+    "rds": [
+      {
+        "identifier": "redacted-shared-postgres",
+        "status": "inaccessible-encryption-credentials",
+        "deletionProtection": true
+      }
+    ],
+    "elasticIps": 0,
+    "ebsVolumes": 0,
+    "ownedEbsSnapshots": 0,
+    "acmCertificates": 0,
+    "eventBridgeRules": 0,
+    "schedulerSchedules": 0,
+    "stepFunctionsStateMachines": 0,
+    "autoScalingGroups": 0,
+    "agentMarketConsumerMapping": "Disabled",
+    "babyStepsCodeBuildRecentBuilds": "completed",
+    "babyStepsPerformanceCleanupState": "cleanup_verified"
+  },
+  "global": {
+    "s3Buckets": 2,
+    "cloudfrontDistributions": 0,
+    "route53HostedZones": 0,
+    "iamOidcProviders": 1
+  },
+  "actionBoundary": {
+    "stoppableRunningResources": 0,
+    "performed": "read-only verification; no stop call required",
+    "destructiveActions": false,
+    "retained": "Shared protected RDS is not in a stoppable state; storage and serverless resources do not support an equivalent stop action."
+  }
+}
