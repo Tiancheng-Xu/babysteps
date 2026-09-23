@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "scope": "Node 24 GitHub Action compatibility and historical performance Evidence",
+  "pullRequest": "https://github.com/Tiancheng-Xu/babysteps/pull/88",
+  "sourceCommit": "5360c3e5455964d9a7c623a47443fc864c4d1a11",
+  "pullRequestCheckRun": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/35810215332",
+  "mainCheckRun": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/35810476221",
+  "cloudflareProject": "babysteps",
+  "productionDeploymentId": "d08d933c-412a-4400-96c4-604ab4d1bdb6",
+  "productionDeploymentUrl": "https://d08d933c.babysteps-83x.pages.dev/",
+  "productionUrl": "https://babysteps.baby2b.online/",
+  "evidenceUrl": "https://babysteps.baby2b.online/evidence/",
+  "verifiedRoutes": ["/", "/evidence/", "/performance/", "/profile/"],
+  "unknownRouteStatus": 404,
+  "reciprocalLinks": "passed",
+  "awsPerformanceDispatch": false,
+  "awsInfrastructureWrite": false,
+  "currentAwsInventory": "pending-fresh-read-only-snapshot",
+  "historicalAwsRunId": 33370197607
+}

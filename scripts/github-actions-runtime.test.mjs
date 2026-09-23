@@ -122,9 +122,11 @@ test("performance Evidence stays historical while AWS remains in cost-sleep", as
 	assert.equal(evidence.dataMode, "historical-verified-snapshot");
 	assert.match(evidence.nextStep, /read-only AWS snapshot/);
 	assert.deepEqual(evidence.currentReleaseEvidence, {
-		status: "pending-remote-verification",
-		runId: null,
-		url: null,
+		status: "repository-and-site-verified",
+		runId: 35810476221,
+		url: "https://github.com/Tiancheng-Xu/babysteps/actions/runs/35810476221",
+		sourceCommit: "5360c3e5455964d9a7c623a47443fc864c4d1a11",
+		productionDeploymentId: "d08d933c-412a-4400-96c4-604ab4d1bdb6",
 	});
 	assert.deepEqual(evidence.currentBoundary, {
 		observedAt: null,

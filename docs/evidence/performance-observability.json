@@ -3,13 +3,15 @@
 	"profile": "compact",
 	"status": "planned",
 	"dataMode": "historical-verified-snapshot",
-	"summary": "This release's remote verification is planned. The performance observability pipeline has verified historical AWS evidence, while the current AWS boundary awaits a fresh read-only snapshot.",
+	"summary": "The Node 24 maintenance release passed remote repository verification and production site readback. The performance pipeline has verified historical AWS evidence, while the current AWS resource boundary awaits a fresh read-only snapshot.",
 	"evidenceUrl": "https://babysteps.baby2b.online/evidence",
-	"nextStep": "Verify this release through the repository PR checks and production readback; capture a fresh read-only AWS snapshot before making a current AWS resource claim.",
+	"nextStep": "Capture a fresh read-only AWS snapshot before making a current AWS resource claim; do not start the performance runtime without separate cost approval.",
 	"currentReleaseEvidence": {
-		"status": "pending-remote-verification",
-		"runId": null,
-		"url": null
+		"status": "repository-and-site-verified",
+		"runId": 35810476221,
+		"url": "https://github.com/Tiancheng-Xu/babysteps/actions/runs/35810476221",
+		"sourceCommit": "5360c3e5455964d9a7c623a47443fc864c4d1a11",
+		"productionDeploymentId": "d08d933c-412a-4400-96c4-604ab4d1bdb6"
 	},
 	"currentBoundary": {
 		"observedAt": null,

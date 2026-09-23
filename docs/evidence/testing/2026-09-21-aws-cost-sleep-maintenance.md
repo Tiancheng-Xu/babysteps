@@ -2,7 +2,7 @@
 
 ## 结论
 
-本地维护阶段只修改 CI 合同与 Evidence，没有主动 workflow dispatch、AWS deploy 或 AWS 写操作。后续仓库 commit、push、PR、Cloudflare Git Integration 发布和生产回读属于独立发布阶段，不会启动 AWS 性能 Runtime。现有安全过期 schedule 继续执行读检查/空操作保护，不是本轮主动触发的性能运行。
+本地维护阶段只修改 CI 合同与 Evidence，没有主动 workflow dispatch、AWS deploy 或 AWS 写操作。随后通过 PR #88 发布到 Cloudflare Git Integration，生产回读通过；整个发布没有启动 AWS 性能 Runtime。现有安全过期 schedule 继续执行读检查/空操作保护，不是本轮主动触发的性能运行。
 
 - AWS Free Plan 为 `ACTIVE`，只读协调快照显示剩余 `$147.38`，有效期至 `2027-02-05`。这是日期化余额，不是后续云写操作的免费承诺。
 - 共享 NAT 已通过另一次审核后的 CloudFormation Change Set 移除；当前 NAT Gateway 数量为 `0`。
@@ -28,11 +28,12 @@ GitHub Actions 已在本地更新到 Node 24 兼容主版本：
 
 - [x] 本地升级 Node 24 兼容 Actions。
 - [x] 保留 Run `33370197607` 作为历史验证，不把 `cost-sleep` 冒充 Live AWS。
-- [x] 记录当前性能项目零活跃残留和 NAT=0 边界。
-- [ ] commit / push / PR / Cloudflare deploy：由独立发布流程验证并记录，本文件不提前宣称远程完成。
+- [x] 保留 2026-09-21 的性能项目零活跃残留和 NAT=0 历史快照，不冒充当前 AWS 状态。
+- [x] commit / push / PR / Cloudflare deploy：PR #88 已合并为 main `5360c3e`；验证 Run `35810476221` 通过；生产部署 `d08d933c-412a-4400-96c4-604ab4d1bdb6` 与首页、Evidence、深链接回读通过。
+- [ ] 获取新鲜 AWS 只读资源快照；当前 AWS CLI 会话已过期，不把历史零残留快照当作现在的观测。
 - [ ] `BLOCKED`：恢复或替换共享 RDS；无法证明零增量成本且违反终止资源边界。
 - [ ] `BLOCKED`：触发 AWS Performance `start` 或创建付费 Runtime；即使有赠送额度，也不能把余额等同于零增量成本。安全过期 schedule 仅允许保持读检查/空操作与已授权运行的清理职责。
 
 ## 验证边界
 
-本地测试只能证明 YAML 结构、版本合同和已有生命周期合同没有回归。由于本轮禁止远程派发，不能宣称 GitHub hosted runner 或 AWS 运行时已经重新验证；远程验证必须在单独授权的发布阶段进行。
+本地测试证明 YAML 结构、版本合同和已有生命周期合同没有回归；GitHub hosted runner 已通过 PR 与 main 验证。没有远程派发 AWS 性能运行，也没有新鲜 AWS 只读快照，因此不能宣称当前 AWS Runtime 或资源清理状态已重新验证。
