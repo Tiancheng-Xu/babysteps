@@ -16,8 +16,8 @@ import performanceFinalVideo from "../../../docs/evidence/recordings/2026-08-31-
 import implementedFeatureWalkthroughVideo from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/implemented-feature-full-walkthrough.webm";
 import implementedFeatureWalkthroughPoster from "../../../docs/evidence/recordings/2026-09-12-implemented-feature-walkthrough/poster.png";
 import babycareDemoVideo from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏.webm";
-import babycareDemoVideoManifest from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-机器清单.json?url&no-inline";
 import babycareDemoCaptions from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-字幕.vtt?url";
+import babycareDemoVideoManifest from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-机器清单.json?url&no-inline";
 import babycareDemoPoster from "../../../docs/evidence/recordings/2026-09-14-babycare-low-friction-demo/BabySteps-访客优先产品流程录屏-海报.png";
 import renderingDesktopImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-desktop-1440.png";
 import renderingMobileImage from "../../../docs/evidence/screenshots/2026-08-14-rendering-resilience/rendering-evidence-mobile-390.png";
