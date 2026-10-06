@@ -7,7 +7,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-OUT = "output/pdf/babysteps-babycare-product-demo-guide-zh.pdf"
+OUT = "output/pdf/BabySteps-中国日本海外亲子社交产品说明.pdf"
 navy = colors.HexColor("#153b53")
 ink = colors.HexColor("#243746")
 gold = colors.HexColor("#a47738")
