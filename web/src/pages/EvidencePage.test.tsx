@@ -6,7 +6,8 @@ afterEach(cleanup);
 
 describe("EvidencePage", () => {
 	it("lists every current, service, historical, and deferred role and mounts the Archify artifact only on demand", () => {
-		render(<EvidencePage />);
+		const { container } = render(<EvidencePage />);
+		expect(container.querySelectorAll("#prd-design")).toHaveLength(1);
 
 		expect(
 			screen.getByRole("heading", { name: "全角色与权限边界" }),

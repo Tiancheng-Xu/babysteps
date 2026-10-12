@@ -33,6 +33,26 @@ function appStream(markup: string): ReadableStream<Uint8Array> {
 }
 
 describe("Cloudflare Pages SSR worker", () => {
+	it.each(["/evidence", "/evidence/"])(
+		"returns the PRD summary once in the initial %s HTML response",
+		async (pathname) => {
+			const response = await createPagesHandler().fetch(
+				new Request(`https://example.test${pathname}`, {
+					headers: { accept: "text/html" },
+				}),
+				environment(),
+			);
+			const html = await response.text();
+			expect(response.status).toBe(200);
+			expect(response.headers.get("x-babysteps-render-mode")).toBe("ssr");
+			expect(html.match(/id="prd-design"/gu) ?? []).toHaveLength(1);
+			expect(html).toContain(
+				"fa772263435bfa388c9ecd811fa834e90decaec1c273565262efdacbb69ece40",
+			);
+			expect(html).toContain('href="/evidence/prd.html"');
+		},
+	);
+
 	it("serves the extensionless public PRD without replacing it with SSR", async () => {
 		const document =
 			"<!doctype html><html><body><h1>完整项目 PRD</h1></body></html>";

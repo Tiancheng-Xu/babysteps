@@ -13,6 +13,7 @@ describe("edge SSR route rendering", () => {
 		expect(html).toContain("<!--$-->");
 		expect(html).toContain("<!--/$-->");
 		expect(html).not.toContain("可用 BabyCoin");
+		expect(html).not.toContain('id="prd-design"');
 		expect(html).not.toMatch(/authorization|cookie|private key/iu);
 	});
 
