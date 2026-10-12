@@ -95,6 +95,10 @@ export function EvidencePage() {
 
 	return (
 		<section className="product-page" aria-labelledby="evidence-heading">
+			<p>
+				<a href="/evidence/prd.html">查看完整项目 PRD</a> ·
+				公开脱敏版，完整产品流程与技术讲述；设计与实测交付分别说明。
+			</p>
 			<header className="product-page__hero product-page__hero--evidence">
 				<div>
 					<p className="product-page__eyebrow">可复核工程记录</p>
