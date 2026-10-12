@@ -1,0 +1,247 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="BabySteps：完整产品需求、架构取舍与项目讲述，已有交付与规划分层。"><title>BabySteps · 项目 PRD</title><style>
+  :root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f7f8fb;color:#182332;font:16px/1.85 system-ui,sans-serif}header,main,footer{max-width:1100px;margin:auto;padding:24px}nav{display:flex;gap:20px;flex-wrap:wrap}a{color:#285ba8;text-underline-offset:4px}a:focus-visible{outline:3px solid #5b86cc;outline-offset:4px}h1{font-size:clamp(26px,4vw,40px);line-height:1.4}h2,h3,h4{scroll-margin-top:20px;line-height:1.5}article{background:white;padding:clamp(18px,4vw,44px);border:1px solid #dae0ea;border-radius:12px;overflow-wrap:anywhere}.notice{background:#eef3fb;padding:16px;border-left:4px solid #527ab8}.toc{border:1px solid #dce3ec;background:white;padding:20px;margin:24px 0;border-radius:12px}.toc ul{columns:2;padding-left:20px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;min-width:600px;width:100%;font-size:14px}th,td{border:1px solid #dae0ea;padding:10px;vertical-align:top}th{background:#edf2f8}pre{overflow-x:auto;background:#111d2e;color:#e6edf5;padding:18px;border-radius:8px}code{font:14px/1.7 ui-monospace,monospace}p code,li code,td code{background:#edf2f8;padding:2px 4px}li{margin:6px 0}@media(max-width:600px){header,main,footer{padding:16px}.toc ul{columns:1}nav{gap:12px}}@media print{body{background:white}.toc,header{display:none}article{border:0;padding:0}pre{white-space:pre-wrap}.table-wrap{overflow:visible}table{min-width:0}}
+  </style></head><body><header><nav aria-label="项目导航"><a href="https://baby2b.online/">作品集首页</a><a href="https://babysteps.baby2b.online/">项目主页</a><a href="https://babysteps.baby2b.online/evidence/">工作证明</a></nav></header><main><h1>BabySteps</h1><p>公开脱敏版 · 文档生成日期 2026-10-12</p><p class="notice">本文保留完整产品需求与项目讲述。本人已确认实际项目主控与上线；具体版本、增强设计、实测结果分别说明。新规划项目仅代表设计文档，文档完成不等于实现、模型效果或生产验收。内部来源保留原件，但不公开本机路径、联系方式、凭据与客户原始资料。</p><nav class="toc" aria-label="PRD章节目录"><ul><li><a href="#section-1">BabySteps：基于现状的完整 PRD 与项目讲述材料</a></li><li><a href="#section-2">1. 文档身份、版本与证据截止点</a></li><li><a href="#section-3">2. 一句话定义与产品背景</a></li><li><a href="#section-4">3. 用户、角色、权限与核心场景</a></li><li><a href="#section-5">4. 目标、成功指标与非目标</a></li><li><a href="#section-6">5. 产品边界、模块、路由与依赖</a></li><li><a href="#section-7">6. 端到端正常、失败与恢复流程</a></li><li><a href="#section-8">7. 需求矩阵</a></li><li><a href="#section-9">8. 状态机、业务规则、幂等与未知结果</a></li><li><a href="#section-10">9. 数据与领域模型</a></li><li><a href="#section-11">10. API、事件与外部接口</a></li><li><a href="#section-12">11. 架构与技术取舍</a></li><li><a href="#section-13">12. Agent / 模型特有要求</a></li><li><a href="#section-14">13. 非功能要求、安全、性能、成本与降级</a></li><li><a href="#section-15">14. 测试、验收与发布分账</a></li><li><a href="#section-16">15. 本人职责与协作边界</a></li><li><a href="#section-17">16. 已知缺口、风险与后续路线图</a></li><li><a href="#section-18">17. 项目讲述：30 秒、90 秒与 5 分钟</a></li><li><a href="#section-22">18. 追问树与大白话复习</a></li><li><a href="#section-23">19. 演示顺序、证据索引与必要确认问题</a></li></ul></nav><article><h2 id="section-1">BabySteps：基于现状的完整 PRD 与项目讲述材料</h2>
+<h3 id="section-2">1. 文档身份、版本与证据截止点</h3>
+<ul>
+<li>产品：BabySteps · 成长星球，成年照护者使用的亲子陪伴与 Sepolia 成长任务概念验证。</li>
+<li>归类：全栈 / Edge Web3 协作项目及课程工程实践。存在面向 Babycare 的中国、日本市场演示材料；没有证据证明已获得 Babycare 商业合作、签约、客户收入或正式社交产品运营。</li>
+<li>本文版本：2026-10-11 as-built PRD，重建已实现能力，不是新增开发授权。</li>
+<li>本轮源码基准：<code>内部证据路径（未公开）</code>，分支 <code>codex/pr83-import-order</code>，HEAD <code>cea8ee769afc7302b03630ba2268c99946bbc808</code>，本轮只读检查工作树干净。</li>
+<li>历史发布：PR #83 合并提交 <code>7d759af3e175ec9f867dd745c1023f500a8cb6ee</code>；2026-10-06 UTC 的生产回执证明 CI、Cloudflare Pages Git Integration、域名、深链及附件当时验收通过。本文没有重新浏览生产、连接钱包或查询云端。</li>
+<li>公开入口：<a href="https://babysteps.baby2b.online/" rel="noreferrer">主站</a> · <a href="https://babysteps.baby2b.online/evidence/" rel="noreferrer">项目 Evidence</a> · <a href="https://github.com/Tiancheng-Xu/babysteps/pull/83" rel="noreferrer">PR #83</a>。这些是证据入口，不等于本轮在线性确认。</li>
+<li>主仓库 <code>内部证据路径（未公开）</code> 仍处于 <code>fix/performance-final-snapshot</code>、<code>bd9b0a0</code>，有用户修改和未跟踪文件，包括 <code>web/src/App 2.tsx</code>；不把这个旧、脏工作树当成 PR #83 源码，也未改动它。</li>
+</ul>
+<p>本文把四种事实分开：<strong>源码实现、历史验证、历史生产发布、本人职责</strong>。源码存在不证明当前云服务在线；课程交付 complete 不证明所有新版 UI 又完成一次真实交易；简历写“参与”不证明独立负责全部系统。</p>
+<p>常用缩写先对照：PRD = Product Requirements Document，产品需求文档；DApp = Decentralized Application，去中心化应用；PR = Pull Request，代码变更请求；CI = Continuous Integration，持续集成；SSR = Server-Side Rendering，服务端渲染；CSR = Client-Side Rendering，客户端渲染；DOM = Document Object Model，浏览器文档对象模型；HTML = HyperText Markup Language，网页标记语言；API = Application Programming Interface，应用接口；RPC = Remote Procedure Call，远程过程调用；SDK = Software Development Kit，软件开发工具包；VRF = Verifiable Random Function，可验证随机函数；SBT = Soulbound Token，绑定凭证；ERC = Ethereum Request for Comments，以太坊应用标准编号；SLA = Service-Level Agreement，服务水平协议。D1、Privy、wagmi、viem 是服务或库名，不是产品功能。</p>
+<p>性能术语：LCP = Largest Contentful Paint，最大内容绘制；CLS = Cumulative Layout Shift，累积布局偏移；INP = Interaction to Next Paint，交互到下一次绘制；FCP = First Contentful Paint，首次内容绘制；TTFB = Time to First Byte，首字节时间；RUM = Real User Monitoring，真实用户监控。p50 / p75 / p95 是第50 / 75 / 95百分位，必须和样本量及测量条件一起说。</p>
+<h3 id="section-3">2. 一句话定义与产品背景</h3>
+<p>一句话：先让家庭用三分钟亲子任务获得轻量陪伴体验，再按需进入登录、成长积分、任务购买和链上证书等进阶能力。</p>
+<p>产品假设是：日常陪伴重复、反馈弱，家长需要容易开始和能看见积累的体验；钱包和测试网会提高第一次使用门槛，因此目前首页采用访客优先。没有可查证用户访谈、真实转化率或育儿效果评估，不能把这个假设讲成经大规模市场验证的结论。</p>
+<p>演进分为三层。早期 OnchainNotebook 用非 ERC-20 成长星记录喂养、散步、共读、赠送和公开便签；成长市集增加 ERC-20 BabyCoin、Provider 审核、Chainlink 随机任务、购买与不可转让证书；PR #83 所在版本把访客任务放到首页主路径，并公开中文产品说明和流程录屏。中国、日本、城市选项只是演示中的粗粒度本地选择，不代表当地活动、社交关系或推荐后台已经落地。</p>
+<h3 id="section-4">3. 用户、角色、权限与核心场景</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">角色</th><th scope="col">可做什么</th><th scope="col">权限依据与边界</th></tr></thead><tbody>
+<tr><td>访客 / 成年照护者</td><td>选宝宝阶段、市场、城市，开始和完成三分钟任务</td><td>无登录、无钱包；状态只存当前浏览器</td></tr>
+<tr><td>已登录用户</td><td>查看和修改自己的用户名、建立应用会话</td><td>Privy 登录入口与 Worker 钱包签名证明是不同环节</td></tr>
+<tr><td>家长 / 买方钱包</td><td>记录链上活动、获得或兑换测试 BABY、购买任务、提交完成说明、评论</td><td>Sepolia、有效会话、链上购买事实按操作分别校验</td></tr>
+<tr><td>Provider</td><td>建立任务草稿，向合约请求任务审核</td><td>必须有 <code>PROVIDER_ROLE</code>；登录不能授予该角色</td></tr>
+<tr><td>Owner / 管理员</td><td>审核或拒绝任务、暂停任务、管理 Provider；链下审核界面</td><td>合约管理权限及 Worker Owner 门控分别存在</td></tr>
+<tr><td>完成确认钱包</td><td>调用 <code>confirmCompletion</code> 铸造证书</td><td>必须有 <code>COMPLETION_RELAYER_ROLE</code>；Owner 身份本身不等于拥有该角色</td></tr>
+<tr><td>评审者 / 评审者</td><td>阅读 Evidence、源码、历史回执、受控录屏</td><td>能核对工程事实，不能据此推断商业营收或现实陪伴真实性</td></tr>
+</tbody></table></div>
+<p>重点记忆：<strong>钱包连接 ≠ 网络正确 ≠ 业务有权限 ≠ 交易成功</strong>。连上钱包只说明浏览器拿到了一个账户；Sepolia 正确只说明链对了；角色或已购买决定能否做业务；成功回执与重新读取才确定链上结果。</p>
+<h3 id="section-5">4. 目标、成功指标与非目标</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">类型</th><th scope="col">可用指标 / 验收口径</th><th scope="col">当前结论</th></tr></thead><tbody>
+<tr><td>首次体验</td><td>不连接钱包即可开始、完成并刷新恢复访客任务</td><td>源码与历史录屏支持；没有真实访客完成率</td></tr>
+<tr><td>购买安全</td><td>精确额度 approve，再 buy；每钱包每任务一次；以 receipt 为确认依据</td><td>合约、Hook、真实 Sepolia 历史回执支持</td></tr>
+<tr><td>内容保护</td><td>未登录 / 未购买拿不到受保护视频与完成说明</td><td>Worker 源码与课程交付记录支持；不是 DRM 防盗链承诺</td></tr>
+<tr><td>证书一致性</td><td>一个 purchaseId 对应一张锁定 SBT，重复相同请求返回原结果，冲突拒绝</td><td>当前源码与历史证书 #1 回读支持</td></tr>
+<tr><td>可读交付</td><td>公开页面 SSR 可读、直接深链可访问、未知路由真实 404</td><td>PR #83 历史发布回执及渲染专项证据支持</td></tr>
+<tr><td>性能证据</td><td>实际 sampleCount 与 p50 / p75 / p95，说明测量条件</td><td>2026-08-31 受控样本；不是当前生产用户数据</td></tr>
+</tbody></table></div>
+<p>非目标：儿童独立账户、姓名照片健康档案、医疗育儿判断、现实活动真实性证明、主网资产、提现收益、NFT 二级市场、跨链桥、真正的中日社交后台、已完成商业合作。也不承诺尚未测量的可用性 SLA、百万并发、收入增长、留存增长或“全自动完成认证”。</p>
+<p>旧 README v1 中“没有 API、登录、兑换、NFT”等非目标只适用于旧版成长记录；当前代码已有这些进阶模块。旧设计中的可转让 ERC-721、自动 Oracle 设想，不能覆盖当前 V2 的锁定 SBT 和角色受限确认机制。</p>
+<h3 id="section-6">5. 产品边界、模块、路由与依赖</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">路由</th><th scope="col">模块</th><th scope="col">服务端呈现策略</th></tr></thead><tbody>
+<tr><td><code>/</code></td><td>品牌、访客任务、可选进阶成长 / 钱包能力</td><td>public</td></tr>
+<tr><td><code>/tasks</code></td><td>成长任务市集、购买、已购内容、评论 / 完成入口</td><td>public 摘要，私有内容另行鉴权</td></tr>
+<tr><td><code>/parent</code></td><td>家长中心、钱包与成长记录</td><td>client-shell</td></tr>
+<tr><td><code>/keepsakes</code></td><td>星宝纪念馆、抽卡、融合与请求状态</td><td>public 摘要，钱包库存客户端读取</td></tr>
+<tr><td><code>/provider</code></td><td>Provider 请求、Owner 审核和完成确认界面</td><td>client-shell</td></tr>
+<tr><td><code>/exchange</code></td><td>USDC / ETH / WETH → BabyCoin</td><td>client-shell</td></tr>
+<tr><td><code>/profile</code></td><td>Privy、钱包签名、会话、用户名</td><td>client-shell</td></tr>
+<tr><td><code>/performance</code></td><td>性能指标、覆盖情况、历史快照</td><td>client-shell</td></tr>
+<tr><td><code>/evidence</code></td><td>架构、链上回执、发布、录屏、附件</td><td>public</td></tr>
+</tbody></table></div>
+<p>路由由 <code>web/src/routing/routeDefinitions.ts</code> 统一声明。客户端用真实路径与 History Router；服务端用 StaticRouter，而不是 hash 模拟页面。</p>
+<p>上游依赖：Sepolia、MetaMask / 钱包、Privy、Cloudflare Pages / Worker / D1、Chainlink VRF v2.5、Uniswap v3、The Graph 与 RPC。页面渲染 Worker 和业务 API Worker 是两种职责；业务接口在配置的 API 域名，不把 Pages 的 <code>/api</code> 静态绑定回退当成业务后端。临时 AWS 性能管线是独立取证能力，不能成为当前主体验在线的先决条件。</p>
+<h3 id="section-7">6. 端到端正常、失败与恢复流程</h3>
+<p>访客主流程：</p>
+<pre><code>选择阶段 / 市场 / 粗粒度城市
+  → 按阶段得到固定任务 → 开始 → 标记完成
+  → 当前浏览器本地保存 → 刷新恢复
+  → 按需进入个人中心或进阶 Web3</code></pre>
+<p>任务市集流程：</p>
+<pre><code>Provider 建草稿与 metadata hash → requestTask
+  → PendingReview → Owner approveTask
+  → PendingRandomness → VRF 回调 → Active / 固定价格与窗口
+  → 家长网络就绪、余额与资格校验 → exact approve → 成功回执
+  → buy → 成功回执 → Worker 验购买 → 解锁内容与评论
+  → 家长提交完成说明及 hash → 受限钱包确认完成
+  → GrowthCertificateSBT 按 purchaseId 铸一张证书 → 回读</code></pre>
+<p>失败与恢复：用户拒签时不增加成长值、不标记已购；网络不正确时提供切网；读取权限或购买事实失败时关闭敏感操作，RPC 不可用返回 503，不猜测用户没买。任务被拒绝、暂停或已过期时不能购买。approve 成功而 buy 没成功时，应按现有 allowance / purchase 状态重新核对，不把两步当一个不可分的操作。</p>
+<p>兑换后若 Router allowance 大于 0，当前 Hook 锁定下一次报价与输入，引导用户单独签名清零；链上读回为 0 才解除 Gate。纪念卡随机请求超时可按规则 recover 退款 / 解锁；迟到随机回调不能再结算已恢复请求。</p>
+<p>访客存储不可用时体验仍可继续，但不能保证刷新保留。损坏或不符合 v1 枚举的记录被当作无有效状态；本轮没有注入异常重跑测试。登录后的跨设备迁移、家庭长期档案不能从一个 CTA 推导为已实现。</p>
+<h3 id="section-8">7. 需求矩阵</h3>
+<p>状态含义：实现＝本轮读到源码；历史验证＝读到明确时间和版本的结果；历史生产＝读到部署回执；待补验＝不能借前者补成后者。P0 是此概念验证的正确性 / 核心交付优先级。</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">ID</th><th scope="col">需求 / 优先级</th><th scope="col">验收条件</th><th scope="col">实现与验证状态</th><th scope="col">证据</th></tr></thead><tbody>
+<tr><td>BS-01</td><td>访客体验 / P0</td><td>无身份即可开始、完成，刷新恢复；明确本地边界</td><td>实现；历史本地录屏；PR83 历史发布</td><td>E02、E03</td></tr>
+<tr><td>BS-02</td><td>钱包与网络 / P0</td><td>区分 missing、disconnected、wrong-network、ready</td><td>实现；真实链上历史支持；本轮未连接</td><td>E04、E08</td></tr>
+<tr><td>BS-03</td><td>双账本成长 / P0</td><td>Meal/Walk/Read 奖励 3/5/7；消费 / 转入不增长 lifetimeEarned</td><td>实现；历史课程验收</td><td>E05、E08</td></tr>
+<tr><td>BS-04</td><td>任务审批与随机 / P0</td><td>Provider 请求；Owner 审核；VRF 前不可买；2–4 BABY 锁价</td><td>实现；任务 #1/#2 历史链上</td><td>E05、E08、E09</td></tr>
+<tr><td>BS-05</td><td>任务购买 / P0</td><td>精确 approve → buy；买方来自 msg.sender；重复购买拒绝</td><td>实现；历史买入、收款与 allowance=0</td><td>E05、E08</td></tr>
+<tr><td>BS-06</td><td>链上链下绑定 / P0</td><td>stable taskKey；核对回执、事件、合约 metadata hash</td><td>实现；任务 #2 公开 API 历史闭环</td><td>E06、E09</td></tr>
+<tr><td>BS-07</td><td>身份与用户名 / P0</td><td>challenge 单次、5 分钟有效；签名地址匹配；12 小时会话</td><td>实现；历史签名 / D1 回读；本轮未登录</td><td>E06、E09</td></tr>
+<tr><td>BS-08</td><td>已购内容与评论 / P0</td><td>会话钱包真实买过才解锁 / 发评论；本人可编辑，Owner 隐藏</td><td>实现；课程映射与评论历史证据；新版全流程待补验</td><td>E06、E09、E15</td></tr>
+<tr><td>BS-09</td><td>完成与证书 / P0</td><td>submission 按 purchaseId 唯一；同 hash 可重试；受限角色确认；SBT 锁定</td><td>实现；历史临时授权确认并撤权；长期 Relayer 未落地</td><td>E05、E06、E08</td></tr>
+<tr><td>BS-10</td><td>BabyCoin 兑换 / P1</td><td>QuoterV2 报价、必要 wrap、有限 approve、1% 滑点、余授权读回</td><td>实现；真实池 / swap 历史证据；新版清理流程全 Journey 待补验</td><td>E07、E10、E15</td></tr>
+<tr><td>BS-11</td><td>纪念卡抽卡 / P1</td><td>扣 12 旧成长星、VRF 随机、SBT 不转让、超时恢复</td><td>实现；真实抽卡 #1 历史回执</td><td>E11</td></tr>
+<tr><td>BS-12</td><td>同卡融合 / P2</td><td>三张匹配卡、锁定、按规则烧卡 / 升级；超时解锁</td><td>源码与本地历史验证；无真实融合闭环</td><td>E11</td></tr>
+<tr><td>BS-13</td><td>Edge SSR / P0</td><td>public 可读；个人数据不进 SSR；路径版本 marker 与 DOM 匹配才水合</td><td>实现；历史生产渲染专项</td><td>E12</td></tr>
+<tr><td>BS-14</td><td>渲染失败降级 / P0</td><td>服务端错误 / 超时退静态壳；致命水合最多一次 CSR；可恢复错误只记录</td><td>实现；历史异常测试；本轮不重测</td><td>E12</td></tr>
+<tr><td>BS-15</td><td>性能观测 / P1</td><td>白名单、采样、批量、去重聚合；真实样本数；无样本 / 历史分别标</td><td>实现；232 事件历史受控闭环；AWS Runtime 清理</td><td>E13、E14</td></tr>
+<tr><td>BS-16</td><td>可复核发布 / P0</td><td>GitHub Gate → Cloudflare → 三类 URL、TLS、深链、404、附件</td><td>PR83 历史回执已验证；本轮只读文档</td><td>E01</td></tr>
+</tbody></table></div>
+<h3 id="section-9">8. 状态机、业务规则、幂等与未知结果</h3>
+<p><strong>任务合约实际枚举</strong>：<code>None → PendingReview → PendingRandomness → Active</code>，审核拒绝进入 <code>Rejected</code>。<code>paused</code> 是独立布尔值；是否过期由 <code>block.timestamp &gt;= closesAt</code> 决定。不要把设计稿中的 Draft、Expired、Paused、RandomnessFailed 全部说成 V2 合约枚举。链下草稿是另一个实体。</p>
+<p><strong>成长规则</strong>：成长值阶段 <code>&lt;3</code> 星蛋、<code>3–7</code> 星芽、<code>8–14</code> 探索星宝、<code>≥15</code> 闪耀星宝。成长奖励增加累计成长值与可用余额；赠送、兑换、购入、测试分配、Provider 收款不能伪造成本人活动成长。喂养冷却 3–4 小时 / 每日 6 次，散步 8–12 小时 / 每日 2 次，共读 4–6 小时 / 每日 3 次；按 UTC+8 日编号。虚拟伙伴冷却不代表真实婴儿需求，不用精确倒计时制造照护压力。</p>
+<p><strong>购买</strong>：任务 Active、未暂停、未过期、钱包未购过才允许 buy。合约用 <code>msg.sender</code> 得买方，用 <code>SafeERC20.safeTransferFrom</code> 扣精确锁价，交易失败整体回滚。<code>purchaseIdForBuyer[taskId][wallet]</code> 抑制重复购买。广播哈希不代表成功；回执与链上读回决定下一步。</p>
+<p><strong>完成</strong>：D1 的 <code>completion_submissions.purchase_id</code> 唯一，完全相同的 evidence hash、wallet、URI 返回已有记录；不同内容冲突返回 409。合约确认受 <code>COMPLETION_RELAYER_ROLE</code> 约束；相同已完成 evidence hash 走已有证书，不同 hash 拒绝。证书层再核对 recipient / URI，防止同 purchaseId 改成另一张证书。当前 D1 唯一键只使用 purchaseId；若将来同时服务多个 Marketplace，需要把合约身份纳入键，不能未经改造直接宣称跨合约幂等安全。</p>
+<p><strong>纪念卡</strong>：抽卡成本 12 个 OnchainNotebook 成长星，不能说成任意 BABY 余额都可支付。四阶段 / 四稀有度，稀有度概率 70/22/7/1；三张同系列同稀有度可融合，成功概率按级别 100/70/40%，失败随机烧一张、解锁两张，最高级别不能继续融合。请求 24 小时超时后可以 recover，退款或解锁，迟到回调忽略。真实抽卡已取证，真实融合仍需自然获得三张匹配卡。</p>
+<p><strong>未知结果</strong>：链上操作超时并不证明失败。先根据哈希、receipt、purchaseId、余额 / allowance 读取确认，避免重新创建同一笔业务。当前项目有查询和幂等基础，但没有证据说明已实现跨刷新持久化的通用交易恢复账本；项目讲述不要把其他 Agent 项目的操作账本搬过来。</p>
+<h3 id="section-10">9. 数据与领域模型</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">实体</th><th scope="col">主要字段与关系</th><th scope="col">来源、持久化与敏感性</th></tr></thead><tbody>
+<tr><td>GuestJourney</td><td>version=1、stage、market、city、taskId、started/completed、startedAt</td><td>localStorage <code>babysteps.guest-journey.v1</code>；粗阶段 / 城市；清除只删本项目键</td></tr>
+<tr><td>Wallet / Growth</td><td>address、chainId、余额、lifetimeEarned、活动计数 / 冷却</td><td>公链；地址、活动与交易可关联，不收私钥</td></tr>
+<tr><td>TaskDraft</td><td>id、provider_wallet、metadata_json / hash、时间</td><td>D1；标题说明、封面 / 视频链接、完成说明；无儿童档案</td></tr>
+<tr><td>PublishedTask / Task</td><td>chainId、marketplaceAddress、taskId；taskKey；provider、payee、价格、状态、窗口、metadataHash</td><td>D1 绑定链上真相；稳定键为 <code>chainId:marketplaceAddress:taskId</code></td></tr>
+<tr><td>Purchase</td><td>id、buyer、taskId、price、purchasedAt、completed、evidenceHash、certificateTokenId</td><td>链上；已购事实不能只信浏览器</td></tr>
+<tr><td>CompletionSubmission</td><td>task_key、purchase_id、buyer_wallet、evidence_text/hash、certificate_uri</td><td>D1；用户输入说明可能含私人信息，应只提交非敏感演示内容</td></tr>
+<tr><td>Certificate / Keepsake</td><td>purchaseId→tokenId、owner、tokenURI、locked；卡片 series / rarity / request</td><td>Sepolia SBT；不是可交易资产，链上历史不可真正删除</td></tr>
+<tr><td>Identity</td><td>profiles.username；challenge nonce_hash、used_at、expires_at；session token_hash、revoked_at</td><td>D1；Cookie 是会话凭据，不进入证据；服务器保存 token hash</td></tr>
+<tr><td>Comment / Audit</td><td>taskKey、wallet、content、hidden_at/by；actor、action、resource、detail</td><td>D1；隐藏是展示 / 审核状态，不能等同物理删除</td></tr>
+<tr><td>PerformanceEvent</td><td>event UUID、归一化 route、metric、env、version、时间与数值</td><td>浏览器白名单→临时 PostgreSQL；脱敏、幂等与聚合，不收钱包签名 / 用户输入</td></tr>
+</tbody></table></div>
+<p>链上便签限制 280 UTF-8 字节，清空只修改当前值，历史交易仍公开。访客选择不会形成真正儿童身份；浏览器粗粒度记录也没有跨设备备份承诺。源码未证明完整用户注销 / D1 删除 / 保留期限产品，不能承诺“退出登录即全部删除”。</p>
+<h3 id="section-11">10. API、事件与外部接口</h3>
+<p>当前业务 API 是 Hono Worker，<code>worker/src/app.ts</code> 配置同源白名单 CORS、credentials 和日志 requestId。</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">名称 / 入口</th><th scope="col">职责与错误语义</th></tr></thead><tbody>
+<tr><td><code>GET /api/health</code></td><td>Worker 健康 / schemaVersion，不证明所有外部依赖健康</td></tr>
+<tr><td><code>POST /api/auth/challenges</code></td><td>address + action；5 分钟 challenge；无效地址 / action 为 400</td></tr>
+<tr><td><code>POST /api/auth/sessions</code></td><td>精确 message 与恢复地址验证，原子消费 challenge；过期 / 无效签名 401、重复使用 409</td></tr>
+<tr><td><code>POST /api/auth/logout</code></td><td>撤销服务器会话并清 Cookie；不等于钱包撤 allowance</td></tr>
+<tr><td><code>GET/PUT /api/profile</code></td><td>会话钱包自己的用户名读写；输入校验，不让浏览器指定任意用户身份</td></tr>
+<tr><td><code>POST /api/task-drafts</code>、<code>PUT /api/task-drafts/:draftId</code></td><td>创建 / 修改草稿，校验 Provider 身份与内容</td></tr>
+<tr><td><code>POST /api/task-drafts/:draftId/bind</code></td><td>核对 transaction、TaskRequested 与 getTask；冲突 <code>TASK_BINDING_CONFLICT</code></td></tr>
+<tr><td><code>GET /api/tasks/:taskKey</code></td><td>公开元数据摘要；不回视频与完成说明</td></tr>
+<tr><td><code>GET /api/tasks/:taskKey/content</code></td><td>会话 + 链上购买门控；RPC 不可用 <code>CHAIN_READ_UNAVAILABLE</code> / 503</td></tr>
+<tr><td><code>GET/POST /api/tasks/:taskKey/comments</code></td><td>公开读、已购会话发；不把公开读等同公开写</td></tr>
+<tr><td><code>PUT /api/comments/:commentId</code>、<code>POST .../hide</code></td><td>作者编辑，Owner 隐藏；无权限 403</td></tr>
+<tr><td><code>POST /api/tasks/:taskKey/completions</code>、<code>GET /api/completions</code></td><td>买方提交；Owner 审核列表；缺购买 403，内容冲突 409</td></tr>
+<tr><td><code>/api/performance/*</code></td><td>Worker 到性能 Origin 的受控代理；非 AWS Journey 明确 503 / 未采集</td></tr>
+</tbody></table></div>
+<p>链上入口：<code>requestTask/approveTask/rejectTask/setTaskPaused/buy/confirmCompletion</code>；事件包括 <code>TaskRequested/TaskApproved/TaskRejected/TaskRandomized/PurchaseCreated/CompletionConfirmed/CertificateMinted</code>。The Graph 索引事件并提供 GraphQL 查询，是读取视图，不是购买鉴权的唯一真相。Uniswap 使用 QuoterV2 与 SwapRouter02；实际最小到账由报价和 100 basis points（1%）滑点计算。API 的返回 shape、错误码需以源码为准，本文没有虚构新的社交 / 家庭 / 医疗接口。</p>
+<h3 id="section-12">11. 架构与技术取舍</h3>
+<pre><code>Pages Edge SSR 公共摘要 → React 水合 → 客户端激活 Privy / wagmi
+                                      ├─ viem → Sepolia 合约 / VRF / Uniswap
+                                      └─ 业务 Worker → D1 元数据 / 会话 / 评论
+合约事件 → The Graph → 可检索历史视图
+浏览器性能白名单 → Worker → 临时 AWS 队列 / Cleaner → PostgreSQL 聚合</code></pre>
+<ol>
+<li><strong>先体验再钱包。</strong> 访客任务用固定阶段规则和 localStorage；替代是强制钱包登录或先建家庭云档案。前者使体验更容易开始，代价是不能同步、不能证明真实活动。代码实际 <code>guestTaskFor(stage)</code> 只按阶段选任务，market / city 不参与个性化算法；不要说“AI 匹配中日同城活动”。</li>
+<li><strong>链上权利与链下内容分开。</strong> 合约保存价格、购买、角色、完成 hash，D1 保存视频链接、文字与会话。替代是全部内容上链；目前组合降低写入成本和隐私暴露，但依赖 Worker / 链下内容可用性，metadata hash 只证明内容一致，不证明内容真实。</li>
+<li><strong>SSR（Server-Side Rendering，服务端渲染）与私有激活分开。</strong> Cloudflare 输出可读公共壳；钱包、Privy、余额、会话客户端挂载。替代为纯 CSR（Client-Side Rendering，客户端渲染）或所有用户数据 SSR。当前选择保证公共页面可读并减少私有数据进入共享 HTML / 缓存；不等于已实现 SSG 或岛屿架构。</li>
+<li><strong>精确 allowance 代替无限授权。</strong> 额度读回、approve、buy / swap 分阶段确认。多了一笔交易或残余清零，但便于解释余额和权限暴露。登录签名不能代替 ERC-20 approve，approve 也不是实际付款。</li>
+<li><strong>VRF 与完成审查职责分开。</strong> VRF（Verifiable Random Function，可验证随机函数）只提供可核验随机价格 / 窗口 / 卡片结果。替代是服务端随机数；VRF 可核对，但需要订阅余额和异步等待。它不能判断现实陪伴是否完成，完成目前是受限角色的批准事实。</li>
+<li><strong>任务证书不可转让。</strong> V2 用 ERC-721 + ERC-5192 SBT（Soulbound Token，绑定凭证）；替代是可交易 NFT。当前让完成证明和买方绑定；它也不是实名或真实成长证明，不能保证换钱包后继承。</li>
+<li><strong>性能链路按受控运行取证。</strong> SQS 解耦、一次性 ECS Cleaner 清洗、UUID 去重、小时聚合；替代是直接同步写数据库或常驻服务。设计能展示可靠接收与清洗，代价是较多组件与成本管理；当前无需把临时管线长期运行来维持作品站。</li>
+</ol>
+<h3 id="section-13">12. Agent / 模型特有要求</h3>
+<p>本项目核心是确定性应用与 Web3 合约，不是 AI Agent 产品。本轮源码未找到可据以说明大模型调用、工具自主规划、RAG（Retrieval-Augmented Generation，检索增强生成）或模型效果评测的依据。</p>
+<p>访客推荐是固定阶段到固定任务映射；Owner 审核、VRF、性能 Gate 不是模型推理。AI 参与开发协作是工程工作方式，不代表应用里存在 AI 功能；不能从 Agent Market 的 LangGraph、Checkpoint、工具账本借入本项目叙述。若岗位问 Agent 经验，应明确换到对应项目，再讲模型职责和确定性规则。</p>
+<h3 id="section-14">13. 非功能要求、安全、性能、成本与降级</h3>
+<p><strong>身份安全。</strong> Worker 不接收私钥 / 助记词；challenge nonce 一次使用且有时限；会话 Cookie 为 HttpOnly、Secure、SameSite=Lax，服务器保存 token hash。CORS 允许配置来源、凭据与必要方法；它不能代替业务鉴权。API session、Provider / Owner / Relayer 角色、链上已购事实分别校验。</p>
+<p><strong>隐私。</strong> RenderState 只白名单 <code>mode/pathname/version</code>，安全序列化转义 <code>&lt; &gt; &amp;</code> 与 Unicode 行分隔符；不能把地址、会话、余额或儿童资料注入初始化状态。client-shell、含 query / Authorization / Cookie、404 请求使用 <code>private,no-store</code>。事件日志只输出受限元数据，证据不写 Token、Cookie、完整签名或儿童输入。</p>
+<p><strong>渲染。</strong> Pages 默认 2500 ms 硬超时；失败输出 CSR 静态文档。客户端只有 state.mode=ssr、路径和构建版本匹配、DOM marker=<code>ssr</code>、根有子节点才 <code>hydrateRoot</code>。可恢复水合错误记录 <code>hydration.recoverable_error</code>；未捕获错误或同步异常最多一次卸载、清空根、<code>createRoot</code> 重挂载并记录 <code>csr.fallback</code>。这不是把所有告警都当致命故障。</p>
+<p><strong>可访问性与响应式。</strong> 产品希望大文字、大按钮、键盘焦点、状态文字和 reduced-motion；访客版验收要求 375 / 390 / 430 / 1440 无根级横向溢出，主要触控目标至少 44px。旧版目标含 320px 与 48px；本轮未重新审全站 WCAG，不宣称全部达到 AA。</p>
+<p><strong>性能口径。</strong> 2026-08-31 受控运行 LCP n=6、P75=2568ms，CLS n=9、P75=0.090，INP n=4、P75=48ms。LCP 受控值仍有改进空间，样本小且运行条件特定；FCP / TTFB 是诊断指标。TLS 不可分时标 unavailable；执行但健康零错误、没有样本、功能未执行必须区分。不要宣称线上用户性能优化了某个百分比。</p>
+<p><strong>成本 / 运行。</strong> 8月31日性能取证后项目 schema / Stack 与所列临时资源已清理。9月23日 17 区域清单 <code>stoppableRunningResources=0</code>，仍保留共享受保护 RDS，状态为 <code>inaccessible-encryption-credentials</code>，不是“已停止且零费用”；S3 等也不能用 stop 等价处理。该清单是历史快照，本轮未做 AWS 操作，不能说当前账号全部停机、删除或免费。</p>
+<h3 id="section-15">14. 测试、验收与发布分账</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">层次</th><th scope="col">已查证的历史结果</th><th scope="col">本轮边界</th></tr></thead><tbody>
+<tr><td>源码</td><td>PR83 源 HEAD cea8ee7；wallet / SSR / Worker / 合约 / 访客规则可读</td><td>本轮已只读核对；未运行应用</td></tr>
+<tr><td>局部 / 全量历史测试</td><td>8月14日渲染证据记 Web 42 文件 / 216 项，类型检查与双构建通过，built Worker 4/4；记录错误、超时、旧 path/version、one-shot fallback</td><td>这些是当时版本；不当 PR83 新跑结果</td></tr>
+<tr><td>合约 / 外部闭环</td><td>8月11日任务 #1 approve、buy、confirmCompletion、SBT #1、撤临时角色；8月12日任务 #2 D1/API/评论，Graph 查询</td><td>真实测试网历史；本轮无交易或 RPC 重查</td></tr>
+<tr><td>纪念卡</td><td>8月14日真实 VRF 抽卡 #1，15→3 余额，lifetimeGrowth=15，tokenLocked=true</td><td>融合无真实回执；不升级 partial</td></tr>
+<tr><td>性能受控闭环</td><td>8月31日 Run33370197607、f15bc873；232 唯一事件 / 49 批；Cleaner 232/232；队列空、清理通过</td><td>历史受控样本；不是 live 或生产 Field RUM</td></tr>
+<tr><td>新版非 AWS 全流程</td><td>9月9日独立 30 项 Journey dry-run / scope 合同本地通过；PERF-01 明确排除</td><td>尚未取得新版 30 项可见钱包真实 Journey、完整录屏 / 人工审阅</td></tr>
+<tr><td>访客演示</td><td>version193291e、1440×900、8 场景、pageErrors=[]、overflow=0；只本地访客操作</td><td>不含钱包写、跨设备保存、AWS live</td></tr>
+<tr><td>PR83 CI / 生产</td><td>10月6日 UTC：CI37397187076 success，Cloudflare8cfa01e4 success；部署 / pages.dev / 品牌域名 bundle hash 一致；深链200、未知404、附件200、Evidence无 pageerror</td><td>历史回执，不是本轮实时可用性测试；独立审查责任未从回执推断</td></tr>
+</tbody></table></div>
+<p>运行结果中 “complete” 的对象必须说清楚：任务 #1 合约闭环完整，不等于商业平台完整；抽卡闭环 complete，不等于融合 complete；PR83 productionVerified=true，不等于 AWS 全量生产运行或本次重新测完所有业务。</p>
+<h3 id="section-16">15. 本人职责与协作边界</h3>
+<p><strong>当前简历声明</strong>（2026-10-08《徐天成-全栈与AI-Agent简历》）：参与成长任务、家长中心、链上交互的全栈协作；区分钱包 / 网络 / 授权 / 回执；Edge SSR 受控水合与 CSR 回退；隔离服务端、身份、钱包，并区分真实样本 / 无样本 / 历史快照。用户要求以这个项目复习项目讲述；本文不把简历声明升级成逐模块独立代码所有权。</p>
+<p><strong>工程可核验事实</strong>：仓库具备上述模块、测试和外部交付；真实 Sepolia、D1、Graph、性能和生产回执可定位。仓库在 <code>Tiancheng-Xu/babysteps</code> 下，不足以证明本人独立设计 / 手写每行代码。与 AI、其他协作者共同完成的部分，应按实际说“我参与设计、实现、审查、验证中的哪些环节”。</p>
+<p><strong>需本人确认</strong>：哪些页面 / Hook / Worker / 合约是自己主导，哪些由协作者或 AI 先写；SSR 故障机制由谁提出；自己实际操作哪一笔验收；架构权衡是否本人参与；课程要求与自主产品增强的具体范围。未经确认不写团队人数、管理职责、生产事故、客户背书、上线收益。</p>
+<h3 id="section-17">16. 已知缺口、风险与后续路线图</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">优先级</th><th scope="col">缺口 / 风险</th><th scope="col">合理后续；不代表本轮启动</th></tr></thead><tbody>
+<tr><td>P0</td><td>新版 30 项非 AWS Journey 缺完整可见交易与录屏，历史任务证据和新版验证不一致</td><td>获授权后按 scope 与人工签名 Gate 补证据；不用旧录屏替代</td></tr>
+<tr><td>P0</td><td>完成确认长期 Relayer / KMS 路径未落地，历史临时角色已撤销</td><td>明确谁审查、谁签名、如何审计；单独成本与权限批准</td></tr>
+<tr><td>P0</td><td>源码 README v1 与当前市集 / 访客版、旧 PR9 状态存在历史差异</td><td>文档标版本；PR9 历史草稿 body 待真实 Sepolia/VRF不能覆盖已有抽卡回执，也不能证明草稿全部完成</td></tr>
+<tr><td>P1</td><td>跨设备保存 / 家庭协作 / 中日社交能力仍为产品方向</td><td>先确认真实需求、隐私与账户数据迁移，不能将登录 CTA 作为实作证据</td></tr>
+<tr><td>P1</td><td>真实融合缺三张自然匹配卡 / 交易</td><td>保持 partial；不用管理员造卡填验收</td></tr>
+<tr><td>P1</td><td>长期性能 SLA 与真实用户规模未测</td><td>使用历史受控数据做诊断；获得明确运行预算再讨论 live</td></tr>
+<tr><td>P1</td><td>扩展多合约时 completion purchaseId 唯一键易冲突</td><td>将链 / 合约纳入幂等身份再扩展</td></tr>
+<tr><td>P2</td><td>源码私有内容门控不等于视频 DRM；删除 / 保留期限未完整定义</td><td>梳理链接可用性、用户退出和内容保留要求</td></tr>
+</tbody></table></div>
+<p>不要为项目讲述补造一场生产事故。能讲的真实难点是多种身份状态、异步交易和水合前提如何保持一致；没有本人经历细节就讲机制与证据，不讲虚构冲突。</p>
+<h3 id="section-18">17. 项目讲述：30 秒、90 秒与 5 分钟</h3>
+<p>以下“我”是待本人核对的复述稿，采用简历的“参与协作”，不是独立所有权声明。</p>
+<h4 id="section-19">30 秒</h4>
+<p>“BabySteps 是我参与的亲子成长全栈 Web3 实践。首页先让访客完成三分钟任务，钱包放到进阶体验。进阶部分包含成长奖励、任务审核购买和不可转让证书。我重点关注钱包连接、网络、业务权限和交易确认四个环节，以及 Edge SSR 到客户端水合的安全接管。项目有测试网交易和 Cloudflare 发布证据；性能是受控历史采样，真实融合和长期完成确认服务仍有边界。”</p>
+<h4 id="section-20">90 秒</h4>
+<p>“这个项目希望让成年家长把日常陪伴变成容易开始、能看见积累的体验。早期版本先连接钱包，后来把访客三分钟任务放到前面，记录只存在当前浏览器，不声称建成家庭社交后台。</p>
+<p>“进阶流程是 Provider 建任务，Owner 审核后由 Chainlink VRF 固定随机价格和开放时间。家长拿到测试 BabyCoin 后，先精确授权再购买；后端不是看按钮状态，而是核对会话钱包的链上购买，才返回视频、评论和完成入口。完成说明存在 D1，受限钱包把同一证据 hash 提交合约，一笔购买只铸一张锁定证书。</p>
+<p>“工程上我参与的重点是状态和边界。SSR 只输出公共壳，钱包和身份在浏览器激活；marker、路径、版本和 DOM 都匹配才水合，致命错误最多回退一次 CSR，可恢复错误只记录。历史交付有真实 Sepolia 购买和证书、Cloudflare 发布；性能样本来自临时管线，运行后已清理，不能讲成持续在线监控。本人具体模块会按实际协作范围补充。”</p>
+<h4 id="section-21">5 分钟</h4>
+<p><strong>第 1 分钟：业务和范围。</strong> “目标是轻量亲子陪伴反馈，不是医疗建议或儿童画像。产品先用访客任务证明体验，再把 Web3 放到需要积累、购买和凭证的进阶层。阶段选项与城市选择是演示规则；没有真实用户增长数据，也没有商业合作落地证明。我参与全栈协作，具体主导模块以本人事实为准。”</p>
+<p><strong>第 2 分钟：走完整链路。</strong> “Provider 先存 D1 草稿和 canonical metadata hash，再请求链上审核。Owner 批准后异步等 VRF，激活任务并锁定所有家长共用的价格和窗口。买方按精确额度 approve 后 buy，合约从 msg.sender 取身份，付款到 Provider payee。后端核对已购买才解锁内容。完成说明与 hash 幂等存 D1，受限角色确认后按 purchaseId 铸 SBT。VRF 证明随机数，不证明现实活动真实。”</p>
+<p><strong>第 3 分钟：两个技术难点。</strong> “一是身份状态不能混为一谈。Privy 登录、Worker 会话、钱包账户、Sepolia 网络、Provider / Relayer 权限、ERC-20 allowance 和 receipt 都是独立事实。用户连了钱包不一定有角色；授权成功也还没付款。二是首屏和交互不能互相污染。Cloudflare SSR 输出安全公共壳，初始化只带 mode/path/version，浏览器先严格判断才 hydrate。之后才挂钱包 SDK；可恢复错误计数，致命错误才一次重挂载，避免无限恢复循环。”</p>
+<p><strong>第 4 分钟：取舍与失败。</strong> “链上存权利和 hash，链下存内容，省成本也给内容和隐私留调整空间，但服务可用性仍依赖链下。精确授权比无限授权麻烦，换来小的授权面和可验证收尾。SBT 不可转让，使证书绑定购买者，但不解决实名真实性。签名被拒绝不能乐观加积分；RPC 故障不能推断未购买；交易超时先查回执与业务状态再重试。纪念卡超时可以退款 / 解锁，迟到回调不能重复结算。”</p>
+<p><strong>第 5 分钟：验证与诚实边界。</strong> “真实回执证明 Sepolia 任务审核、购买、临时授权完成、SBT #1 和撤权；Graph 读回两任务两购买一证书。抽卡也有真实 #1，但融合仍缺匹配卡和真实交易。最新已查历史发布是 PR83，部署和品牌域名 bundle 一致，深链200、未知404、附件可读。8月31日性能是 232 事件的受控窗口，LCP 只有6个样本，P75 2568ms不能吹成优秀生产表现。临时 AWS Runtime已清理，长期 Relayer和新版30项全流程还要补验。我的价值是把每一步的权限、状态和验收对象讲清，并按本人参与事实说明怎么落地。”</p>
+<h3 id="section-22">18. 追问树与大白话复习</h3>
+<p>每个回答按“机制 → 为什么 → 失败怎么办 → 哪份证据 → 我做了什么”展开；最后一句必须由本人补全。</p>
+<ol>
+<li><strong>为什么钱包连上还买不了？</strong> 钱包连接是知道账户，chainId 判断网络，余额 / allowance 判断资产授权，合约状态与角色判断业务资格；买入还要签名和 receipt。追问：切账户后会话钱包如何重新证明？不能沿用旧账户资格；现场查 identity Hook，不说未经验证的自动恢复。</li>
+<li><strong>approve 与 buy 区别？</strong> approve 是允许合约最多花多少；buy 才实际转款和写购买。大白话：先给“扣款额度”，再下单。追问中间失败：查 allowance / purchaseId，不能重复买；余额和付款不能只信前端。</li>
+<li><strong>hash 与 receipt 为什么分开？</strong> hash 是已广播的查询单号；receipt 成功才是执行结果。追问超时：未知不是失败，先查再决定；当前没有通用持久化交易账本，不借用别的项目概念。</li>
+<li><strong>为什么同时用链和 D1？</strong> 链保存权利、状态和 metadata hash，D1保存文本与视频链接；用 taskKey 绑定。追问 DB有人改内容：重新算 hash与合约比对；hash证明一致不是证明真实。</li>
+<li><strong>Privy 登录等于业务授权吗？</strong> 不等于。第三方身份入口、challenge钱包签名、HttpOnly应用会话、链上角色是四层。追问重放：5分钟challenge、精确message、recover地址、原子consume；冲突409。Cookie安全与CORS分别解决不同问题。</li>
+<li><strong>SSR 和水合怎么配合？</strong> 服务端先给能看的公共壳，浏览器接管同一结构。追问为什么版本 / 路径 / marker / DOM都检查：防止旧HTML、错页面或空壳被当成当前SSR；钱包SDK后激活，私有状态不灌HTML。</li>
+<li><strong>所有水合错误都回退吗？</strong> recoverable只记录；uncaught / 同步异常一次CSR。大白话：小偏差记账，真正接管失败才换一套渲染。追问恢复风暴：recovered布尔锁+microtask，最多一次；源代码E12。</li>
+<li><strong>随机性与真实性区别？</strong> VRF让价格和卡片结果可核验，不能判断家长真的完成陪伴。追问“自动Oracle”在哪：历史完成是临时Relayer签名且已撤权；不要说KMS生产自动服务已上线。</li>
+<li><strong>怎么保证不重复发证？</strong> D1 purchaseId唯一、相同hash重放返回原记录；合约完成hash冲突拒绝；SBT purchaseId→tokenId再次校验owner/URI。追问多合约：当前D1要扩键，不能直接横向复用。</li>
+<li><strong>SBT和普通NFT差别？</strong> SBT这里禁止转让 / approval，是绑定完成记录；不是证明实名或真实成长。追问钱包丢失：目前没有已确认恢复产品，不能承诺自动迁移。</li>
+<li><strong>历史性能是不是线上RUM？</strong> RUM（Real User Monitoring，真实用户监控）要来自真实生产用户；此处是受控浏览器、临时AWS窗口。追问统计：样本数必须一起说，LCP n=6；没样本、不可用、健康零事件分别解释。不能用截图证明常驻服务。</li>
+<li><strong>为什么没有真融合也说实现？</strong> 实现是源码与本地测试层；真实链上验收还缺三张自然匹配卡。给抽卡回执、明确融合partial，避免把管理员造卡当业务证据。</li>
+</ol>
+<p>记忆串：<strong>先体验 → 再身份 → 链上资格 → 精确额度 → 签名 / 回执 → 内容与凭证 → 证据分层。</strong></p>
+<h3 id="section-23">19. 演示顺序、证据索引与必要确认问题</h3>
+<p>建议演示 8–10 分钟：先首页三分钟任务、刷新恢复和本地边界；再 <code>/tasks</code> 的公开内容与已购门控；展示 <code>/parent</code>、<code>/profile</code> 的身份 / 钱包 / 网络状态；用历史回执讲 Provider审核、购买、证书，不为项目讲述临时发交易；切到 SSR bootstrap 源码解释前提与一次降级；最后展示 Evidence、历史性能及未完成边界。若现场只演示公开页面，不能把“按钮存在”当私有流程验收。</p>
+<p>证据根目录 A：<code>内部证据路径（未公开）</code>。以下源码 / 回执均可在本地定位；编号在上文使用。本文引用的回执来自文件读取，本轮没有按其中链接重新访问外部服务。</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">编号</th><th scope="col">证据路径 / 入口</th><th scope="col">支持什么</th></tr></thead><tbody>
+<tr><td>E01</td><td>PR83生产回执（内部证据或非公开入口）、后续只读状态（内部证据或非公开入口）</td><td>当时生产版本、CI、deployment、HTTP、附件；PR9历史草稿边界</td></tr>
+<tr><td>E02</td><td>访客状态源码（内部证据或非公开入口）、同目录 <code>GuestFirstExperience.tsx</code> 与测试</td><td>枚举、固定阶段推荐、localStorage恢复 / 删除</td></tr>
+<tr><td>E03</td><td>访客录屏机器清单（内部证据或非公开入口）</td><td>version193291e本地8场景、无钱包写 / AWS live</td></tr>
+<tr><td>E04</td><td>钱包状态（内部证据或非公开入口）、路由定义（内部证据或非公开入口）</td><td>钱包状态与9路由</td></tr>
+<tr><td>E05</td><td>任务合约（内部证据或非公开入口）、锁定证书（内部证据或非公开入口）、同目录 <code>BabyCoin.sol/GrowthActivities.sol/OnchainNotebook.sol</code></td><td>当前合约规则、双账本与V2证书</td></tr>
+<tr><td>E06</td><td>Worker组装（内部证据或非公开入口）、<code>worker/src/routes/{auth,tasks,profile,comments,completions}.ts</code>、<code>worker/migrations/0001_initial.sql</code> / <code>0003_completion_submissions.sql</code></td><td>API、鉴权、数据与幂等</td></tr>
+<tr><td>E07</td><td>兑换Hook（内部证据或非公开入口）、完成确认Hook（内部证据或非公开入口）</td><td>swap收尾与Relayer前置检查</td></tr>
+<tr><td>E08</td><td>真实V2业务回执（内部证据或非公开入口）</td><td>任务#1、2BABY、付款、allowance0、SBT#1、临时授权后撤权</td></tr>
+<tr><td>E09</td><td>公共API闭环（内部证据或非公开入口）、Graph回读（内部证据或非公开入口）</td><td>任务#2、D1绑定 / 评论；2任务2购买1证书的历史索引</td></tr>
+<tr><td>E10</td><td>Uniswap历史验证（内部证据或非公开入口）、同目录 <code>2026-08-12-rpc-comparison.json</code></td><td>测试池 / swap与三RPC历史比较；本轮以交付映射为摘要，未重复网络验证</td></tr>
+<tr><td>E11</td><td>StarBuddy真实抽卡（内部证据或非公开入口）、<code>contracts/contracts/StarBuddyKeepsakes.sol</code></td><td>扣12、SBT#1、锁定、真实融合缺口</td></tr>
+<tr><td>E12</td><td>客户端接管（内部证据或非公开入口）、Pages渲染（内部证据或非公开入口）、渲染历史验证（内部证据或非公开入口）</td><td>marker/path/version/DOM、安全白名单、缓存与降级</td></tr>
+<tr><td>E13</td><td>历史性能闭环（内部证据或非公开入口）、同源码树 <code>web/src/performance/</code>、<code>aws/src/performance/</code></td><td>受控232事件、样本分位数、清洗与临时资源清理</td></tr>
+<tr><td>E14</td><td>9月23日AWS只读清单（内部证据或非公开入口）</td><td>历史无可停止运行资源，保留受保护RDS；不是当前零费用</td></tr>
+<tr><td>E15</td><td>非AWS Journey合同（内部证据或非公开入口）、课程实现映射（内部证据或非公开入口）</td><td>30项local-verified与新版真实流程待补验；任务complete语义</td></tr>
+<tr><td>E16</td><td>当前简历项目段（内部证据或非公开入口）</td><td>本人“参与协作”的当前声明；不复制私人联系方式</td></tr>
+</tbody></table></div>
+<p>只需本人补的确认问题，不阻塞已知文档：</p>
+<ol>
+<li>你最熟悉并亲自推进的两到三个模块是哪几个？分别做了设计、编码、复核还是交付验证？请给一个文件或PR和具体动作。</li>
+<li>水合控制是你主导提出，还是在协作方案中实现 / 审查？当时实际遇到的现象、你采取的动作和证据是什么？</li>
+<li>真实 Sepolia / Privy / Cloudflare 验收中，哪些由你本人在可见界面操作，哪些由协作者或脚本完成？</li>
+<li>本项目是课程、小团队合作、个人延伸实践中的哪种组合？起止时间和对外可讲的身份是什么？</li>
+<li>Babycare材料是否只是对外演示准备，还是已得到回复 / 合作？没有确认前，项目讲述保持“准备合作演示”，不说客户项目。</li>
+<li>哪次失败或取舍是你亲历、能复述的？不要先选宏大的事故；可以是approve成功但后续未成功、旧HTML不能水合、RPC读回失败等有证据的小问题。</li>
+</ol>
+<p>本轮文档自审：19节已覆盖；生产 / 测试 / 历史性能 / 本人职责分开；无私人联系方式和凭据；真实抽卡与待融合分开；无新AWS、交易、推送、发布或测试重跑。</p></article></main><footer><a href="https://babysteps.baby2b.online/evidence/">返回该项目工作证明</a> · <a href="https://babysteps.baby2b.online/">返回项目主页</a></footer></body></html>
