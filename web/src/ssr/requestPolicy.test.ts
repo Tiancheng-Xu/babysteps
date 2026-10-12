@@ -3,6 +3,26 @@ import { describe, expect, it } from "vitest";
 import { classifyRequest } from "./requestPolicy";
 
 describe("Pages SSR request policy", () => {
+	it("preserves the PRD static asset after Pages removes its HTML extension", () => {
+		for (const path of [
+			"/evidence/prd.html",
+			"/evidence/prd",
+			"/evidence/prd/",
+		]) {
+			expect(
+				classifyRequest(
+					new Request(`https://babysteps.example${path}`, {
+						headers: { accept: "text/html" },
+					}),
+				),
+			).toEqual({ kind: "asset" });
+		}
+		expect(
+			classifyRequest(
+				new Request("https://babysteps.example/evidence/missing"),
+			),
+		).toEqual({ kind: "document", status: 404 });
+	});
 	it("passes the API namespace root through to the asset binding", () => {
 		expect(
 			classifyRequest(

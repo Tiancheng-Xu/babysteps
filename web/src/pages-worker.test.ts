@@ -33,6 +33,31 @@ function appStream(markup: string): ReadableStream<Uint8Array> {
 }
 
 describe("Cloudflare Pages SSR worker", () => {
+	it("serves the extensionless public PRD without replacing it with SSR", async () => {
+		const document =
+			"<!doctype html><html><body><h1>完整项目 PRD</h1></body></html>";
+		const env = {
+			ASSETS: {
+				fetch: vi.fn(
+					async (request: Request) =>
+						new Response(
+							new URL(request.url).pathname === "/index.html"
+								? template
+								: document,
+						),
+				),
+			},
+		};
+		const render = vi.fn(async () => appStream("<h1>不应渲染</h1>"));
+		const handler = createPagesHandler({ render });
+		const response = await handler.fetch(
+			new Request("https://example.test/evidence/prd"),
+			env,
+		);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe(document);
+		expect(render).not.toHaveBeenCalled();
+	});
 	it("passes static assets through without masking their status", async () => {
 		const env = environment();
 		const handler = createPagesHandler({

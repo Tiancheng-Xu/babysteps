@@ -38,6 +38,12 @@ export function ServerRouteShell({ route }: { route: RouteDefinition }) {
 				{PUBLIC_SUMMARIES[route.view] ??
 					"此页面的身份、钱包和实时链上数据只在浏览器中加载，服务端不会保存或输出个人状态。"}
 			</p>
+			{route.view === "evidence" && (
+				<p>
+					<a href="/evidence/prd.html">查看完整项目 PRD</a> ·
+					产品需求、架构取舍与项目讲述；已有交付与规划分层。
+				</p>
+			)}
 		</section>
 	);
 }

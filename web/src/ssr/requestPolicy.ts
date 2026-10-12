@@ -6,6 +6,9 @@ export type RequestClassification =
 
 const STATIC_PREFIXES = ["/assets/", "/metadata/", "/screenshots/"];
 const STATIC_FILENAMES = new Set([
+	// Pages redirects .html assets to clean URLs before the SSR worker sees them.
+	"/evidence/prd",
+	"/evidence/prd/",
 	"/favicon.ico",
 	"/manifest.webmanifest",
 	"/robots.txt",
