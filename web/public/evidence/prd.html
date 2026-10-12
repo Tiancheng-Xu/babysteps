@@ -26,7 +26,7 @@
 <tr><td>Provider</td><td>建立任务草稿，向合约请求任务审核</td><td>必须有 <code>PROVIDER_ROLE</code>；登录不能授予该角色</td></tr>
 <tr><td>Owner / 管理员</td><td>审核或拒绝任务、暂停任务、管理 Provider；链下审核界面</td><td>合约管理权限及 Worker Owner 门控分别存在</td></tr>
 <tr><td>完成确认钱包</td><td>调用 <code>confirmCompletion</code> 铸造证书</td><td>必须有 <code>COMPLETION_RELAYER_ROLE</code>；Owner 身份本身不等于拥有该角色</td></tr>
-<tr><td>评审者 / 评审者</td><td>阅读 Evidence、源码、历史回执、受控录屏</td><td>能核对工程事实，不能据此推断商业营收或现实陪伴真实性</td></tr>
+<tr><td>评审者</td><td>阅读 Evidence、源码、历史回执、受控录屏</td><td>能核对工程事实，不能据此推断商业营收或现实陪伴真实性</td></tr>
 </tbody></table></div>
 <p>重点记忆：<strong>钱包连接 ≠ 网络正确 ≠ 业务有权限 ≠ 交易成功</strong>。连上钱包只说明浏览器拿到了一个账户；Sepolia 正确只说明链对了；角色或已购买决定能否做业务；成功回执与重新读取才确定链上结果。</p>
 <h3 id="section-5">4. 目标、成功指标与非目标</h3>
